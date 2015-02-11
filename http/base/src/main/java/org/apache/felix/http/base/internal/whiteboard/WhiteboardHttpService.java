@@ -28,6 +28,7 @@ import org.apache.felix.http.base.internal.handler.FilterHandler;
 import org.apache.felix.http.base.internal.handler.HandlerRegistry;
 import org.apache.felix.http.base.internal.handler.ServletHandler;
 import org.apache.felix.http.base.internal.runtime.FilterInfo;
+import org.apache.felix.http.base.internal.runtime.RegistryRuntime;
 import org.apache.felix.http.base.internal.runtime.ResourceInfo;
 import org.apache.felix.http.base.internal.runtime.ServletInfo;
 import org.apache.felix.http.base.internal.whiteboard.tracker.FilterTracker;
@@ -41,7 +42,6 @@ import org.osgi.util.tracker.ServiceTracker;
 
 public final class WhiteboardHttpService
 {
-
     private final HandlerRegistry handlerRegistry;
 
     private final BundleContext bundleContext;
@@ -210,5 +210,10 @@ public final class WhiteboardHttpService
     public void unregisterContext(@Nonnull final ContextHandler contextHandler)
     {
         this.handlerRegistry.remove(contextHandler.getContextInfo());
+    }
+
+    public RegistryRuntime getRuntime()
+    {
+        return contextManager.getRuntime(handlerRegistry);
     }
 }

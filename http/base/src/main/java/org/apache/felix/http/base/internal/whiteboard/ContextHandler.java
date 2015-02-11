@@ -185,6 +185,11 @@ public final class ContextHandler implements Comparable<ContextHandler>
         }
     }
 
+    public ServletContext getSharedContext()
+    {
+        return sharedContext;
+    }
+
     public void ungetServletContext(@Nonnull final Bundle bundle)
     {
         final Long key = bundle.getBundleId();

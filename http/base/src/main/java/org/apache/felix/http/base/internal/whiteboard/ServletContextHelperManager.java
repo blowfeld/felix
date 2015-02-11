@@ -24,12 +24,16 @@ import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeSet;
 
 import javax.annotation.Nonnull;
 import javax.servlet.ServletContext;
 
+import org.apache.felix.http.base.internal.handler.HandlerRegistry;
 import org.apache.felix.http.base.internal.logger.SystemLogger;
+import org.apache.felix.http.base.internal.runtime.ContextRuntime;
 import org.apache.felix.http.base.internal.runtime.FilterInfo;
+import org.apache.felix.http.base.internal.runtime.RegistryRuntime;
 import org.apache.felix.http.base.internal.runtime.ResourceInfo;
 import org.apache.felix.http.base.internal.runtime.ServletContextAttributeListenerInfo;
 import org.apache.felix.http.base.internal.runtime.ServletContextHelperInfo;
@@ -371,5 +375,20 @@ public final class ServletContextHelperManager
         {
             handler.removeListener((ServletContextAttributeListenerInfo)info );
         }
+    }
+
+    public RegistryRuntime getRuntime(HandlerRegistry registry)
+    {
+        List<ContextRuntime> contextRuntimes;
+        TreeSet<ContextHandler> contextHandlers = new TreeSet<ContextHandler>();
+        synchronized ( this.contextMap )
+        {
+            for (List<ContextHandler> contextHandlerList : this.contextMap.values())
+            {
+                contextHandlers.addAll(contextHandlerList);
+            }
+            contextRuntimes = registry.getContextRuntimes();
+        }
+        return new RegistryRuntime(contextHandlers, contextRuntimes);
     }
 }

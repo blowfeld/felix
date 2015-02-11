@@ -18,6 +18,7 @@ package org.apache.felix.http.base.internal.handler;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -28,9 +29,12 @@ import javax.servlet.Filter;
 import javax.servlet.Servlet;
 import javax.servlet.ServletException;
 
+import org.apache.felix.http.base.internal.runtime.ContextRuntime;
 import org.apache.felix.http.base.internal.runtime.FilterInfo;
 import org.apache.felix.http.base.internal.runtime.ServletContextHelperInfo;
 import org.apache.felix.http.base.internal.runtime.ServletInfo;
+import org.apache.felix.http.base.internal.runtime.ContextRuntime.ErrorPage;
+import org.apache.felix.http.base.internal.util.InternalIdFactory;
 
 public final class PerContextHandlerRegistry implements Comparable<PerContextHandlerRegistry>
 {
@@ -48,7 +52,7 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
     private final String prefixPath;
 
     public PerContextHandlerRegistry() {
-        this.serviceId = 0;
+        this.serviceId = InternalIdFactory.INSTANCE.next();
         this.ranking = Integer.MAX_VALUE;
         this.prefixPath = "/";
     }
@@ -340,5 +344,20 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
     public long getContextServiceId()
     {
         return this.serviceId;
+    }
+
+    public synchronized ContextRuntime getRuntime() {
+        List<ServletHandler> servletHandlers = new ArrayList<ServletHandler>(servletMap.values());
+        List<FilterHandler> filterHandlers = new ArrayList<FilterHandler>(filterMap.values());
+
+        Collection<ErrorPage> errorPages = new ArrayList<ContextRuntime.ErrorPage>();
+        Collection<ServletHandler> errorHandlers = errorsMapping.getMappedHandlers();
+        for (ServletHandler servletHandler : errorHandlers)
+        {
+            errorPages.add(errorsMapping.getErrorPage(servletHandler));
+        }
+        servletHandlers.removeAll(errorHandlers);
+
+        return new ContextRuntime(servletHandlers, filterHandlers, errorPages, serviceId);
     }
 }

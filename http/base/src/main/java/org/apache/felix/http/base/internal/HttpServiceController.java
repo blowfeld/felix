@@ -16,6 +16,8 @@
  */
 package org.apache.felix.http.base.internal;
 
+import java.util.Collections;
+import java.util.Dictionary;
 import java.util.Hashtable;
 
 import javax.servlet.ServletContext;
@@ -33,9 +35,11 @@ import org.apache.felix.http.base.internal.service.HttpServiceFactory;
 import org.apache.felix.http.base.internal.service.HttpServiceRuntimeImpl;
 import org.apache.felix.http.base.internal.whiteboard.WhiteboardHttpService;
 import org.osgi.framework.BundleContext;
+import org.osgi.framework.Constants;
 import org.osgi.framework.ServiceRegistration;
 import org.osgi.service.http.HttpService;
 import org.osgi.service.http.runtime.HttpServiceRuntime;
+import org.osgi.util.tracker.ServiceTracker;
 
 public final class HttpServiceController
 {
@@ -58,6 +62,9 @@ public final class HttpServiceController
      * Otherwise leave this property unset.
      */
     private static final String FELIX_HTTP_SHARED_SERVLET_CONTEXT_ATTRIBUTES = "org.apache.felix.http.shared_servlet_context_attributes";
+    private static final String HTTP_SERVICE_ID = "osgi.http.service.id";
+    private static final String HTTP_SERVICE_ENDPOINTS = "osgi.http.service.endpoints";
+    private static final String HTTP_ENDPOINT = "osgi.http.endpoint";
 
     private final BundleContext bundleContext;
     private final HandlerRegistry registry;
@@ -71,7 +78,7 @@ public final class HttpServiceController
     private final boolean sharedContextAttributes;
     private final HttpServicePlugin plugin;
     private volatile WhiteboardHttpService whiteboardHttpService;
-    private volatile ServiceRegistration serviceReg;
+    private volatile ServiceRegistration<?> serviceReg;
     private volatile ServiceRegistration<HttpServiceRuntime> runtimeReg;
 
     public HttpServiceController(BundleContext bundleContext)
@@ -145,7 +152,28 @@ public final class HttpServiceController
         this.serviceReg = this.bundleContext.registerService(ifaces, factory, this.serviceProps);
         this.whiteboardHttpService = new WhiteboardHttpService(this.bundleContext, servletContext, this.registry);
 
-        this.runtimeReg = this.bundleContext.registerService(HttpServiceRuntime.class, new HttpServiceRuntimeImpl(), null);
+        Dictionary<String, Object> runtimeProperties = createRuntimeProperties(serviceReg);
+        //TODO listeners
+        HttpServiceRuntimeImpl serviceRuntime = new HttpServiceRuntimeImpl(whiteboardHttpService);
+        this.runtimeReg = this.bundleContext.registerService(HttpServiceRuntime.class, serviceRuntime, runtimeProperties);
+    }
+
+    private Dictionary<String, Object> createRuntimeProperties(ServiceRegistration<?> httpService)
+    {
+        Hashtable<String, Object> props = new Hashtable<String, Object>();
+
+        Object httpServiceId = httpService.getReference().getProperty(Constants.SERVICE_ID);
+        if (httpServiceId != null)
+        {
+            props.put(HTTP_SERVICE_ID, httpServiceId);
+        }
+
+        Object endpoints = httpService.getReference().getProperty(HTTP_SERVICE_ENDPOINTS);
+        if (endpoints != null)
+        {
+            props.put(HTTP_ENDPOINT, endpoints);
+        }
+        return props;
     }
 
     public void unregister()

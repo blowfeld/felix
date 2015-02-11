@@ -16,62 +16,59 @@
  */
 package org.apache.felix.http.base.internal.service;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+
+import org.apache.felix.http.base.internal.runtime.RegistryRuntime;
+import org.apache.felix.http.base.internal.runtime.dto.RuntimeDTOBuilder;
+import org.apache.felix.http.base.internal.whiteboard.WhiteboardHttpService;
+import org.osgi.framework.ServiceReference;
 import org.osgi.service.http.runtime.HttpServiceRuntime;
-import org.osgi.service.http.runtime.dto.ErrorPageDTO;
-import org.osgi.service.http.runtime.dto.FailedErrorPageDTO;
-import org.osgi.service.http.runtime.dto.FailedFilterDTO;
-import org.osgi.service.http.runtime.dto.FailedServletDTO;
-import org.osgi.service.http.runtime.dto.FilterDTO;
 import org.osgi.service.http.runtime.dto.RequestInfoDTO;
 import org.osgi.service.http.runtime.dto.RuntimeDTO;
-import org.osgi.service.http.runtime.dto.ServletDTO;
+import org.osgi.util.tracker.ServiceTracker;
 
 public final class HttpServiceRuntimeImpl implements HttpServiceRuntime
 {
+    private final Collection<ServiceTracker<?,?>> listenerTrackers;
+    private final WhiteboardHttpService whiteboardHttpService;
 
-    @Override
+    public HttpServiceRuntimeImpl(WhiteboardHttpService whiteboardHttpService)
+    {
+        this.whiteboardHttpService = whiteboardHttpService;
+        // TODO
+        this.listenerTrackers = Collections.emptyList();
+    }
+
     public RuntimeDTO getRuntimeDTO()
     {
-        // create new DTO on every call
-        final RuntimeDTO runtime = new RuntimeDTO();
-
-        return runtime;
+        RegistryRuntime runtime = whiteboardHttpService.getRuntime();
+        List<ServiceReference<?>> listenerRefs = readListenerRefs(listenerTrackers);
+        RuntimeDTOBuilder runtimeDTOBuilder = new RuntimeDTOBuilder(runtime, listenerRefs);
+        return runtimeDTOBuilder.build();
     }
 
-    public void registerServlet(ServletDTO servletDTO)
+    private List<ServiceReference<?>> readListenerRefs(Collection<ServiceTracker<?,?>> listenerTrackers)
     {
-        // TODO
-    }
-
-    public void registerFailedServlet(FailedServletDTO failedServletDTO)
-    {
-        // TODO
-    }
-
-    public void registerErrorPage(ErrorPageDTO errorPageDTO)
-    {
-        // TODO
-    }
-
-    public void registerFailedErrorPage(FailedErrorPageDTO failedErrorPageDTO)
-    {
-        // TODO
-    }
-
-    public void registerFilter(FilterDTO filterDTO)
-    {
-        // TODO
-    }
-
-    public void registerFailedFilter(FailedFilterDTO failedFilterDTO)
-    {
-        // TODO
+        List<ServiceReference<?>> listeners = new ArrayList<ServiceReference<?>>();
+        for (ServiceTracker<?,?> tracker : listenerTrackers)
+        {
+            ServiceReference<?>[] serviceReferences = tracker.getServiceReferences();
+            if (serviceReferences != null)
+            {
+                listeners.addAll(Arrays.<ServiceReference<?>>asList(serviceReferences));
+            }
+        }
+        return listeners;
     }
 
     @Override
-    public RequestInfoDTO calculateRequestInfoDTO(String path) {
-        // TODO
+    public RequestInfoDTO calculateRequestInfoDTO(String path)
+    {
+        // TODO Auto-generated method stub
         return null;
     }
-
 }
