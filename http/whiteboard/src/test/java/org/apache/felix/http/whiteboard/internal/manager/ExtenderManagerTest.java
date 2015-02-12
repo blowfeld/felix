@@ -111,6 +111,9 @@ public class ExtenderManagerTest
 
     @Mock
     private ServiceReference httpContextReference;
+    
+    @Mock 
+    private ServiceReference httpServiceReference;
 
     @Before
     public void setup()
@@ -157,6 +160,10 @@ public class ExtenderManagerTest
         when(filterAndServletReference.getProperty(HttpWhiteboardConstants.ALIAS)).thenReturn(SERVLET_2_ALIAS);
         when(filterAndServletReference.getProperty(Constants.SERVICE_ID)).thenReturn(7L);
 
+        when(httpServiceReference.getBundle()).thenReturn(bundle1);
+        when(httpServiceReference.getPropertyKeys()).thenReturn(new String[0]);
+        when(httpServiceReference.getProperty(Constants.SERVICE_ID)).thenReturn(8L);
+
         this.httpService = new MockExtHttpService();
     }
 
@@ -171,11 +178,11 @@ public class ExtenderManagerTest
     {
         ExtenderManager em = new ExtenderManager();
 
-        em.setHttpService(this.httpService);
+        em.setHttpService(this.httpService, this.httpServiceReference);
         TestCase.assertTrue(this.httpService.getServlets().isEmpty());
         TestCase.assertTrue(this.httpService.getFilters().isEmpty());
 
-        em.setHttpService(null);
+        em.setHttpService(null, null);
         TestCase.assertTrue(this.httpService.getServlets().isEmpty());
         TestCase.assertTrue(this.httpService.getFilters().isEmpty());
 
@@ -189,7 +196,7 @@ public class ExtenderManagerTest
         ExtenderManager em = new ExtenderManager();
 
         // prepare with http service
-        em.setHttpService(this.httpService);
+        em.setHttpService(this.httpService, this.httpServiceReference);
         TestCase.assertTrue(this.httpService.getServlets().isEmpty());
         TestCase.assertTrue(this.httpService.getFilters().isEmpty());
 
@@ -260,7 +267,7 @@ public class ExtenderManagerTest
         ExtenderManager em = new ExtenderManager();
 
         // prepare with http service
-        em.setHttpService(this.httpService);
+        em.setHttpService(this.httpService, this.httpServiceReference);
         TestCase.assertTrue(this.httpService.getServlets().isEmpty());
         TestCase.assertTrue(this.httpService.getFilters().isEmpty());
 
@@ -327,7 +334,7 @@ public class ExtenderManagerTest
         final String id2 = HttpContextManagerTest.createId(bundle2, null);
 
         // prepare with http service
-        em.setHttpService(this.httpService);
+        em.setHttpService(this.httpService, this.httpServiceReference);
         TestCase.assertTrue(this.httpService.getServlets().isEmpty());
         TestCase.assertTrue(this.httpService.getFilters().isEmpty());
         TestCase.assertEquals(0, em.getHttpContexts().size());
@@ -380,7 +387,7 @@ public class ExtenderManagerTest
         final String id = HttpContextManagerTest.createId(bundle1, SAMPLE_CONTEXT_ID);
 
         // prepare with http service
-        em.setHttpService(this.httpService);
+        em.setHttpService(this.httpService, this.httpServiceReference);
         TestCase.assertTrue(this.httpService.getServlets().isEmpty());
         TestCase.assertTrue(this.httpService.getFilters().isEmpty());
 
@@ -440,7 +447,7 @@ public class ExtenderManagerTest
         final String id = HttpContextManagerTest.createId(SAMPLE_CONTEXT_ID);
 
         // prepare with http service
-        em.setHttpService(this.httpService);
+        em.setHttpService(this.httpService, this.httpServiceReference);
         TestCase.assertTrue(this.httpService.getServlets().isEmpty());
         TestCase.assertTrue(this.httpService.getFilters().isEmpty());
 
@@ -500,7 +507,7 @@ public class ExtenderManagerTest
         ExtenderManager em = new ExtenderManager();
 
         // prepare with http service
-        em.setHttpService(this.httpService);
+        em.setHttpService(this.httpService, this.httpServiceReference);
         TestCase.assertTrue(this.httpService.getFilters().isEmpty());
 
         // setup a context without context ID
@@ -570,7 +577,7 @@ public class ExtenderManagerTest
         ExtenderManager em = new ExtenderManager();
 
         // prepare with http service
-        em.setHttpService(this.httpService);
+        em.setHttpService(this.httpService, this.httpServiceReference);
         TestCase.assertTrue(this.httpService.getFilters().isEmpty());
 
         // set up a context with context ID and shared
@@ -636,7 +643,7 @@ public class ExtenderManagerTest
         final String id2 = HttpContextManagerTest.createId(bundle2, null);
 
         // prepare with http service
-        em.setHttpService(this.httpService);
+        em.setHttpService(this.httpService, this.httpServiceReference);
         TestCase.assertTrue(this.httpService.getFilters().isEmpty());
         TestCase.assertEquals(0, em.getHttpContexts().size());
 
@@ -688,7 +695,7 @@ public class ExtenderManagerTest
         final String id = HttpContextManagerTest.createId(bundle1, SAMPLE_CONTEXT_ID);
 
         // prepare with http service
-        em.setHttpService(this.httpService);
+        em.setHttpService(this.httpService, this.httpServiceReference);
         TestCase.assertTrue(this.httpService.getFilters().isEmpty());
 
         // register filter1 from bundle1
@@ -747,7 +754,7 @@ public class ExtenderManagerTest
         final String id = HttpContextManagerTest.createId(SAMPLE_CONTEXT_ID);
 
         // prepare with http service
-        em.setHttpService(this.httpService);
+        em.setHttpService(this.httpService, this.httpServiceReference);
         TestCase.assertTrue(this.httpService.getFilters().isEmpty());
 
         // register filter1 from bundle1
@@ -806,7 +813,7 @@ public class ExtenderManagerTest
         ExtenderManager em = new ExtenderManager();
 
         // prepare with http service
-        em.setHttpService(this.httpService);
+        em.setHttpService(this.httpService, this.httpServiceReference);
         TestCase.assertTrue(this.httpService.getServlets().isEmpty());
         TestCase.assertTrue(this.httpService.getFilters().isEmpty());
 

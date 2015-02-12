@@ -18,6 +18,7 @@ package org.apache.felix.http.whiteboard.internal.manager;
 
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
@@ -26,26 +27,33 @@ import javax.servlet.Servlet;
 
 import org.apache.felix.http.api.ExtHttpService;
 import org.apache.felix.http.base.internal.logger.SystemLogger;
-import org.apache.felix.http.whiteboard.HttpWhiteboardConstants;
 import org.apache.felix.http.whiteboard.internal.manager.HttpContextManager.HttpContextHolder;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.Constants;
+import org.osgi.framework.FrameworkUtil;
+import org.osgi.framework.InvalidSyntaxException;
 import org.osgi.framework.ServiceReference;
 import org.osgi.service.http.HttpContext;
 import org.osgi.service.http.HttpService;
+import org.osgi.service.http.whiteboard.HttpWhiteboardConstants;
 
 public final class ExtenderManager
 {
     static final String TYPE_FILTER = "f";
     static final String TYPE_SERVLET = "s";
 
-    private HttpService httpService;
+    private volatile HttpService httpService;
+    private volatile ServiceReference httpServiceReference;
+
     private final Map<String, AbstractMapping> mapping;
+    private final Map<String, ServiceReference> serviceReferenceMapping;
+
     private final HttpContextManager contextManager;
 
     public ExtenderManager()
     {
         this.mapping = new HashMap<String, AbstractMapping>();
+        this.serviceReferenceMapping = new HashMap<String, ServiceReference>();
         this.contextManager = new HttpContextManager();
     }
 
@@ -91,8 +99,8 @@ public final class ExtenderManager
     private void addInitParams(ServiceReference ref, AbstractMapping mapping)
     {
         for (String key : ref.getPropertyKeys()) {
-            if (key.startsWith(HttpWhiteboardConstants.INIT_PREFIX)) {
-                String paramKey = key.substring(HttpWhiteboardConstants.INIT_PREFIX.length());
+            if (key.startsWith(org.apache.felix.http.whiteboard.HttpWhiteboardConstants.INIT_PREFIX)) {
+                String paramKey = key.substring(org.apache.felix.http.whiteboard.HttpWhiteboardConstants.INIT_PREFIX.length());
                 String paramValue = getStringProperty(ref, key);
 
                 if (paramValue != null) {
@@ -104,10 +112,10 @@ public final class ExtenderManager
 
     public void add(HttpContext service, ServiceReference ref)
     {
-        String contextId = getStringProperty(ref, HttpWhiteboardConstants.CONTEXT_ID);
+        String contextId = getStringProperty(ref, org.apache.felix.http.whiteboard.HttpWhiteboardConstants.CONTEXT_ID);
         if (!isEmpty(contextId))
         {
-            boolean shared = getBooleanProperty(ref, HttpWhiteboardConstants.CONTEXT_SHARED);
+            boolean shared = getBooleanProperty(ref, org.apache.felix.http.whiteboard.HttpWhiteboardConstants.CONTEXT_SHARED);
             Bundle bundle = shared ? null : ref.getBundle();
             Collection<AbstractMapping> mappings = this.contextManager.addHttpContext(bundle, contextId, service);
             for (AbstractMapping mapping : mappings)
@@ -117,7 +125,7 @@ public final class ExtenderManager
         }
         else
         {
-            SystemLogger.debug("Ignoring HttpContext Service " + ref + ", " + HttpWhiteboardConstants.CONTEXT_ID
+            SystemLogger.debug("Ignoring HttpContext Service " + ref + ", " + org.apache.felix.http.whiteboard.HttpWhiteboardConstants.CONTEXT_ID
                 + " is missing or empty");
         }
     }
@@ -137,24 +145,30 @@ public final class ExtenderManager
     private void getHttpContext(AbstractMapping mapping, ServiceReference ref)
     {
         Bundle bundle = ref.getBundle();
-        String contextId = getStringProperty(ref, HttpWhiteboardConstants.CONTEXT_ID);
+        String contextId = getStringProperty(ref, org.apache.felix.http.whiteboard.HttpWhiteboardConstants.CONTEXT_ID);
         this.contextManager.getHttpContext(bundle, contextId, mapping);
     }
 
     private void ungetHttpContext(AbstractMapping mapping, ServiceReference ref)
     {
         Bundle bundle = ref.getBundle();
-        String contextId = getStringProperty(ref, HttpWhiteboardConstants.CONTEXT_ID);
+        String contextId = getStringProperty(ref, org.apache.felix.http.whiteboard.HttpWhiteboardConstants.CONTEXT_ID);
         this.contextManager.ungetHttpContext(bundle, contextId, mapping);
     }
 
     public void add(Filter service, ServiceReference ref)
     {
+    	if(! targetPropertyMatches(ref))
+    	{
+     		SystemLogger.debug("Ignoring Filter Service " + ref + ", " + HttpWhiteboardConstants.HTTP_WHITEBOARD_TARGET 
+    				+ " not matching or invalid");
+    		return;
+    	}
         int ranking = getIntProperty(ref, Constants.SERVICE_RANKING, 0);
-        String pattern = getStringProperty(ref, HttpWhiteboardConstants.PATTERN);
+        String pattern = getStringProperty(ref, org.apache.felix.http.whiteboard.HttpWhiteboardConstants.PATTERN);
 
         if (isEmpty(pattern)) {
-            SystemLogger.debug("Ignoring Filter Service " + ref + ", " + HttpWhiteboardConstants.PATTERN
+            SystemLogger.debug("Ignoring Filter Service " + ref + ", " + org.apache.felix.http.whiteboard.HttpWhiteboardConstants.PATTERN
                 + " is missing or empty");
             return;
         }
@@ -164,13 +178,21 @@ public final class ExtenderManager
         addInitParams(ref, mapping);
         addMapping(TYPE_FILTER, ref, mapping);
     }
+    
 
-    public void add(Servlet service, ServiceReference ref)
+	public void add(Servlet service, ServiceReference ref)
     {
-        String alias = getStringProperty(ref, HttpWhiteboardConstants.ALIAS);
+    	if(! targetPropertyMatches(ref))
+    	{
+    		SystemLogger.debug("Ignoring Servlet Service " + ref + ", " + HttpWhiteboardConstants.HTTP_WHITEBOARD_TARGET 
+    				+ " not matching or invalid");
+    		return;
+    	}
+
+        String alias = getStringProperty(ref, org.apache.felix.http.whiteboard.HttpWhiteboardConstants.ALIAS);
         if (isEmpty(alias))
         {
-            SystemLogger.debug("Ignoring Servlet Service " + ref + ", " + HttpWhiteboardConstants.ALIAS
+            SystemLogger.debug("Ignoring Servlet Service " + ref + ", " + org.apache.felix.http.whiteboard.HttpWhiteboardConstants.ALIAS
                 + " is missing or empty");
             return;
         }
@@ -180,6 +202,22 @@ public final class ExtenderManager
         addInitParams(ref, mapping);
         addMapping(TYPE_SERVLET, ref, mapping);
     }
+
+    private boolean targetPropertyMatches(ServiceReference ref) {
+        String target = getStringProperty(ref, HttpWhiteboardConstants.HTTP_WHITEBOARD_TARGET);
+        if(isEmpty(target)) 
+        {
+        	return true;
+        }
+        
+        try {
+			org.osgi.framework.Filter filter = FrameworkUtil.createFilter(target);
+			return filter.match(this.httpServiceReference);			
+		} catch (InvalidSyntaxException e) {
+    		SystemLogger.info(HttpWhiteboardConstants.HTTP_WHITEBOARD_TARGET + " property of" + ref + "is invalid");
+			return false;
+		}
+	}
 
     public void removeFilter(ServiceReference ref)
     {
@@ -191,22 +229,48 @@ public final class ExtenderManager
         removeMapping(TYPE_SERVLET, ref);
     }
 
-    public synchronized void setHttpService(HttpService service)
+    public synchronized void setHttpService(HttpService service, ServiceReference ref)
     {
         this.httpService = service;
+        this.httpServiceReference = ref;
         if (this.httpService instanceof ExtHttpService) {
             SystemLogger.info("Detected extended HttpService. Filters enabled.");
         } else {
             SystemLogger.info("Detected standard HttpService. Filters disabled.");
         }
-
+        
+        removeNonTargetMatchingMappings();
         registerAll();
     }
+
+    private synchronized void removeNonTargetMatchingMappings() 
+    {    	
+    	Iterator<Map.Entry<String, AbstractMapping>> iterator = this.mapping.entrySet().iterator();
+    
+    	while(iterator.hasNext())
+    	{
+    		Map.Entry<String, AbstractMapping> entry = iterator.next();
+    		AbstractMapping mapping = entry.getValue();
+    		String key = entry.getKey();
+    		ServiceReference ref = this.serviceReferenceMapping.get(key);
+    		
+    		if(mapping != null)
+    		{
+    			if (! targetPropertyMatches(ref))
+    			{
+    				iterator.remove();
+    				this.serviceReferenceMapping.remove(key);
+    			}
+    		}
+    	}    	
+	}
+
 
     public synchronized void unsetHttpService()
     {
         unregisterAll();
         this.httpService = null;
+        this.httpServiceReference = null;
     }
 
     public synchronized void unregisterAll()
@@ -248,12 +312,14 @@ public final class ExtenderManager
     private synchronized void addMapping(final String servType, ServiceReference ref, AbstractMapping mapping)
     {
         this.mapping.put(ref.getProperty(Constants.SERVICE_ID).toString() + servType, mapping);
+        this.serviceReferenceMapping.put(ref.getProperty(Constants.SERVICE_ID).toString().concat(servType), ref);
         this.registerMapping(mapping);
     }
 
     private synchronized void removeMapping(final String servType, ServiceReference ref)
     {
         AbstractMapping mapping = this.mapping.remove(ref.getProperty(Constants.SERVICE_ID).toString() + servType);
+        this.serviceReferenceMapping.remove(ref.getProperty(Constants.SERVICE_ID).toString() + servType);
         if (mapping != null)
         {
             ungetHttpContext(mapping, ref);

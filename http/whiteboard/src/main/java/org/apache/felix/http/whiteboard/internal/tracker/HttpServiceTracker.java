@@ -34,7 +34,7 @@ public final class HttpServiceTracker
 
     protected void added(HttpService service, ServiceReference ref)
     {
-        this.manager.setHttpService(service);
+        this.manager.setHttpService(service, ref);
     }
 
     protected void modified(HttpService service, ServiceReference ref)
