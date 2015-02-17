@@ -56,6 +56,7 @@ import org.osgi.framework.ServiceFactory;
 import org.osgi.framework.ServiceReference;
 import org.osgi.framework.ServiceRegistration;
 import org.osgi.service.http.context.ServletContextHelper;
+import org.osgi.service.http.runtime.HttpServiceRuntime;
 import org.osgi.service.http.whiteboard.HttpWhiteboardConstants;
 
 public final class ServletContextHelperManager
@@ -68,42 +69,53 @@ public final class ServletContextHelperManager
 
     private final WhiteboardHttpService httpService;
 
-    private final ServiceRegistration<ServletContextHelper> defaultContextRegistration;
-
-    private final ServletContext webContext;
-
-    private final Bundle bundle;
+    private final BundleContext bundleContext;
 
     private final Set<AbstractInfo<?>> invalidRegistrations = new ConcurrentSkipListSet<AbstractInfo<?>>();
+
+    private volatile ServletContext webContext;
+
+    private volatile ServiceReference<HttpServiceRuntime> httpServiceRuntime;
+
+    private volatile ServiceRegistration<ServletContextHelper> defaultContextRegistration;
 
     /**
      * Create a new servlet context helper manager
      * and the default context
      */
     public ServletContextHelperManager(final BundleContext bundleContext,
-            final ServletContext webContext,
             final WhiteboardHttpService httpService)
     {
         this.httpService = httpService;
+        this.bundleContext = bundleContext;
+    }
+
+    public void start(ServletContext webContext, ServiceReference<HttpServiceRuntime> httpServiceRuntime)
+    {
         this.webContext = webContext;
-        this.bundle = bundleContext.getBundle();
+        this.httpServiceRuntime = httpServiceRuntime;
 
         final Dictionary<String, Object> props = new Hashtable<String, Object>();
         props.put(HttpWhiteboardConstants.HTTP_WHITEBOARD_CONTEXT_NAME, HttpWhiteboardConstants.HTTP_WHITEBOARD_DEFAULT_CONTEXT_NAME);
         props.put(HttpWhiteboardConstants.HTTP_WHITEBOARD_CONTEXT_PATH, "/");
         props.put(Constants.SERVICE_RANKING, Integer.MIN_VALUE);
 
-        this.defaultContextRegistration = bundleContext.registerService(ServletContextHelper.class,
-                new ServiceFactory<ServletContextHelper>() {
+        this.defaultContextRegistration = bundleContext.registerService(
+                ServletContextHelper.class,
+                new ServiceFactory<ServletContextHelper>()
+                {
 
                     @Override
                     public ServletContextHelper getService(
                             final Bundle bundle,
-                            final ServiceRegistration<ServletContextHelper> registration) {
-                        return new ServletContextHelper(bundle) {
+                            final ServiceRegistration<ServletContextHelper> registration)
+                    {
+                        return new ServletContextHelper(bundle)
+                        {
 
                             @Override
-                            public String getMimeType(final String file) {
+                            public String getMimeType(final String file)
+                            {
                                 return MimeTypes.get().getByFile(file);
                             }
                         };
@@ -113,13 +125,12 @@ public final class ServletContextHelperManager
                     public void ungetService(
                             final Bundle bundle,
                             final ServiceRegistration<ServletContextHelper> registration,
-                            final ServletContextHelper service) {
+                            final ServletContextHelper service)
+                    {
                         // nothing to do
                     }
-                },
-                props);
+                }, props);
     }
-
     /**
      * Clean up the instance
      */
@@ -216,7 +227,7 @@ public final class ServletContextHelperManager
         {
             if ( info.isValid() )
             {
-                final ContextHandler handler = new ContextHandler(info, this.webContext, this.bundle);
+                final ContextHandler handler = new ContextHandler(info, this.webContext, this.bundleContext.getBundle());
                 synchronized ( this.contextMap )
                 {
                     List<ContextHandler> handlerList = this.contextMap.get(info.getName());
@@ -474,8 +485,8 @@ public final class ServletContextHelperManager
         {
             try
             {
-                final Filter f = this.bundle.getBundleContext().createFilter(target);
-                return f.match(this.httpService.getServiceReference());
+                final Filter f = this.bundleContext.createFilter(target);
+                return f.match(this.httpServiceRuntime);
             }
             catch ( final InvalidSyntaxException ise)
             {
