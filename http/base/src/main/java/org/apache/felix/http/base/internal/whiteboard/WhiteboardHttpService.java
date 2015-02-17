@@ -73,7 +73,6 @@ public final class WhiteboardHttpService
                     if (registry != null )
                     {
                         registry.addServlet(handler);
-                        contextHandler.addWhiteboardService(servletInfo);
                     }
                 } catch (final ServletException e) {
                     so.ungetService(servlet);
@@ -100,7 +99,6 @@ public final class WhiteboardHttpService
             }
         }
         contextHandler.ungetServletContext(servletInfo.getServiceReference().getBundle());
-        contextHandler.removeWhiteboardService(servletInfo);
     }
 
     /**
@@ -124,7 +122,6 @@ public final class WhiteboardHttpService
                 if (registry != null )
                 {
                     registry.addFilter(handler);
-                    contextHandler.addWhiteboardService(filterInfo);
                 }
             } catch (final ServletException e) {
                 // TODO create failure DTO
@@ -149,7 +146,6 @@ public final class WhiteboardHttpService
             }
         }
         contextHandler.ungetServletContext(filterInfo.getServiceReference().getBundle());
-        contextHandler.removeWhiteboardService(filterInfo);
     }
 
     /**
@@ -172,7 +168,6 @@ public final class WhiteboardHttpService
             if (registry != null )
             {
                 registry.addServlet(handler);
-                contextHandler.addWhiteboardService(resourceInfo);
             }
         } catch (ServletException e) {
             // TODO create failure DTO
@@ -193,7 +188,6 @@ public final class WhiteboardHttpService
             registry.removeServlet(servletInfo, true);
         }
         contextHandler.ungetServletContext(servletInfo.getServiceReference().getBundle());
-        contextHandler.removeWhiteboardService(servletInfo);
     }
 
     public void registerContext(@Nonnull final ContextHandler contextHandler)

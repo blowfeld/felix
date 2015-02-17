@@ -18,9 +18,7 @@ package org.apache.felix.http.base.internal.whiteboard;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListMap;
-import java.util.concurrent.ConcurrentSkipListSet;
 
 import javax.annotation.Nonnull;
 import javax.servlet.ServletContext;
@@ -45,7 +43,6 @@ import org.apache.felix.http.base.internal.runtime.ServletContextHelperInfo;
 import org.apache.felix.http.base.internal.runtime.ServletContextListenerInfo;
 import org.apache.felix.http.base.internal.runtime.ServletRequestAttributeListenerInfo;
 import org.apache.felix.http.base.internal.runtime.ServletRequestListenerInfo;
-import org.apache.felix.http.base.internal.runtime.WhiteboardServiceInfo;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.ServiceObjects;
 import org.osgi.framework.ServiceReference;
@@ -88,9 +85,6 @@ public final class ContextHandler implements Comparable<ContextHandler>
     private final Map<ServiceReference<ServletRequestAttributeListener>, ServletRequestAttributeListener> requestAttributeListeners =
             new ConcurrentSkipListMap<ServiceReference<ServletRequestAttributeListener>, ServletRequestAttributeListener>();
 
-    /** All whiteboard services - servlets, filters, resources. */
-    private final Set<WhiteboardServiceInfo<?>> whiteboardServices = new ConcurrentSkipListSet<WhiteboardServiceInfo<?>>();
-
     /**
      * Create new handler.
      * @param info
@@ -131,7 +125,6 @@ public final class ContextHandler implements Comparable<ContextHandler>
     public void deactivate()
     {
         this.ungetServletContext(bundle);
-        this.whiteboardServices.clear();
     }
 
     public void initialized(@Nonnull final ServletContextListenerInfo listenerInfo)
@@ -161,6 +154,11 @@ public final class ContextHandler implements Comparable<ContextHandler>
             this.ungetServletContext(listenerInfo.getServiceReference().getBundle());
             listenerInfo.ungetService(bundle, listener);
         }
+    }
+
+    public ServletContext getSharedContext()
+    {
+        return sharedContext;
     }
 
     public ExtServletContext getServletContext(@Nonnull final Bundle bundle)
@@ -485,20 +483,5 @@ public final class ContextHandler implements Comparable<ContextHandler>
                 }
             }
         };
-    }
-
-    public void addWhiteboardService(final WhiteboardServiceInfo<?> info)
-    {
-        this.whiteboardServices.add(info);
-    }
-
-    public void removeWhiteboardService(final WhiteboardServiceInfo<?> info)
-    {
-        this.whiteboardServices.remove(info);
-    }
-
-    public Set<WhiteboardServiceInfo<?>> getWhiteboardServices()
-    {
-        return this.whiteboardServices;
     }
 }

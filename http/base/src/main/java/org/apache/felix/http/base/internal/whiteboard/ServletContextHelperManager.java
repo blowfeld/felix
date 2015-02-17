@@ -27,17 +27,21 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.concurrent.ConcurrentSkipListSet;
 
 import javax.annotation.Nonnull;
 import javax.servlet.ServletContext;
 import javax.servlet.ServletContextListener;
 
+import org.apache.felix.http.base.internal.handler.HandlerRegistry;
 import org.apache.felix.http.base.internal.logger.SystemLogger;
 import org.apache.felix.http.base.internal.runtime.AbstractInfo;
+import org.apache.felix.http.base.internal.runtime.ContextRuntime;
 import org.apache.felix.http.base.internal.runtime.FilterInfo;
 import org.apache.felix.http.base.internal.runtime.HttpSessionAttributeListenerInfo;
 import org.apache.felix.http.base.internal.runtime.HttpSessionListenerInfo;
+import org.apache.felix.http.base.internal.runtime.RegistryRuntime;
 import org.apache.felix.http.base.internal.runtime.ResourceInfo;
 import org.apache.felix.http.base.internal.runtime.ServletContextAttributeListenerInfo;
 import org.apache.felix.http.base.internal.runtime.ServletContextHelperInfo;
@@ -526,5 +530,20 @@ public final class ServletContextHelperManager
              }
          }
          return handlers;
+    }
+
+    public RegistryRuntime getRuntime(HandlerRegistry registry)
+    {
+        List<ContextRuntime> contextRuntimes;
+        TreeSet<ContextHandler> contextHandlers = new TreeSet<ContextHandler>();
+        synchronized ( this.contextMap )
+        {
+            for (List<ContextHandler> contextHandlerList : this.contextMap.values())
+            {
+                contextHandlers.addAll(contextHandlerList);
+            }
+            contextRuntimes = registry.getContextRuntimes();
+        }
+        return new RegistryRuntime(contextHandlers, contextRuntimes);
     }
 }
