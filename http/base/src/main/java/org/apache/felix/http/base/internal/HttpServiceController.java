@@ -28,11 +28,7 @@ import org.apache.felix.http.base.internal.dispatch.Dispatcher;
 import org.apache.felix.http.base.internal.handler.HandlerRegistry;
 import org.apache.felix.http.base.internal.handler.HttpSessionWrapper;
 import org.apache.felix.http.base.internal.service.HttpServiceFactory;
-import org.apache.felix.http.base.internal.service.HttpServiceRuntimeImpl;
 import org.apache.felix.http.base.internal.service.listener.ServletContextAttributeListenerManager;
-import org.apache.felix.http.base.internal.whiteboard.ListenerRegistry;
-import org.apache.felix.http.base.internal.whiteboard.ServletContextHelperManager;
-import org.apache.felix.http.base.internal.whiteboard.WhiteboardHttpService;
 import org.apache.felix.http.base.internal.whiteboard.WhiteboardManager;
 import org.osgi.framework.BundleContext;
 
@@ -52,12 +48,7 @@ public final class HttpServiceController
         this.dispatcher = new Dispatcher(this.registry);
         this.plugin = new HttpServicePlugin(bundleContext, registry);
         this.httpServiceFactory = new HttpServiceFactory(this.bundleContext, this.registry);
-
-        WhiteboardHttpService whiteboardHttpService = new WhiteboardHttpService(this.bundleContext, this.registry);
-        ListenerRegistry listenerRegistry = new ListenerRegistry(bundleContext.getBundle());
-        ServletContextHelperManager contextManager = new ServletContextHelperManager(bundleContext, whiteboardHttpService, listenerRegistry);
-        HttpServiceRuntimeImpl httpServiceRuntime = new HttpServiceRuntimeImpl(registry, contextManager);
-        this.whiteboardManager = new WhiteboardManager(bundleContext, contextManager, httpServiceFactory, httpServiceRuntime);
+        this.whiteboardManager = new WhiteboardManager(bundleContext, this.httpServiceFactory, this.registry);
     }
 
     Dispatcher getDispatcher()

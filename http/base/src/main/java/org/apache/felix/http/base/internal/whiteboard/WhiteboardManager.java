@@ -26,6 +26,7 @@ import javax.servlet.ServletContext;
 import javax.servlet.http.HttpSession;
 
 import org.apache.felix.http.base.internal.context.ExtServletContext;
+import org.apache.felix.http.base.internal.handler.HandlerRegistry;
 import org.apache.felix.http.base.internal.handler.HttpSessionWrapper;
 import org.apache.felix.http.base.internal.service.HttpServiceFactory;
 import org.apache.felix.http.base.internal.service.HttpServiceRuntimeImpl;
@@ -55,26 +56,26 @@ public final class WhiteboardManager
 
     private final HttpServiceRuntimeImpl serviceRuntime;
 
-    private volatile ServletContextHelperManager contextManager;
+    private final ServletContextHelperManager contextManager;
 
     private volatile ServiceRegistration<HttpServiceRuntime> runtimeServiceReg;
 
     /**
-     * Create a new whiteboard http service
+     * Create a new whiteboard http manager
      * @param bundleContext
-     * @param contextManager
      * @param httpServiceFactory
-     * @param serviceRuntime
+     * @param registry 
      */
     public WhiteboardManager(final BundleContext bundleContext,
-            ServletContextHelperManager contextManager,
-            HttpServiceFactory httpServiceFactory,
-            HttpServiceRuntimeImpl serviceRuntime)
+            final HttpServiceFactory httpServiceFactory,
+            final HandlerRegistry registry)
     {
         this.bundleContext = bundleContext;
         this.httpServiceFactory = httpServiceFactory;
-        this.contextManager = contextManager;
-        this.serviceRuntime = serviceRuntime;
+        WhiteboardHttpService whiteboardHttpService = new WhiteboardHttpService(this.bundleContext, registry);
+        ListenerRegistry listenerRegistry = new ListenerRegistry(bundleContext.getBundle());
+        this.contextManager = new ServletContextHelperManager(bundleContext, whiteboardHttpService, listenerRegistry);
+        this.serviceRuntime = new HttpServiceRuntimeImpl(registry, this.contextManager);
     }
 
     public void start(final ServletContext context)
@@ -86,21 +87,21 @@ public final class WhiteboardManager
                 serviceRuntime,
                 this.serviceRuntime.getAttributes());
 
-        contextManager.start(context, runtimeServiceReg.getReference());
+        this.contextManager.start(context, this.runtimeServiceReg.getReference());
 
-        addTracker(new FilterTracker(bundleContext, contextManager));
-        addTracker(new ServletTracker(bundleContext, this.contextManager));
-        addTracker(new ResourceTracker(bundleContext, this.contextManager));
+        addTracker(new FilterTracker(this.bundleContext, contextManager));
+        addTracker(new ServletTracker(this.bundleContext, this.contextManager));
+        addTracker(new ResourceTracker(this.bundleContext, this.contextManager));
 
-        addTracker(new HttpSessionListenerTracker(bundleContext, this.contextManager));
-        addTracker(new HttpSessionAttributeListenerTracker(bundleContext, this.contextManager));
+        addTracker(new HttpSessionListenerTracker(this.bundleContext, this.contextManager));
+        addTracker(new HttpSessionAttributeListenerTracker(this.bundleContext, this.contextManager));
 
-        addTracker(new ServletContextHelperTracker(bundleContext, this.contextManager));
-        addTracker(new ServletContextListenerTracker(bundleContext, this.contextManager));
-        addTracker(new ServletContextAttributeListenerTracker(bundleContext, this.contextManager));
+        addTracker(new ServletContextHelperTracker(this.bundleContext, this.contextManager));
+        addTracker(new ServletContextListenerTracker(this.bundleContext, this.contextManager));
+        addTracker(new ServletContextAttributeListenerTracker(this.bundleContext, this.contextManager));
 
-        addTracker(new ServletRequestListenerTracker(bundleContext, this.contextManager));
-        addTracker(new ServletRequestAttributeListenerTracker(bundleContext, this.contextManager));
+        addTracker(new ServletRequestListenerTracker(this.bundleContext, this.contextManager));
+        addTracker(new ServletRequestAttributeListenerTracker(this.bundleContext, this.contextManager));
     }
 
     public void stop()
@@ -114,7 +115,6 @@ public final class WhiteboardManager
         if ( this.contextManager != null )
         {
             this.contextManager.close();
-            this.contextManager = null;
         }
 
         if ( this.runtimeServiceReg != null )
