@@ -23,15 +23,13 @@ import javax.servlet.http.HttpSessionAttributeListener;
 import javax.servlet.http.HttpSessionEvent;
 import javax.servlet.http.HttpSessionListener;
 
+import org.apache.felix.http.base.internal.console.HttpServicePlugin;
 import org.apache.felix.http.base.internal.dispatch.Dispatcher;
 import org.apache.felix.http.base.internal.handler.HandlerRegistry;
-import org.apache.felix.http.base.internal.handler.HttpServicePlugin;
 import org.apache.felix.http.base.internal.handler.HttpSessionWrapper;
 import org.apache.felix.http.base.internal.service.HttpServiceFactory;
 import org.apache.felix.http.base.internal.service.HttpServiceRuntimeImpl;
 import org.apache.felix.http.base.internal.service.listener.ServletContextAttributeListenerManager;
-import org.apache.felix.http.base.internal.service.listener.ServletRequestAttributeListenerManager;
-import org.apache.felix.http.base.internal.service.listener.ServletRequestListenerManager;
 import org.apache.felix.http.base.internal.whiteboard.ListenerRegistry;
 import org.apache.felix.http.base.internal.whiteboard.ServletContextHelperManager;
 import org.apache.felix.http.base.internal.whiteboard.WhiteboardHttpService;
@@ -70,16 +68,6 @@ public final class HttpServiceController
     ServletContextAttributeListenerManager getContextAttributeListener()
     {
         return this.httpServiceFactory.getContextAttributeListener();
-    }
-
-    ServletRequestListenerManager getRequestListener()
-    {
-        return this.httpServiceFactory.getRequestListener();
-    }
-
-    ServletRequestAttributeListenerManager getRequestAttributeListener()
-    {
-        return this.httpServiceFactory.getRequestAttributeListener();
     }
 
     HttpSessionListener getSessionListener()
