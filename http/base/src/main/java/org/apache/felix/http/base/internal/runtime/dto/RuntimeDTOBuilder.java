@@ -27,8 +27,8 @@ import java.util.Map;
 
 import org.apache.felix.http.base.internal.handler.FilterHandler;
 import org.apache.felix.http.base.internal.handler.ServletHandler;
-import org.apache.felix.http.base.internal.runtime.ContextRuntime;
-import org.apache.felix.http.base.internal.runtime.ContextRuntime.ErrorPage;
+import org.apache.felix.http.base.internal.runtime.HandlerRuntime;
+import org.apache.felix.http.base.internal.runtime.HandlerRuntime.ErrorPage;
 import org.apache.felix.http.base.internal.runtime.RegistryRuntime;
 import org.apache.felix.http.base.internal.whiteboard.ContextHandler;
 import org.osgi.framework.ServiceReference;
@@ -51,15 +51,11 @@ public final class RuntimeDTOBuilder
     private static final ListenerDTOBuilder LISTENER_DTO_BUILDER = new ListenerDTOBuilder();
 
     private final RegistryRuntime registry;
-    private final Collection<ServiceReference<?>> listenerRefs;
     private final Map<String, Object> serviceProperties;
 
-    public RuntimeDTOBuilder(RegistryRuntime registry,
-            Collection<ServiceReference<?>> listenerRefs,
-            Map<String, Object> serviceProperties)
+    public RuntimeDTOBuilder(RegistryRuntime registry, Map<String, Object> serviceProperties)
     {
         this.registry = registry;
-        this.listenerRefs = listenerRefs;
         this.serviceProperties = serviceProperties;
     }
 
@@ -94,19 +90,23 @@ public final class RuntimeDTOBuilder
         List<ServletContextDTO> contextDTOs = new ArrayList<ServletContextDTO>();
         for (ContextHandler context : registry.getContexts())
         {
-            contextDTOs.add(createContextDTO(context, registry.getContextRuntime(context)));
+            contextDTOs.add(createContextDTO(context,
+                    registry.getHandlerRuntime(context),
+                    registry.getListenerRuntime(context)));
         }
         return contextDTOs.toArray(CONTEXT_DTO_ARRAY);
     }
 
-    private ServletContextDTO createContextDTO(ContextHandler context, ContextRuntime contextRuntime)
+    private ServletContextDTO createContextDTO(ContextHandler context,
+            HandlerRuntime handlerRuntime,
+            Collection<ServiceReference<?>> listenerRefs)
     {
-        Collection<ServletHandler> servletHandlers = contextRuntime.getServletHandlers();
+        Collection<ServletHandler> servletHandlers = handlerRuntime.getServletHandlers();
         //TODO missing functionality
         Collection<ServletHandler> resourceHandlers = Collections.emptyList();
-        Collection<FilterHandler> filterHandlers = contextRuntime.getFilterHandlers();
-        Collection<ErrorPage> errorPages = contextRuntime.getErrorPages();
-        long servletContextId = contextRuntime.getServiceId();
+        Collection<FilterHandler> filterHandlers = handlerRuntime.getFilterHandlers();
+        Collection<ErrorPage> errorPages = handlerRuntime.getErrorPages();
+        long servletContextId = handlerRuntime.getServiceId();
 
         Collection<ServletDTO> servletDTOs = SERVLET_DTO_BUILDER.build(servletHandlers, servletContextId);
         Collection<ResourceDTO> resourcesDTOs = RESOURCE_DTO_BUILDER.build(resourceHandlers, servletContextId);

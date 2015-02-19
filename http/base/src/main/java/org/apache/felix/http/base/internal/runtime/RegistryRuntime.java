@@ -19,40 +19,56 @@
 package org.apache.felix.http.base.internal.runtime;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.felix.http.base.internal.whiteboard.ContextHandler;
+import org.osgi.framework.ServiceReference;
 
 public final class RegistryRuntime
 {
-    private final Collection<ContextRuntime> contextRuntimes;
     private final Collection<ContextHandler> contexts;
-    private volatile Map<Long, ContextRuntime> runtimesByServiceId;
+    private final Map<Long, Collection<ServiceReference<?>>> listenerRuntimes;
+    private final Map<Long, HandlerRuntime> handlerRuntimes;
 
-    public RegistryRuntime(Collection<ContextHandler> contexts, Collection<ContextRuntime> contextRuntimes)
+    public RegistryRuntime(Collection<ContextHandler> contexts,
+            Collection<HandlerRuntime> contextRuntimes,
+            Map<Long, Collection<ServiceReference<?>>> listenerRuntimes)
     {
         this.contexts = contexts;
-        this.contextRuntimes = contextRuntimes;
+        this.handlerRuntimes = createServiceIdMap(contextRuntimes);
+        this.listenerRuntimes = listenerRuntimes;
     }
 
-    public ContextRuntime getContextRuntime(ContextHandler contextHandler)
+    private static Map<Long, HandlerRuntime> createServiceIdMap(Collection<HandlerRuntime> contextRuntimes)
     {
-        if (runtimesByServiceId == null)
-        {
-            runtimesByServiceId = createServiceIdMap();
-        }
-        return runtimesByServiceId.get(contextHandler.getContextInfo().getServiceId());
-    }
-
-    private Map<Long, ContextRuntime> createServiceIdMap()
-    {
-        Map<Long, ContextRuntime> runtimesMap = new HashMap<Long, ContextRuntime>();
-        for (ContextRuntime contextRuntime : contextRuntimes)
+        Map<Long, HandlerRuntime> runtimesMap = new HashMap<Long, HandlerRuntime>();
+        for (HandlerRuntime contextRuntime : contextRuntimes)
         {
             runtimesMap.put(contextRuntime.getServiceId(), contextRuntime);
         }
         return runtimesMap;
+    }
+
+    public HandlerRuntime getHandlerRuntime(ContextHandler contextHandler)
+    {
+        long serviceId = contextHandler.getContextInfo().getServiceId();
+
+        if (handlerRuntimes.containsKey(serviceId))
+        {
+            return handlerRuntimes.get(serviceId);
+        }
+        return HandlerRuntime.empty(serviceId);
+    }
+
+    public Collection<ServiceReference<?>> getListenerRuntime(ContextHandler contextHandler)
+    {
+        if (listenerRuntimes.containsKey(contextHandler.getContextInfo().getServiceId()))
+        {
+            return listenerRuntimes.get(contextHandler.getContextInfo().getServiceId());
+        }
+        return Collections.emptyList();
     }
 
     public Collection<ContextHandler> getContexts()

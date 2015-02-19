@@ -32,6 +32,7 @@ import org.apache.felix.http.base.internal.service.HttpServiceRuntimeImpl;
 import org.apache.felix.http.base.internal.service.listener.ServletContextAttributeListenerManager;
 import org.apache.felix.http.base.internal.service.listener.ServletRequestAttributeListenerManager;
 import org.apache.felix.http.base.internal.service.listener.ServletRequestListenerManager;
+import org.apache.felix.http.base.internal.whiteboard.ListenerRegistry;
 import org.apache.felix.http.base.internal.whiteboard.ServletContextHelperManager;
 import org.apache.felix.http.base.internal.whiteboard.WhiteboardHttpService;
 import org.apache.felix.http.base.internal.whiteboard.WhiteboardManager;
@@ -55,7 +56,8 @@ public final class HttpServiceController
         this.httpServiceFactory = new HttpServiceFactory(this.bundleContext, this.registry);
 
         WhiteboardHttpService whiteboardHttpService = new WhiteboardHttpService(this.bundleContext, this.registry);
-        ServletContextHelperManager contextManager = new ServletContextHelperManager(bundleContext, whiteboardHttpService);
+        ListenerRegistry listenerRegistry = new ListenerRegistry(bundleContext.getBundle());
+        ServletContextHelperManager contextManager = new ServletContextHelperManager(bundleContext, whiteboardHttpService, listenerRegistry);
         HttpServiceRuntimeImpl httpServiceRuntime = new HttpServiceRuntimeImpl(registry, contextManager);
         this.whiteboardManager = new WhiteboardManager(bundleContext, contextManager, httpServiceFactory, httpServiceRuntime);
     }

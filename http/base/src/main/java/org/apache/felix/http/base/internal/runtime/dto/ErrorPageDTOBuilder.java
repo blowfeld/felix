@@ -21,7 +21,7 @@ package org.apache.felix.http.base.internal.runtime.dto;
 import java.util.Collection;
 import java.util.Iterator;
 
-import org.apache.felix.http.base.internal.runtime.ContextRuntime.ErrorPage;
+import org.apache.felix.http.base.internal.runtime.HandlerRuntime.ErrorPage;
 import org.osgi.service.http.runtime.dto.ErrorPageDTO;
 
 final class ErrorPageDTOBuilder extends BaseServletDTOBuilder<ErrorPage, ErrorPageDTO>

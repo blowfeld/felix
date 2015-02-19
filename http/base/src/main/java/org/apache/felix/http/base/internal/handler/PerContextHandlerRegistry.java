@@ -29,8 +29,8 @@ import javax.servlet.Filter;
 import javax.servlet.Servlet;
 import javax.servlet.ServletException;
 
-import org.apache.felix.http.base.internal.runtime.ContextRuntime;
-import org.apache.felix.http.base.internal.runtime.ContextRuntime.ErrorPage;
+import org.apache.felix.http.base.internal.runtime.HandlerRuntime;
+import org.apache.felix.http.base.internal.runtime.HandlerRuntime.ErrorPage;
 import org.apache.felix.http.base.internal.runtime.FilterInfo;
 import org.apache.felix.http.base.internal.runtime.ServletContextHelperInfo;
 import org.apache.felix.http.base.internal.runtime.ServletInfo;
@@ -369,11 +369,11 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
         return this.serviceId;
     }
 
-    public synchronized ContextRuntime getRuntime() {
+    public synchronized HandlerRuntime getRuntime() {
         List<ServletHandler> servletHandlers = new ArrayList<ServletHandler>(servletMap.values());
         List<FilterHandler> filterHandlers = new ArrayList<FilterHandler>(filterMap.values());
 
-        Collection<ErrorPage> errorPages = new ArrayList<ContextRuntime.ErrorPage>();
+        Collection<ErrorPage> errorPages = new ArrayList<HandlerRuntime.ErrorPage>();
         Collection<ServletHandler> errorHandlers = errorsMapping.getMappedHandlers();
         for (ServletHandler servletHandler : errorHandlers)
         {
@@ -381,6 +381,6 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
         }
         servletHandlers.removeAll(errorHandlers);
 
-        return new ContextRuntime(servletHandlers, filterHandlers, errorPages, serviceId);
+        return new HandlerRuntime(servletHandlers, filterHandlers, errorPages, serviceId);
     }
 }

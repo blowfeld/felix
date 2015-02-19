@@ -19,18 +19,19 @@
 package org.apache.felix.http.base.internal.runtime;
 
 import java.util.Collection;
+import java.util.Collections;
 
 import org.apache.felix.http.base.internal.handler.FilterHandler;
 import org.apache.felix.http.base.internal.handler.ServletHandler;
 
-public final class ContextRuntime
+public final class HandlerRuntime
 {
     private final Collection<ServletHandler> servletHandlers;
     private final Collection<FilterHandler> filterHandlers;
     private final Collection<ErrorPage> errorPages;
     private final long serviceId;
 
-    public ContextRuntime(Collection<ServletHandler> servletHandlers,
+    public HandlerRuntime(Collection<ServletHandler> servletHandlers,
             Collection<FilterHandler> filterHandlers,
             Collection<ErrorPage> errorPages,
             long serviceId)
@@ -39,6 +40,14 @@ public final class ContextRuntime
         this.filterHandlers = filterHandlers;
         this.errorPages = errorPages;
         this.serviceId = serviceId;
+    }
+
+    public static HandlerRuntime empty(long serviceId)
+    {
+        return new HandlerRuntime(Collections.<ServletHandler>emptyList(),
+                Collections.<FilterHandler>emptyList(),
+                Collections.<ErrorPage> emptyList(),
+                serviceId);
     }
 
     public Collection<ServletHandler> getServletHandlers()

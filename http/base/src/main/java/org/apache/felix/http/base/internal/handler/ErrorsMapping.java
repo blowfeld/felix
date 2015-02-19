@@ -16,21 +16,21 @@
  */
 package org.apache.felix.http.base.internal.handler;
 
+import static org.apache.felix.http.base.internal.util.CollectionUtils.union;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.regex.Pattern;
 
 import javax.servlet.Servlet;
 import javax.servlet.ServletException;
 
-import org.apache.felix.http.base.internal.runtime.ContextRuntime;
+import org.apache.felix.http.base.internal.runtime.HandlerRuntime;
 
 public final class ErrorsMapping
 {
@@ -129,11 +129,11 @@ public final class ErrorsMapping
         return union(errorCodesMap.values(), exceptionsMap.values());
     }
 
-    public ContextRuntime.ErrorPage getErrorPage(ServletHandler servletHandler)
+    public HandlerRuntime.ErrorPage getErrorPage(ServletHandler servletHandler)
     {
         Collection<Integer> errorCodes = getCopy(servletHandler, invertedErrorCodesMap);
         Collection<String> exceptions = getCopy(servletHandler, invertedExceptionsMap);
-        return new ContextRuntime.ErrorPage(servletHandler, errorCodes, exceptions);
+        return new HandlerRuntime.ErrorPage(servletHandler, errorCodes, exceptions);
     }
 
     private static <T> List<T> getCopy(ServletHandler key, Map<Servlet, Collection<T>> map)
@@ -145,15 +145,5 @@ public final class ErrorsMapping
         }
 
         return Collections.emptyList();
-    }
-
-    private static <T> Set<T> union(Collection<T>... contextCollections)
-    {
-        Set<T> union = new HashSet<T>();
-        for (Collection<T> contexts : contextCollections)
-        {
-            union.addAll(contexts);
-        }
-        return union;
     }
 }

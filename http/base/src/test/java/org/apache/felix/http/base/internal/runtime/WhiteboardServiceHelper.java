@@ -34,7 +34,7 @@ import javax.servlet.Servlet;
 import org.apache.felix.http.base.internal.context.ExtServletContext;
 import org.apache.felix.http.base.internal.handler.FilterHandler;
 import org.apache.felix.http.base.internal.handler.ServletHandler;
-import org.apache.felix.http.base.internal.runtime.ContextRuntime.ErrorPage;
+import org.apache.felix.http.base.internal.runtime.HandlerRuntime.ErrorPage;
 
 public final class WhiteboardServiceHelper
 {

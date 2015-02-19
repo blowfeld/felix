@@ -32,6 +32,7 @@ import static org.apache.felix.http.base.internal.runtime.WhiteboardServiceHelpe
 import static org.apache.felix.http.base.internal.runtime.WhiteboardServiceHelper.createTestFilterWithServiceId;
 import static org.apache.felix.http.base.internal.runtime.WhiteboardServiceHelper.createTestServlet;
 import static org.apache.felix.http.base.internal.runtime.WhiteboardServiceHelper.createTestServletWithServiceId;
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -44,8 +45,10 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
@@ -56,13 +59,16 @@ import javax.servlet.ServletContext;
 import org.apache.felix.http.base.internal.context.ExtServletContext;
 import org.apache.felix.http.base.internal.handler.FilterHandler;
 import org.apache.felix.http.base.internal.handler.ServletHandler;
-import org.apache.felix.http.base.internal.runtime.ContextRuntime;
-import org.apache.felix.http.base.internal.runtime.ContextRuntime.ErrorPage;
+import org.apache.felix.http.base.internal.runtime.HandlerRuntime;
+import org.apache.felix.http.base.internal.runtime.HandlerRuntime.ErrorPage;
 import org.apache.felix.http.base.internal.runtime.FilterInfo;
 import org.apache.felix.http.base.internal.runtime.RegistryRuntime;
 import org.apache.felix.http.base.internal.runtime.ServletContextHelperInfo;
 import org.apache.felix.http.base.internal.runtime.ServletInfo;
 import org.apache.felix.http.base.internal.whiteboard.ContextHandler;
+import org.apache.felix.http.base.internal.whiteboard.ListenerRegistry;
+import org.apache.felix.http.base.internal.whiteboard.PerContextEventListener;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -70,9 +76,12 @@ import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
 import org.osgi.dto.DTO;
+import org.osgi.framework.Bundle;
+import org.osgi.framework.Constants;
 import org.osgi.framework.ServiceReference;
 import org.osgi.service.http.runtime.dto.ErrorPageDTO;
 import org.osgi.service.http.runtime.dto.FilterDTO;
+import org.osgi.service.http.runtime.dto.ListenerDTO;
 import org.osgi.service.http.runtime.dto.RuntimeDTO;
 import org.osgi.service.http.runtime.dto.ServletContextDTO;
 import org.osgi.service.http.runtime.dto.ServletDTO;
@@ -87,6 +96,9 @@ public class RuntimeDTOBuilderTest
     private static final Long ID_A = ID_COUNTER.incrementAndGet();
     private static final Long ID_B = ID_COUNTER.incrementAndGet();
 
+    private static final Long ID_LISTENER_1 = ID_COUNTER.incrementAndGet();
+    private static final Long ID_LISTENER_2 = ID_COUNTER.incrementAndGet();
+
     private static final List<String> CONTEXT_NAMES = Arrays.asList("0", "A", "B");
 
     @SuppressWarnings("serial")
@@ -99,25 +111,37 @@ public class RuntimeDTOBuilderTest
                 }
             };
 
+    @Mock private Bundle bundle;
+
     @Mock private DTO testDTO;
 
     @Mock private ExtServletContext context_0;
     @Mock private ExtServletContext context_A;
     @Mock private ExtServletContext context_B;
 
+    @Mock private ServiceReference<?> listener_1;
+    @Mock private ServiceReference<?> listener_2;
+
     private RegistryRuntime registry;
-    private Collection<ServiceReference<?>> listeners;
-    private Map<String, Object> runtimeAttributes = Collections.emptyMap();
+    private Map<String, Object> runtimeAttributes;
+	private ListenerRegistry listenerRegistry;
 
+    @Before
+    public void setUp()
+    {
+        registry = null;
+        runtimeAttributes = Collections.emptyMap();
+        listenerRegistry = new ListenerRegistry(bundle);
+    }
 
-    public ContextHandler setupContext(ServletContext context, String name, long serviceId)
+	public ContextHandler setupContext(ServletContext context, String name, long serviceId)
     {
         when(context.getServletContextName()).thenReturn(name);
 
         String path = "/" + name;
         when(context.getContextPath()).thenReturn(path);
 
-        List<String> initParameterNames = Arrays.asList("param_1", "param_2");
+        List<String> initParameterNames = asList("param_1", "param_2");
         when(context.getInitParameterNames()).thenReturn(Collections.enumeration(initParameterNames));
         when(context.getInitParameter("param_1")).thenReturn("init_val_1");
         when(context.getInitParameter("param_2")).thenReturn("init_val_2");
@@ -127,7 +151,8 @@ public class RuntimeDTOBuilderTest
         initParemters.put("param_2", "init_val_2");
         ServletContextHelperInfo contextInfo = createContextInfo(0, serviceId, name, path, initParemters);
 
-        ContextHandler contextHandler = new ContextHandler(contextInfo, context, null);
+        PerContextEventListener eventListener = listenerRegistry.addContext(contextInfo);
+        ContextHandler contextHandler = new ContextHandler(contextInfo, context, eventListener, bundle);
 
         ServletContext sharedContext = contextHandler.getSharedContext();
         sharedContext.setAttribute("intAttr", 1);
@@ -138,13 +163,35 @@ public class RuntimeDTOBuilderTest
         return contextHandler;
     }
 
-    public void setupRegistry(List<ContextHandler> contexts, List<ContextRuntime> contextRuntimes) {
-        registry = new RegistryRuntime(contexts, contextRuntimes);
-        listeners = Collections.emptyList();
+    @SuppressWarnings("unchecked")
+    public Map<Long, Collection<ServiceReference<?>>> setupListeners()
+    {
+        Map<Long, Collection<ServiceReference<?>>> listenerRuntimes = new HashMap<Long, Collection<ServiceReference<?>>>();
+        listenerRuntimes.put(ID_0, asList(listener_1, listener_2));
+        listenerRuntimes.put(ID_A, Arrays.<ServiceReference<?>> asList(listener_1));
+        listenerRuntimes.put(ID_B, asList(listener_1, listener_2));
+
+        when(listener_1.getProperty(Constants.SERVICE_ID)).thenReturn(ID_LISTENER_1);
+        when(listener_1.getProperty(Constants.OBJECTCLASS))
+                .thenReturn(new String[] { "org.test.interface_1" });
+
+        when(listener_2.getProperty(Constants.SERVICE_ID)).thenReturn(ID_LISTENER_2);
+        when(listener_2.getProperty(Constants.OBJECTCLASS))
+                .thenReturn(new String[] { "org.test.interface_1", "org.test.interface_2" });
+
+        return listenerRuntimes;
+    }
+
+    public void setupRegistry(List<ContextHandler> contexts,
+            List<HandlerRuntime> contextRuntimes,
+            Map<Long, Collection<ServiceReference<?>>> listenerRuntimes)
+    {
+        registry = new RegistryRuntime(contexts, contextRuntimes, listenerRuntimes);
     }
 
     @Test
-    public void buildRuntimeDTO() {
+    public void buildRuntimeDTO()
+    {
         ContextHandler contextHelper_0 = setupContext(context_0, "0", ID_0);
         ContextHandler contextHelper_A = setupContext(context_A, "A", ID_A);
         ContextHandler contextHelper_B = setupContext(context_B, "B", ID_B);
@@ -152,12 +199,12 @@ public class RuntimeDTOBuilderTest
         List<ServletHandler> servlets_0 = asList(createTestServlet("1", context_0));
         List<FilterHandler> filters_0 = asList(createTestFilter("1", context_0));
         List<ErrorPage> errorPages_0 = asList(createErrorPage("E_1", context_0));
-        ContextRuntime contextRuntime_0 = new ContextRuntime(servlets_0, filters_0, errorPages_0, ID_0);
+        HandlerRuntime contextRuntime_0 = new HandlerRuntime(servlets_0, filters_0, errorPages_0, ID_0);
 
         List<ServletHandler> servlets_A = asList(createTestServlet("A_1", context_A));
         List<FilterHandler> filters_A = asList(createTestFilter("A_1", context_A));
         List<ErrorPage> errorPages_A = asList(createErrorPage("E_A_1", context_A));
-        ContextRuntime contextRuntime_A = new ContextRuntime(servlets_A, filters_A, errorPages_A, ID_A);
+        HandlerRuntime contextRuntime_A = new HandlerRuntime(servlets_A, filters_A, errorPages_A, ID_A);
 
         List<ServletHandler> servlets_B = asList(createTestServletWithServiceId("B_1", context_B),
                 createTestServletWithServiceId("B_2", context_B));
@@ -165,12 +212,15 @@ public class RuntimeDTOBuilderTest
                 createTestFilterWithServiceId("B_2", context_B));
         List<ErrorPage> errorPages_B = asList(createErrorPageWithServiceId("E_B_1", context_B),
                 createErrorPageWithServiceId("E_B_2", context_B));
-        ContextRuntime contextRuntime_B = new ContextRuntime(servlets_B, filters_B, errorPages_B, ID_B);
+        HandlerRuntime contextRuntime_B = new HandlerRuntime(servlets_B, filters_B, errorPages_B, ID_B);
+
+        Map<Long, Collection<ServiceReference<?>>> listenerRuntimes = setupListeners();
 
         setupRegistry(asList(contextHelper_0, contextHelper_A, contextHelper_B),
-                asList(contextRuntime_0, contextRuntime_A, contextRuntime_B));
+                asList(contextRuntime_0, contextRuntime_A, contextRuntime_B),
+                listenerRuntimes);
 
-        RuntimeDTO runtimeDTO = new RuntimeDTOBuilder(registry, listeners, runtimeAttributes).build();
+        RuntimeDTO runtimeDTO = new RuntimeDTOBuilder(registry, runtimeAttributes).build();
 
         assertServletContextDTOs(runtimeDTO);
     }
@@ -197,6 +247,8 @@ public class RuntimeDTOBuilderTest
                         1, servletContextDTO.filterDTOs.length);
                 assertEquals(contextName,
                         1, servletContextDTO.errorPageDTOs.length);
+                assertEquals(contextName,
+                        2, servletContextDTO.listenerDTOs.length);
             }
             else
             {
@@ -214,6 +266,8 @@ public class RuntimeDTOBuilderTest
                         expectedChildren, servletContextDTO.filterDTOs.length);
                 assertEquals(contextName,
                         expectedChildren, servletContextDTO.errorPageDTOs.length);
+                assertEquals(contextName,
+                        expectedChildren, servletContextDTO.listenerDTOs.length);
             }
             seenServiceIds.add(servletContextDTO.serviceId);
 
@@ -247,8 +301,12 @@ public class RuntimeDTOBuilderTest
             serviceIds = assertErrorPageDTOs(contextName,
                     servletContextDTO.serviceId, servletContextDTO.errorPageDTOs);
             seenServiceIds.addAll(serviceIds);
+
+            serviceIds = assertListenerDTOs(contextName,
+                    servletContextDTO.serviceId, servletContextDTO.listenerDTOs);
+            seenServiceIds.addAll(serviceIds);
         }
-        assertEquals(8, seenServiceIds.tailSet(0L).size());
+        assertEquals(10, seenServiceIds.tailSet(0L).size());
         assertEquals(7, seenServiceIds.headSet(0L).size());
     }
 
@@ -407,6 +465,27 @@ public class RuntimeDTOBuilderTest
         return serviceIds;
     }
 
+    private Collection<Long> assertListenerDTOs(String contextName, long contextId, ListenerDTO[] dtos)
+    {
+        Set<Long> serviceIds = new HashSet<Long>();
+        for (ListenerDTO listenerDTO : dtos)
+        {
+            assertEquals(contextId, listenerDTO.servletContextId);
+            serviceIds.add(listenerDTO.serviceId);
+        }
+
+        assertEquals(ID_LISTENER_1.longValue(), dtos[0].serviceId);
+        assertArrayEquals(new String[] { "org.test.interface_1" },
+                dtos[0].types);
+        if (dtos.length > 1)
+        {
+            assertEquals(ID_LISTENER_2.longValue(), dtos[1].serviceId);
+            assertArrayEquals(new String[] { "org.test.interface_1", "org.test.interface_2" }, dtos[1].types);
+        }
+
+        return serviceIds;
+    }
+
     @Test
     public void nullValuesInEntities() {
         ContextHandler contextHandler = setupContext(context_0, "0", ID_0);
@@ -433,10 +512,11 @@ public class RuntimeDTOBuilderTest
                 Collections.<String, String>emptyMap());
         FilterHandler filterHandler = new FilterHandler(null, context_0, mock(Filter.class), filterInfo);
 
-        ContextRuntime contextRuntime = new ContextRuntime(asList(servletHandler), asList(filterHandler), Collections.<ErrorPage>emptyList(), ID_0);
-        setupRegistry(asList(contextHandler), asList(contextRuntime));
+        HandlerRuntime contextRuntime = new HandlerRuntime(asList(servletHandler), asList(filterHandler), Collections.<ErrorPage>emptyList(), ID_0);
+        setupRegistry(asList(contextHandler), asList(contextRuntime),
+                Collections.<Long, Collection<ServiceReference<?>>>emptyMap());
 
-        RuntimeDTO runtimeDTO = new RuntimeDTOBuilder(registry, listeners, runtimeAttributes).build();
+        RuntimeDTO runtimeDTO = new RuntimeDTOBuilder(registry, runtimeAttributes).build();
 
         assertEquals(1, runtimeDTO.servletContextDTOs.length);
         assertEquals(1, runtimeDTO.servletContextDTOs[0].servletDTOs.length);
@@ -455,23 +535,16 @@ public class RuntimeDTOBuilderTest
         ContextHandler contextHandler_A = setupContext(context_A, "A", ID_A);
 
         setupRegistry(asList(contextHandler_0, contextHandler_A),
-                asList(createEmptyContextRuntime(ID_0), createEmptyContextRuntime(ID_A)));
+                asList(HandlerRuntime.empty(ID_0), HandlerRuntime.empty(ID_A)),
+                Collections.<Long, Collection<ServiceReference<?>>>emptyMap());
 
-        RuntimeDTO runtimeDTO = new RuntimeDTOBuilder(registry, listeners, runtimeAttributes).build();
+        RuntimeDTO runtimeDTO = new RuntimeDTOBuilder(registry, runtimeAttributes).build();
 
         assertEquals(2, runtimeDTO.servletContextDTOs.length);
         assertEquals(0, runtimeDTO.servletContextDTOs[0].servletDTOs.length);
         assertEquals(0, runtimeDTO.servletContextDTOs[0].filterDTOs.length);
         assertEquals(0, runtimeDTO.servletContextDTOs[1].servletDTOs.length);
         assertEquals(0, runtimeDTO.servletContextDTOs[1].filterDTOs.length);
-    }
-
-    private ContextRuntime createEmptyContextRuntime(long id)
-    {
-        return new ContextRuntime(Collections.<ServletHandler>emptyList(),
-                Collections.<FilterHandler>emptyList(),
-                Collections.<ErrorPage>emptyList(),
-                id);
     }
 
     @Test
@@ -493,12 +566,13 @@ public class RuntimeDTOBuilderTest
         ServletHandler servletHandler = new ServletHandler(null, context_0, servletInfo, servlet);
         when(servlet.getServletInfo()).thenReturn("info_0");
 
-        ContextRuntime contextRuntime = new ContextRuntime(asList(servletHandler),
+        HandlerRuntime contextRuntime = new HandlerRuntime(asList(servletHandler),
                 Collections.<FilterHandler>emptyList(),
                 Collections.<ErrorPage>emptyList(),
                 ID_0);
-        setupRegistry(asList(contextHandler), asList(contextRuntime));
+        setupRegistry(asList(contextHandler), asList(contextRuntime),
+                Collections.<Long, Collection<ServiceReference<?>>> emptyMap());
 
-        new RuntimeDTOBuilder(registry, listeners, runtimeAttributes).build();
+        new RuntimeDTOBuilder(registry, runtimeAttributes).build();
     }
 }
