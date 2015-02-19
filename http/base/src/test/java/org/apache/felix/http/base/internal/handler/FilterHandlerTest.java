@@ -61,12 +61,13 @@ public class FilterHandlerTest extends AbstractHandlerTest
 
         assertEquals(0, h1.compareTo(h1));
 
-        assertEquals(1, h1.compareTo(h2));
-        assertEquals(-1, h2.compareTo(h1));
+        // h2 has a higher rank as h1, so should be called first...
+        assertEquals(1, h2.compareTo(h1));
+        assertEquals(-1, h1.compareTo(h2));
 
         // h2 is actually registered first, so should be called first...
-        assertEquals(-1, h2.compareTo(h3));
-        assertEquals(1, h3.compareTo(h2));
+        assertEquals(1, h2.compareTo(h3));
+        assertEquals(-1, h3.compareTo(h2));
     }
 
     @Test
