@@ -37,8 +37,8 @@ import javax.servlet.ServletContextListener;
 import org.apache.felix.http.base.internal.handler.HandlerRegistry;
 import org.apache.felix.http.base.internal.logger.SystemLogger;
 import org.apache.felix.http.base.internal.runtime.AbstractInfo;
-import org.apache.felix.http.base.internal.runtime.HandlerRuntime;
 import org.apache.felix.http.base.internal.runtime.FilterInfo;
+import org.apache.felix.http.base.internal.runtime.HandlerRuntime;
 import org.apache.felix.http.base.internal.runtime.ListenerInfo;
 import org.apache.felix.http.base.internal.runtime.RegistryRuntime;
 import org.apache.felix.http.base.internal.runtime.ResourceInfo;
@@ -142,8 +142,11 @@ public final class ServletContextHelperManager
     public void close()
     {
         // TODO cleanup
-
-        this.defaultContextRegistration.unregister();
+        if (this.defaultContextRegistration != null)
+        {
+            this.defaultContextRegistration.unregister();
+            this.defaultContextRegistration = null;
+        }
     }
 
     /**
