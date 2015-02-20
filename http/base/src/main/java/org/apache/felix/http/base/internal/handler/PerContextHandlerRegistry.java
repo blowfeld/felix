@@ -34,7 +34,6 @@ import org.apache.felix.http.base.internal.runtime.HandlerRuntime;
 import org.apache.felix.http.base.internal.runtime.HandlerRuntime.ErrorPage;
 import org.apache.felix.http.base.internal.runtime.ServletContextHelperInfo;
 import org.apache.felix.http.base.internal.runtime.ServletInfo;
-import org.apache.felix.http.base.internal.util.InternalIdFactory;
 
 public final class PerContextHandlerRegistry implements Comparable<PerContextHandlerRegistry>
 {
