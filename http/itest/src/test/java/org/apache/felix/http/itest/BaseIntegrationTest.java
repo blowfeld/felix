@@ -20,7 +20,7 @@ package org.apache.felix.http.itest;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.ops4j.pax.exam.Constants.START_LEVEL_SYSTEM_BUNDLES;
 import static org.ops4j.pax.exam.Constants.START_LEVEL_TEST_BUNDLE;
 import static org.ops4j.pax.exam.CoreOptions.bootDelegationPackage;
@@ -38,11 +38,13 @@ import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.Collection;
 import java.util.Dictionary;
+import java.util.HashMap;
 import java.util.Hashtable;
+import java.util.Map;
 import java.util.Scanner;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 
 import javax.inject.Inject;
 import javax.servlet.Filter;
@@ -64,10 +66,10 @@ import org.ops4j.pax.exam.Option;
 import org.ops4j.pax.exam.junit.Configuration;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
-import org.osgi.framework.ServiceRegistration;
-import org.osgi.service.cm.ConfigurationAdmin;
-import org.osgi.service.cm.ConfigurationEvent;
-import org.osgi.service.cm.ConfigurationListener;
+import org.osgi.framework.Constants;
+import org.osgi.framework.ServiceReference;
+import org.osgi.service.cm.ConfigurationException;
+import org.osgi.service.cm.ManagedService;
 import org.osgi.service.http.HttpContext;
 import org.osgi.service.http.HttpService;
 import org.osgi.service.http.NamespaceException;
@@ -89,13 +91,14 @@ public abstract class BaseIntegrationTest
         {
             this(null, null);
         }
-        
+
         public TestFilter(CountDownLatch initLatch, CountDownLatch destroyLatch)
         {
             m_initLatch = initLatch;
             m_destroyLatch = destroyLatch;
         }
 
+        @Override
         public void destroy()
         {
             if (m_destroyLatch != null)
@@ -104,11 +107,13 @@ public abstract class BaseIntegrationTest
             }
         }
 
+        @Override
         public final void doFilter(ServletRequest req, ServletResponse resp, FilterChain chain) throws IOException, ServletException
         {
             filter((HttpServletRequest) req, (HttpServletResponse) resp, chain);
         }
 
+        @Override
         public void init(FilterConfig config) throws ServletException
         {
             if (m_initLatch != null)
@@ -119,7 +124,7 @@ public abstract class BaseIntegrationTest
 
         protected void filter(HttpServletRequest req, HttpServletResponse resp, FilterChain chain) throws IOException, ServletException
         {
-            ((HttpServletResponse) resp).setStatus(HttpServletResponse.SC_OK);
+            resp.setStatus(HttpServletResponse.SC_OK);
         }
     }
 
@@ -134,7 +139,7 @@ public abstract class BaseIntegrationTest
         {
             this(null, null);
         }
-        
+
         public TestServlet(CountDownLatch initLatch, CountDownLatch destroyLatch)
         {
             m_initLatch = initLatch;
@@ -308,7 +313,7 @@ public abstract class BaseIntegrationTest
             bootDelegationPackage("sun.*"),
             cleanCaches(),
             CoreOptions.systemProperty("logback.configurationFile").value("file:src/test/resources/logback.xml"), //
-//            CoreOptions.vmOption("-Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=8787"),
+            //            CoreOptions.vmOption("-Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=8787"),
 
             mavenBundle("org.slf4j", "slf4j-api").version("1.6.5").startLevel(START_LEVEL_SYSTEM_BUNDLES),
             mavenBundle("ch.qos.logback", "logback-core").version("1.0.6").startLevel(START_LEVEL_SYSTEM_BUNDLES),
@@ -332,6 +337,8 @@ public abstract class BaseIntegrationTest
             junitBundles(), frameworkStartLevel(START_LEVEL_TEST_BUNDLE), felix());
     }
 
+    private final Map<String, ServiceTracker<?, ?>> trackers = new HashMap<String, ServiceTracker<?, ?>>();
+
     @Before
     public void setUp() throws Exception
     {
@@ -341,6 +348,14 @@ public abstract class BaseIntegrationTest
     @After
     public void tearDown() throws Exception
     {
+        synchronized ( trackers )
+        {
+            for(final Map.Entry<String, ServiceTracker<?, ?>> entry : trackers.entrySet())
+            {
+                entry.getValue().close();
+            }
+            trackers.clear();
+        }
         Bundle bundle = getHttpJettyBundle();
         // Restart the HTTP-service to clean all registrations...
         if (bundle.getState() == Bundle.ACTIVE)
@@ -358,75 +373,42 @@ public abstract class BaseIntegrationTest
      */
     protected <T> T awaitService(String serviceName) throws Exception
     {
-        ServiceTracker tracker = new ServiceTracker(m_context, serviceName, null);
-        tracker.open();
-        T result;
-        try
+        ServiceTracker<?, ?> tracker = null;
+        synchronized ( this.trackers )
         {
-            result = (T) tracker.waitForService(DEFAULT_TIMEOUT);
+            tracker = trackers.get(serviceName);
+            if ( tracker == null )
+            {
+                tracker = new ServiceTracker(m_context, serviceName, null);
+                trackers.put(serviceName, tracker);
+                tracker.open();
+            }
         }
-        finally
-        {
-            tracker.close();
-        }
-        return result;
+        return (T) tracker.waitForService(DEFAULT_TIMEOUT);
     }
 
-    protected org.osgi.service.cm.Configuration configureHttpService(Dictionary<?, ?> props) throws Exception
+    protected void configureHttpService(Dictionary<?, ?> props) throws Exception
     {
         final String pid = "org.apache.felix.http";
-        ServiceTracker tracker = new ServiceTracker(m_context, ConfigurationAdmin.class.getName(), null);
-        tracker.open();
 
-        ServiceRegistration reg = null;
-        org.osgi.service.cm.Configuration config = null;
+        Collection<ServiceReference<ManagedService>> serviceRefs = m_context.getServiceReferences(ManagedService.class, String.format("(%s=%s)", Constants.SERVICE_PID, pid));
+        assertNotNull("Unable to obtain managed configuration for " + pid, serviceRefs);
 
-        try
+        for (ServiceReference<ManagedService> serviceRef : serviceRefs)
         {
-            ConfigurationAdmin configAdmin = (ConfigurationAdmin) tracker.waitForService(TimeUnit.SECONDS.toMillis(5));
-            assertNotNull("No configuration admin service found?!", configAdmin);
-
-            final CountDownLatch latch = new CountDownLatch(1);
-            final int configEvent = (props != null) ? ConfigurationEvent.CM_UPDATED : ConfigurationEvent.CM_DELETED;
-
-            config = configAdmin.getConfiguration(pid, null);
-
-            reg = m_context.registerService(ConfigurationListener.class.getName(), new ConfigurationListener()
+            ManagedService service = m_context.getService(serviceRef);
+            try
             {
-                @Override
-                public void configurationEvent(ConfigurationEvent event)
-                {
-                    if (pid.equals(event.getPid()) && event.getType() == configEvent)
-                    {
-                        latch.countDown();
-                    }
-                }
-            }, null);
-
-            if (props != null)
-            {
-                config.update(props);
+                service.updated(props);
             }
-            else
+            catch (ConfigurationException ex)
             {
-                config.delete();
+                fail("Invalid configuration provisioned: " + ex.getMessage());
             }
-
-            assertTrue("Configuration not provisioned in time!", latch.await(5, TimeUnit.SECONDS));
-
-            // Needed to get Jetty restarted...
-            TimeUnit.MILLISECONDS.sleep(150);
-
-            return config;
-        }
-        finally
-        {
-            if (reg != null)
+            finally
             {
-                reg.unregister();
+                m_context.ungetService(serviceRef);
             }
-
-            tracker.close();
         }
     }
 
@@ -468,20 +450,20 @@ public abstract class BaseIntegrationTest
      * @param serviceName
      * @return
      */
-    protected <T> T getService(String serviceName)
+    protected <T> T getService(final String serviceName)
     {
-        ServiceTracker tracker = new ServiceTracker(m_context, serviceName, null);
-        tracker.open();
-        T result;
-        try
+        ServiceTracker<?, ?> tracker = null;
+        synchronized ( this.trackers )
         {
-            result = (T) tracker.getService();
+            tracker = trackers.get(serviceName);
+            if ( tracker == null )
+            {
+                tracker = new ServiceTracker(m_context, serviceName, null);
+                trackers.put(serviceName, tracker);
+                tracker.open();
+            }
         }
-        finally
-        {
-            tracker.close();
-        }
-        return result;
+        return (T) tracker.getService();
     }
 
     protected void register(String pattern, Filter filter) throws ServletException, NamespaceException

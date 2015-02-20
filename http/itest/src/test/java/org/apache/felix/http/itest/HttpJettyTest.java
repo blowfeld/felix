@@ -23,6 +23,7 @@ import static javax.servlet.http.HttpServletResponse.SC_NOT_FOUND;
 import static javax.servlet.http.HttpServletResponse.SC_OK;
 import static javax.servlet.http.HttpServletResponse.SC_PAYMENT_REQUIRED;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -95,7 +96,8 @@ public class HttpJettyTest extends BaseIntegrationTest
 
         bundle.stop();
 
-        assertTrue(destroyLatch.await(5, TimeUnit.SECONDS));
+        // destroy should not be called as the bundle stopped
+        assertFalse(destroyLatch.await(5, TimeUnit.SECONDS));
 
         try
         {
@@ -122,16 +124,19 @@ public class HttpJettyTest extends BaseIntegrationTest
 
         HttpContext context = new HttpContext()
         {
+            @Override
             public String getMimeType(String name)
             {
                 return null;
             }
 
+            @Override
             public URL getResource(String name)
             {
                 return null;
             }
 
+            @Override
             public boolean handleSecurity(HttpServletRequest request, HttpServletResponse response) throws IOException
             {
                 try
@@ -226,25 +231,25 @@ public class HttpJettyTest extends BaseIntegrationTest
             }
         };
 
-        register("/test1", servlet1);
-        register("/test2", servlet2);
-        register("/test.*", filter);
+        register("/test/1", servlet1);
+        register("/test/2", servlet2);
+        register("/test/.*", filter);
 
         assertTrue(initLatch.await(5, TimeUnit.SECONDS));
 
-        assertContent("1.1", createURL("/test1"));
-        assertContent("2.1", createURL("/test2"));
-        assertContent("2.2", createURL("/test2"));
-        assertContent("1.2", createURL("/test1"));
-        assertContent("2.3", createURL("/test2"));
+        assertContent("1.1", createURL("/test/1"));
+        assertContent("2.1", createURL("/test/2"));
+        assertContent("2.2", createURL("/test/2"));
+        assertContent("1.2", createURL("/test/1"));
+        assertContent("2.3", createURL("/test/2"));
 
-        assertResponseCode(SC_FORBIDDEN, createURL("/test2?param=forbidden"));
-        assertResponseCode(SC_NOT_FOUND, createURL("/?test=forbidden"));
+        assertResponseCode(SC_FORBIDDEN, createURL("/test/2?param=forbidden"));
+        assertResponseCode(SC_NOT_FOUND, createURL("/test?param=not_recognized"));
 
-        assertContent("2.4", createURL("/test2"));
-        assertContent("1.3", createURL("/test1"));
+        assertContent("2.4", createURL("/test/2"));
+        assertContent("1.3", createURL("/test/1"));
 
-        assertResponseCode(SC_FORBIDDEN, createURL("/test?param=forbidden"));
+        assertResponseCode(SC_NOT_FOUND, createURL("/test?param=forbidden"));
 
         unregister(servlet1);
         unregister(servlet2);
@@ -259,21 +264,24 @@ public class HttpJettyTest extends BaseIntegrationTest
     @Test
     public void testHandleSecurityInFilterOk() throws Exception
     {
-        CountDownLatch initLatch = new CountDownLatch(1);
-        CountDownLatch destroyLatch = new CountDownLatch(1);
+        CountDownLatch initLatch = new CountDownLatch(2);
+        CountDownLatch destroyLatch = new CountDownLatch(2);
 
         HttpContext context = new HttpContext()
         {
+            @Override
             public String getMimeType(String name)
             {
                 return null;
             }
 
+            @Override
             public URL getResource(String name)
             {
                 return null;
             }
 
+            @Override
             public boolean handleSecurity(HttpServletRequest request, HttpServletResponse response) throws IOException
             {
                 if (request.getParameter("setStatus") != null)
@@ -286,15 +294,20 @@ public class HttpJettyTest extends BaseIntegrationTest
                 }
                 else if (request.getParameter("commit") != null)
                 {
-                    response.getWriter().append("Not allowed!");
-                    response.flushBuffer();
+                    if (!response.isCommitted())
+                    {
+                        response.getWriter().append("Not allowed!");
+                        response.flushBuffer();
+                    }
                 }
                 return false;
             }
         };
 
         TestFilter filter = new TestFilter(initLatch, destroyLatch);
+        TestServlet servlet = new TestServlet(initLatch, destroyLatch);
 
+        register("/foo", servlet, context);
         register("/.*", filter, context);
 
         URL url1 = createURL("/foo");
@@ -310,6 +323,7 @@ public class HttpJettyTest extends BaseIntegrationTest
         assertContent(SC_OK, "Not allowed!", url4);
 
         unregister(filter);
+        unregister(servlet);
 
         assertTrue(destroyLatch.await(5, TimeUnit.SECONDS));
 
@@ -334,7 +348,7 @@ public class HttpJettyTest extends BaseIntegrationTest
             {
                 assertEquals("", request.getContextPath());
                 assertEquals("/foo", request.getServletPath());
-                assertEquals("/a", request.getPathInfo()); // /a,b/c;d/e.f;g/h
+                assertEquals("/a;b/c;d/e;f;g/h", request.getPathInfo());
                 assertEquals("/foo/a;b/c;d/e;f;g/h", request.getRequestURI());
                 assertEquals("i=j+k&l=m", request.getQueryString());
             }
@@ -436,11 +450,13 @@ public class HttpJettyTest extends BaseIntegrationTest
 
         HttpContext context = new HttpContext()
         {
+            @Override
             public String getMimeType(String name)
             {
                 return null;
             }
 
+            @Override
             public URL getResource(String name)
             {
                 try
@@ -458,6 +474,7 @@ public class HttpJettyTest extends BaseIntegrationTest
                 return null;
             }
 
+            @Override
             public boolean handleSecurity(HttpServletRequest request, HttpServletResponse response) throws IOException
             {
                 return true;
