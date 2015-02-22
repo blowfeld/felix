@@ -25,7 +25,9 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Dictionary;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.felix.framework.ext.FelixBundleContext;
 import org.osgi.framework.AdminPermission;
@@ -50,12 +52,17 @@ class BundleContextImpl implements FelixBundleContext
     private Felix m_felix = null;
     private BundleImpl m_bundle = null;
     private boolean m_valid = true;
+    
+    @SuppressWarnings("rawtypes")
+	private Map<ServiceReference, ServiceObjects> m_serviceObjects;
 
-    protected BundleContextImpl(Logger logger, Felix felix, BundleImpl bundle)
+    @SuppressWarnings("rawtypes")
+	protected BundleContextImpl(Logger logger, Felix felix, BundleImpl bundle)
     {
         m_logger = logger;
         m_felix = felix;
         m_bundle = bundle;
+        m_serviceObjects = new HashMap<ServiceReference, ServiceObjects>();
     }
 
     protected void invalidate()
@@ -539,11 +546,25 @@ class BundleContextImpl implements FelixBundleContext
 
         ServiceRegistrationImpl reg =
                 ((ServiceRegistrationImpl.ServiceReferenceImpl) ref).getRegistration();
-        if ( reg.isValid() )
+        
+        synchronized (m_serviceObjects) 
         {
-        	return new ServiceObjectsImpl(ref);
-        }
-        return null;
+        	if(reg.isValid())
+        	{
+        		if(m_serviceObjects.containsKey(ref)) 
+        		{
+        			return (ServiceObjects<S>) m_serviceObjects.get(ref);
+        		} 
+        		else 
+        		{
+            		ServiceObjects<S> result = new ServiceObjectsImpl<S>(ref);
+        			m_serviceObjects.put(ref, result);
+        			return result;
+        		}
+        	}
+        	m_serviceObjects.remove(ref);
+        	return null;
+		}
     }
 
     //
