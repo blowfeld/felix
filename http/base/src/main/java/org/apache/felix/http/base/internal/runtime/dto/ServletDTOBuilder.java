@@ -18,19 +18,18 @@
  */
 package org.apache.felix.http.base.internal.runtime.dto;
 
-import org.apache.felix.http.base.internal.handler.ServletHandler;
 import org.apache.felix.http.base.internal.runtime.ServletInfo;
 import org.osgi.service.http.runtime.dto.ServletDTO;
 
-final class ServletDTOBuilder extends BaseServletDTOBuilder<ServletHandler, ServletDTO>
+final class ServletDTOBuilder extends BaseServletDTOBuilder<ServletRuntime, ServletDTO>
 {
     @Override
-    ServletDTO buildDTO(ServletHandler servletHandler, long servletContextId)
+    ServletDTO buildDTO(ServletRuntime servletRuntime, long servletContextId)
     {
-        ServletInfo info = servletHandler.getServletInfo();
+        ServletInfo info = servletRuntime.getServletInfo();
 
         ServletDTO servletDTO = new ServletDTO();
-        setBaseFields(servletDTO, servletHandler, servletContextId);
+        setBaseFields(servletDTO, servletRuntime, servletContextId);
         servletDTO.patterns = copyWithDefault(checkNotEmpty(info.getPatterns()), null);
         return servletDTO;
     }

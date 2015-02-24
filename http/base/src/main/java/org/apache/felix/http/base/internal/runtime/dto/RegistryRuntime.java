@@ -16,7 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.felix.http.base.internal.runtime;
+package org.apache.felix.http.base.internal.runtime.dto;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -30,10 +30,10 @@ public final class RegistryRuntime
 {
     private final Collection<ContextHandler> contexts;
     private final Map<Long, Collection<ServiceReference<?>>> listenerRuntimes;
-    private final Map<Long, HandlerRuntime> handlerRuntimes;
+    private final Map<Long, ContextRuntime> handlerRuntimes;
 
     public RegistryRuntime(Collection<ContextHandler> contexts,
-            Collection<HandlerRuntime> contextRuntimes,
+            Collection<ContextRuntime> contextRuntimes,
             Map<Long, Collection<ServiceReference<?>>> listenerRuntimes)
     {
         this.contexts = contexts;
@@ -41,17 +41,17 @@ public final class RegistryRuntime
         this.listenerRuntimes = listenerRuntimes;
     }
 
-    private static Map<Long, HandlerRuntime> createServiceIdMap(Collection<HandlerRuntime> contextRuntimes)
+    private static Map<Long, ContextRuntime> createServiceIdMap(Collection<ContextRuntime> contextRuntimes)
     {
-        Map<Long, HandlerRuntime> runtimesMap = new HashMap<Long, HandlerRuntime>();
-        for (HandlerRuntime contextRuntime : contextRuntimes)
+        Map<Long, ContextRuntime> runtimesMap = new HashMap<Long, ContextRuntime>();
+        for (ContextRuntime contextRuntime : contextRuntimes)
         {
             runtimesMap.put(contextRuntime.getServiceId(), contextRuntime);
         }
         return runtimesMap;
     }
 
-    public HandlerRuntime getHandlerRuntime(ContextHandler contextHandler)
+    public ContextRuntime getHandlerRuntime(ContextHandler contextHandler)
     {
         long serviceId = contextHandler.getContextInfo().getServiceId();
 
@@ -59,7 +59,7 @@ public final class RegistryRuntime
         {
             return handlerRuntimes.get(serviceId);
         }
-        return HandlerRuntime.empty(serviceId);
+        return ContextRuntime.empty(serviceId);
     }
 
     public Collection<ServiceReference<?>> getListenerRuntime(ContextHandler contextHandler)

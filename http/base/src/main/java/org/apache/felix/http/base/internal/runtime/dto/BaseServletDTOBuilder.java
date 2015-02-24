@@ -20,23 +20,22 @@ package org.apache.felix.http.base.internal.runtime.dto;
 
 import javax.servlet.Servlet;
 
-import org.apache.felix.http.base.internal.handler.ServletHandler;
 import org.apache.felix.http.base.internal.runtime.ServletInfo;
 import org.osgi.service.http.runtime.dto.BaseServletDTO;
 
 abstract class BaseServletDTOBuilder<T, U extends BaseServletDTO> extends BaseDTOBuilder<T, U>
 {
-    final U setBaseFields(U dto, ServletHandler servletHandler, long servletContextId)
+    final U setBaseFields(U dto, ServletRuntime servletRuntime, long servletContextId)
     {
-        ServletInfo info = servletHandler.getServletInfo();
-        Servlet servlet = servletHandler.getServlet();
+        ServletInfo info = servletRuntime.getServletInfo();
+        Servlet servlet = servletRuntime.getServlet();
 
         dto.asyncSupported = info.isAsyncSupported();
         dto.initParams = copyWithDefault(info.getInitParameters());
         dto.name = info.getName();
-        dto.serviceId = servletHandler.getServletInfo().getServiceId();
+        dto.serviceId = servletRuntime.getServletInfo().getServiceId();
         dto.servletContextId = servletContextId;
-        dto.servletInfo = servlet.getServletInfo();
+        dto.servletInfo = servlet != null ? servlet.getServletInfo() : null;
         return dto;
     }
 }

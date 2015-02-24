@@ -30,10 +30,12 @@ import javax.servlet.Servlet;
 import javax.servlet.ServletException;
 
 import org.apache.felix.http.base.internal.runtime.FilterInfo;
-import org.apache.felix.http.base.internal.runtime.HandlerRuntime;
-import org.apache.felix.http.base.internal.runtime.HandlerRuntime.ErrorPage;
 import org.apache.felix.http.base.internal.runtime.ServletContextHelperInfo;
 import org.apache.felix.http.base.internal.runtime.ServletInfo;
+import org.apache.felix.http.base.internal.runtime.dto.ErrorPageRuntime;
+import org.apache.felix.http.base.internal.runtime.dto.FilterRuntime;
+import org.apache.felix.http.base.internal.runtime.dto.ContextRuntime;
+import org.apache.felix.http.base.internal.runtime.dto.ServletRuntime;
 
 public final class PerContextHandlerRegistry implements Comparable<PerContextHandlerRegistry>
 {
@@ -368,30 +370,30 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
         return this.serviceId;
     }
 
-    public synchronized HandlerRuntime getRuntime() {
-        Collection<ErrorPage> errorPages = new ArrayList<HandlerRuntime.ErrorPage>();
+    public synchronized ContextRuntime getRuntime() {
+        Collection<ErrorPageRuntime> errorPages = new ArrayList<ErrorPageRuntime>();
         Collection<ServletHandler> errorHandlers = errorsMapping.getMappedHandlers();
         for (ServletHandler servletHandler : errorHandlers)
         {
             errorPages.add(errorsMapping.getErrorPage(servletHandler));
         }
 
-        List<FilterHandler> filterHandlers = new ArrayList<FilterHandler>(filterMap.values());
+        List<FilterRuntime> filterRuntimes = new ArrayList<FilterRuntime>(filterMap.values());
 
-        List<ServletHandler> servletHandlers = new ArrayList<ServletHandler>();
-        List<ServletHandler> resourceHandlers = new ArrayList<ServletHandler>();
+        List<ServletRuntime> servletRuntimes = new ArrayList<ServletRuntime>();
+        List<ServletRuntime> resourceRuntimes = new ArrayList<ServletRuntime>();
         for (ServletHandler servletHandler : servletMap.values())
         {
             if (servletHandler.getServletInfo().isResource())
             {
-                resourceHandlers.add(servletHandler);
+                resourceRuntimes.add(servletHandler);
             }
             else if (!errorHandlers.contains(servletHandler))
             {
-                servletHandlers.add(servletHandler);
+                servletRuntimes.add(servletHandler);
             }
         }
 
-        return new HandlerRuntime(servletHandlers, filterHandlers, resourceHandlers, errorPages, serviceId);
+        return new ContextRuntime(servletRuntimes, filterRuntimes, resourceRuntimes, errorPages, serviceId);
     }
 }

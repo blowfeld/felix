@@ -24,11 +24,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.felix.http.base.internal.handler.FilterHandler;
-import org.apache.felix.http.base.internal.handler.ServletHandler;
-import org.apache.felix.http.base.internal.runtime.HandlerRuntime;
-import org.apache.felix.http.base.internal.runtime.HandlerRuntime.ErrorPage;
-import org.apache.felix.http.base.internal.runtime.RegistryRuntime;
 import org.apache.felix.http.base.internal.whiteboard.ContextHandler;
 import org.osgi.framework.ServiceReference;
 import org.osgi.service.http.runtime.dto.ErrorPageDTO;
@@ -103,27 +98,27 @@ public final class RuntimeDTOBuilder
     }
 
     private ServletContextDTO createContextDTO(ContextHandler context,
-            HandlerRuntime handlerRuntime,
+            ContextRuntime handlerRuntime,
             Collection<ServiceReference<?>> listenerRefs)
     {
-        Collection<ServletHandler> servletHandlers = handlerRuntime.getServletHandlers();
-        Collection<ServletHandler> resourceHandlers = handlerRuntime.getResourceHandlers();
-        Collection<FilterHandler> filterHandlers = handlerRuntime.getFilterHandlers();
-        Collection<ErrorPage> errorPages = handlerRuntime.getErrorPages();
+        Collection<ServletRuntime> servletRuntimes = handlerRuntime.getServletRuntimes();
+        Collection<ServletRuntime> resourceRuntimes = handlerRuntime.getResourceRuntimes();
+        Collection<FilterRuntime> filterRuntimes = handlerRuntime.getFilterRuntimes();
+        Collection<ErrorPageRuntime> errorPageRuntimes = handlerRuntime.getErrorPageRuntimes();
         long servletContextId = handlerRuntime.getServiceId();
 
-        Collection<ServletDTO> servletDTOs = SERVLET_DTO_BUILDER.build(servletHandlers, servletContextId);
-        Collection<ResourceDTO> resourcesDTOs = RESOURCE_DTO_BUILDER.build(resourceHandlers, servletContextId);
-        Collection<FilterDTO> filtersDTOs = FILTER_DTO_BUILDER.build(filterHandlers, servletContextId);
-        Collection<ErrorPageDTO> errorsDTOs = ERROR_PAGE_DTO_BUILDER.build(errorPages, servletContextId);
-        Collection<ListenerDTO> listenersDTOs = LISTENER_DTO_BUILDER.build(listenerRefs, servletContextId);
+        Collection<ServletDTO> servletDTOs = SERVLET_DTO_BUILDER.build(servletRuntimes, servletContextId);
+        Collection<ResourceDTO> resourceDTOs = RESOURCE_DTO_BUILDER.build(resourceRuntimes, servletContextId);
+        Collection<FilterDTO> filterDTOs = FILTER_DTO_BUILDER.build(filterRuntimes, servletContextId);
+        Collection<ErrorPageDTO> errorDTOs = ERROR_PAGE_DTO_BUILDER.build(errorPageRuntimes, servletContextId);
+        Collection<ListenerDTO> listenerDTOs = LISTENER_DTO_BUILDER.build(listenerRefs, servletContextId);
 
         return new ServletContextDTOBuilder(context,
                     servletDTOs,
-                    resourcesDTOs,
-                    filtersDTOs,
-                    errorsDTOs,
-                    listenersDTOs)
+                    resourceDTOs,
+                    filterDTOs,
+                    errorDTOs,
+                    listenerDTOs)
                 .build();
     }
 }

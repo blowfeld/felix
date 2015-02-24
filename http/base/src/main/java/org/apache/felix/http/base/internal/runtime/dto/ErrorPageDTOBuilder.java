@@ -21,15 +21,14 @@ package org.apache.felix.http.base.internal.runtime.dto;
 import java.util.Collection;
 import java.util.Iterator;
 
-import org.apache.felix.http.base.internal.runtime.HandlerRuntime.ErrorPage;
 import org.osgi.service.http.runtime.dto.ErrorPageDTO;
 
-final class ErrorPageDTOBuilder extends BaseServletDTOBuilder<ErrorPage, ErrorPageDTO>
+final class ErrorPageDTOBuilder extends BaseServletDTOBuilder<ErrorPageRuntime, ErrorPageDTO>
 {
     private static final String[] STRING_ARRAY = new String[0];
 
     @Override
-    ErrorPageDTO buildDTO(ErrorPage errorPage, long servletConextId)
+    ErrorPageDTO buildDTO(ErrorPageRuntime errorPage, long servletConextId)
     {
         ErrorPageDTO errorPageDTO = new ErrorPageDTO();
         setBaseFields(errorPageDTO, errorPage.getServletHandler(), servletConextId);

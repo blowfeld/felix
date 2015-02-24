@@ -38,14 +38,14 @@ import org.apache.felix.http.base.internal.handler.HandlerRegistry;
 import org.apache.felix.http.base.internal.logger.SystemLogger;
 import org.apache.felix.http.base.internal.runtime.AbstractInfo;
 import org.apache.felix.http.base.internal.runtime.FilterInfo;
-import org.apache.felix.http.base.internal.runtime.HandlerRuntime;
 import org.apache.felix.http.base.internal.runtime.ListenerInfo;
-import org.apache.felix.http.base.internal.runtime.RegistryRuntime;
 import org.apache.felix.http.base.internal.runtime.ResourceInfo;
 import org.apache.felix.http.base.internal.runtime.ServletContextHelperInfo;
 import org.apache.felix.http.base.internal.runtime.ServletContextListenerInfo;
 import org.apache.felix.http.base.internal.runtime.ServletInfo;
 import org.apache.felix.http.base.internal.runtime.WhiteboardServiceInfo;
+import org.apache.felix.http.base.internal.runtime.dto.ContextRuntime;
+import org.apache.felix.http.base.internal.runtime.dto.RegistryRuntime;
 import org.apache.felix.http.base.internal.util.MimeTypes;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
@@ -506,7 +506,7 @@ public final class ServletContextHelperManager
 
     public RegistryRuntime getRuntime(HandlerRegistry registry)
     {
-        List<HandlerRuntime> handlerRuntimes;
+        List<ContextRuntime> handlerRuntimes;
         Map<Long, Collection<ServiceReference<?>>> listenerRuntimes;
         Set<ContextHandler> contextHandlers = new TreeSet<ContextHandler>();
         synchronized ( this.contextMap )
