@@ -20,9 +20,16 @@ package org.apache.felix.http.base.internal.runtime.dto;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.felix.http.base.internal.runtime.AbstractInfo;
+import org.apache.felix.http.base.internal.runtime.FilterInfo;
+import org.apache.felix.http.base.internal.runtime.ListenerInfo;
+import org.apache.felix.http.base.internal.runtime.ResourceInfo;
+import org.apache.felix.http.base.internal.runtime.ServletContextHelperInfo;
+import org.apache.felix.http.base.internal.runtime.ServletInfo;
 import org.osgi.framework.ServiceReference;
 import org.osgi.service.http.runtime.dto.FailedErrorPageDTO;
 import org.osgi.service.http.runtime.dto.FailedFilterDTO;
@@ -72,6 +79,56 @@ public final class FailureRuntime
                 Collections.<ErrorPageRuntime, Integer>emptyMap());
     }
 
+    public static FailureRuntime forServiceInfos(Map<AbstractInfo<?>, Integer> failureInfos)
+    {
+        Map<ServletContextHelperRuntime, Integer> contextRuntimes = new HashMap<ServletContextHelperRuntime, Integer>();
+        Map<ServletRuntime, Integer> servletRuntimes = new HashMap<ServletRuntime, Integer>();
+        Map<FilterRuntime, Integer> filterRuntimes = new HashMap<FilterRuntime, Integer>();
+        Map<ServletRuntime, Integer> resourceRuntimes = new HashMap<ServletRuntime, Integer>();
+        Map<ErrorPageRuntime, Integer> errorPageRuntimes = new HashMap<ErrorPageRuntime, Integer>();
+        Map<ServiceReference<?>, Integer> listenerRuntimes = new HashMap<ServiceReference<?>, Integer>();
+
+        for (AbstractInfo<?> info : failureInfos.keySet())
+        {
+            if (info instanceof ServletContextHelperInfo)
+            {
+                ServletContextHelperRuntime servletRuntime = new FailureServletContextHelperRuntime((ServletContextHelperInfo) info);
+                contextRuntimes.put(servletRuntime, failureInfos.get(info));
+            }
+            else if (info instanceof ServletInfo)
+            {
+                ServletRuntime servletRuntime = new FailureServletRuntime((ServletInfo) info);
+                servletRuntimes.put(servletRuntime, failureInfos.get(info));
+            }
+            else if (info instanceof FilterInfo)
+            {
+                FilterRuntime filterRuntime = new FailureFilterRuntime((FilterInfo) info);
+                filterRuntimes.put(filterRuntime, failureInfos.get(info));
+            }
+            else if (info instanceof ResourceInfo)
+            {
+                ServletRuntime servletRuntime = new FailureServletRuntime(new ServletInfo((ResourceInfo) info));
+                resourceRuntimes.put(servletRuntime, failureInfos.get(info));
+            }
+            else if (info instanceof ListenerInfo)
+            {
+                ServiceReference<?> serviceReference = ((ListenerInfo<?>) info).getServiceReference();
+                listenerRuntimes.put(serviceReference, failureInfos.get(info));
+            }
+            else
+            {
+                throw new IllegalArgumentException("Unsupported info type: " + info.getClass());
+            }
+        }
+
+        return new FailureRuntime(contextRuntimes,
+                listenerRuntimes,
+                servletRuntimes,
+                filterRuntimes,
+                resourceRuntimes,
+                errorPageRuntimes);
+    }
+
     public FailedServletDTO[] getServletDTOs()
     {
         List<FailedServletDTO> servletDTOs = new ArrayList<FailedServletDTO>();
@@ -85,7 +142,7 @@ public final class FailureRuntime
     private FailedServletDTO getServletDTO(ServletRuntime failedServlet, int failureCode)
     {
         ServletDTOBuilder<FailedServletDTO> dtoBuilder = new ServletDTOBuilder<FailedServletDTO>(DTOSuppliers.FAILED_SERVLET);
-        FailedServletDTO servletDTO = (FailedServletDTO) dtoBuilder.buildDTO(failedServlet, 0);
+        FailedServletDTO servletDTO = dtoBuilder.buildDTO(failedServlet, 0);
         servletDTO.failureReason = failureCode;
         return servletDTO;
     }
@@ -103,7 +160,7 @@ public final class FailureRuntime
     private FailedFilterDTO getFilterDTO(FilterRuntime failedFilter, int failureCode)
     {
         FilterDTOBuilder<FailedFilterDTO> dtoBuilder = new FilterDTOBuilder<FailedFilterDTO>(DTOSuppliers.FAILED_FILTER);
-        FailedFilterDTO filerDTO = (FailedFilterDTO) dtoBuilder.buildDTO(failedFilter, 0);
+        FailedFilterDTO filerDTO = dtoBuilder.buildDTO(failedFilter, 0);
         filerDTO.failureReason = failureCode;
         return filerDTO;
     }
@@ -176,7 +233,6 @@ public final class FailureRuntime
     {
         ServletContextDTOBuilder dtoBuilder = new ServletContextDTOBuilder(new FailedServletContextDTO(), failedContext);
         FailedServletContextDTO servletContextDTO = (FailedServletContextDTO) dtoBuilder.build();
-        servletContextDTO.attributes = Collections.emptyMap();
         servletContextDTO.failureReason = failureCode;
         return servletContextDTO;
     }

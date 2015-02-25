@@ -21,6 +21,7 @@ package org.apache.felix.http.base.internal.runtime.dto;
 import static java.util.Collections.list;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -95,11 +96,11 @@ final class ServletContextDTOBuilder
         long contextId = contextInfo.getServiceId();
 
         contextDTO.attributes = getAttributes(context);
-        contextDTO.contextName = context.getServletContextName();
-        contextDTO.contextPath = context.getContextPath();
+        contextDTO.contextName = contextInfo.getName();
+        contextDTO.contextPath = context == null ? contextInfo.getPath() : context.getContextPath();
         contextDTO.errorPageDTOs = errorPageDTOs;
         contextDTO.filterDTOs = filterDTOs;
-        contextDTO.initParams = getInitParameters(context);
+        contextDTO.initParams = contextInfo.getInitParameters();
         contextDTO.listenerDTOs = listenerDTOs;
         contextDTO.name = contextId >= 0 ? contextInfo.getName() : null;
         contextDTO.resourceDTOs = resourceDTOs;
@@ -110,6 +111,11 @@ final class ServletContextDTOBuilder
 
     private Map<String, Object> getAttributes(ServletContext context)
     {
+        if (context == null)
+        {
+            return Collections.emptyMap();
+        }
+
         Map<String, Object> attributes = new HashMap<String, Object>();
         for (String name : list(context.getAttributeNames()))
         {
@@ -140,15 +146,5 @@ final class ServletContextDTOBuilder
                 short.class.isAssignableFrom(type) ||
                 byte.class.isAssignableFrom(type) ||
                 char.class.isAssignableFrom(type);
-    }
-
-    private Map<String, String> getInitParameters(ServletContext context)
-    {
-        Map<String, String> initParameters = new HashMap<String, String>();
-        for (String name : list(context.getInitParameterNames()))
-        {
-            initParameters.put(name, context.getInitParameter(name));
-        }
-        return initParameters;
     }
 }

@@ -26,7 +26,6 @@ import java.util.regex.Pattern;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
-import javax.servlet.Servlet;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -34,7 +33,6 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.felix.http.base.internal.context.ExtServletContext;
 import org.apache.felix.http.base.internal.runtime.FilterInfo;
 import org.apache.felix.http.base.internal.runtime.ServletContextHelperInfo;
-import org.apache.felix.http.base.internal.runtime.ServletInfo;
 import org.apache.felix.http.base.internal.runtime.dto.FilterRuntime;
 import org.apache.felix.http.base.internal.util.PatternUtil;
 

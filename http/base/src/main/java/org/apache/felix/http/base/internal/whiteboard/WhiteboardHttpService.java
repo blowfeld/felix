@@ -16,6 +16,9 @@
  */
 package org.apache.felix.http.base.internal.whiteboard;
 
+import static org.osgi.service.http.runtime.dto.DTOConstants.FAILURE_REASON_EXCEPTION_ON_INIT;
+import static org.osgi.service.http.runtime.dto.DTOConstants.FAILURE_REASON_SERVICE_NOT_GETTABLE;
+
 import javax.annotation.Nonnull;
 import javax.servlet.Filter;
 import javax.servlet.Servlet;
@@ -53,15 +56,15 @@ public final class WhiteboardHttpService
      * Register a servlet.
      * @param contextInfo The servlet context helper info
      * @param servletInfo The servlet info
+     * @throws RegistrationFailureException 
      */
     public void registerServlet(@Nonnull final ContextHandler contextHandler,
-            @Nonnull final ServletInfo servletInfo)
+            @Nonnull final ServletInfo servletInfo) throws RegistrationFailureException
     {
         final ServiceObjects<Servlet> so = this.bundleContext.getServiceObjects(servletInfo.getServiceReference());
         if ( so != null )
         {
             final Servlet servlet = so.getService();
-            // TODO create failure DTO if null
             if ( servlet != null )
             {
                 final ServletHandler handler = new ServletHandler(contextHandler.getContextInfo(),
@@ -74,10 +77,20 @@ public final class WhiteboardHttpService
                     {
                         registry.addServlet(handler);
                     }
-                } catch (final ServletException e) {
-                    so.ungetService(servlet);
-                    // TODO create failure DTO
                 }
+                catch (final RegistrationFailureException e)
+                {
+                    throw e;
+                }
+                catch (final ServletException e)
+                {
+                    so.ungetService(servlet);
+                    throw new RegistrationFailureException(servletInfo, FAILURE_REASON_EXCEPTION_ON_INIT);
+                }
+            }
+            else
+            {
+                throw new RegistrationFailureException(servletInfo, FAILURE_REASON_SERVICE_NOT_GETTABLE);
             }
         }
     }
@@ -105,12 +118,12 @@ public final class WhiteboardHttpService
      * Register a filter
      * @param contextInfo The servlet context helper info
      * @param filterInfo The filter info
+     * @throws RegistrationFailureException 
      */
     public void registerFilter(@Nonnull  final ContextHandler contextHandler,
-            @Nonnull final FilterInfo filterInfo)
+            @Nonnull final FilterInfo filterInfo) throws RegistrationFailureException
     {
         final Filter filter = this.bundleContext.getServiceObjects(filterInfo.getServiceReference()).getService();
-        // TODO create failure DTO if null
         if ( filter != null )
         {
             final FilterHandler handler = new FilterHandler(contextHandler.getContextInfo(),
@@ -123,9 +136,19 @@ public final class WhiteboardHttpService
                 {
                     registry.addFilter(handler);
                 }
-            } catch (final ServletException e) {
-                // TODO create failure DTO
             }
+            catch (final RegistrationFailureException e)
+            {
+                throw e;
+            }
+            catch (final ServletException e)
+            {
+                throw new RegistrationFailureException(filterInfo, FAILURE_REASON_EXCEPTION_ON_INIT);
+            }
+        }
+        else
+        {
+            throw new RegistrationFailureException(filterInfo, FAILURE_REASON_SERVICE_NOT_GETTABLE);
         }
     }
 
@@ -152,9 +175,10 @@ public final class WhiteboardHttpService
      * Register a resource.
      * @param contextInfo The servlet context helper info
      * @param resourceInfo The resource info
+     * @throws RegistrationFailureException 
      */
     public void registerResource(@Nonnull final ContextHandler contextHandler,
-            @Nonnull final ResourceInfo resourceInfo)
+            @Nonnull final ResourceInfo resourceInfo) throws RegistrationFailureException
     {
         final ServletInfo servletInfo = new ServletInfo(resourceInfo);
 
@@ -170,7 +194,7 @@ public final class WhiteboardHttpService
                 registry.addServlet(handler);
             }
         } catch (ServletException e) {
-            // TODO create failure DTO
+            throw new RegistrationFailureException(resourceInfo, FAILURE_REASON_EXCEPTION_ON_INIT);
         }
     }
 

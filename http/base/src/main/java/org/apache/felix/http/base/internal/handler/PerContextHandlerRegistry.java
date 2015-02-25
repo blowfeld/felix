@@ -16,6 +16,8 @@
  */
 package org.apache.felix.http.base.internal.handler;
 
+import static org.osgi.service.http.runtime.dto.DTOConstants.FAILURE_REASON_SERVICE_ALREAY_USED;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -36,6 +38,7 @@ import org.apache.felix.http.base.internal.runtime.dto.ContextRuntime;
 import org.apache.felix.http.base.internal.runtime.dto.ErrorPageRuntime;
 import org.apache.felix.http.base.internal.runtime.dto.FilterRuntime;
 import org.apache.felix.http.base.internal.runtime.dto.ServletRuntime;
+import org.apache.felix.http.base.internal.whiteboard.RegistrationFailureException;
 
 public final class PerContextHandlerRegistry implements Comparable<PerContextHandlerRegistry>
 {
@@ -80,7 +83,7 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
     {
         if (this.filterMap.containsKey(handler.getFilter()))
         {
-            throw new ServletException("Filter instance already registered");
+            throw new RegistrationFailureException(handler.getFilterInfo(), FAILURE_REASON_SERVICE_ALREAY_USED, "Filter instance " + handler.getName() + " already registered");
         }
 
         handler.init();
@@ -135,7 +138,7 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
             final String pattern = patterns[i];
             if (this.servletPatternMap.containsKey(pattern))
             {
-                throw new ServletException("Servlet instance " + handler.getName() + " already registered");
+                throw new RegistrationFailureException(handler.getServletInfo(), FAILURE_REASON_SERVICE_ALREAY_USED, "Servlet instance " + handler.getName() + " already registered");
             }
             this.servletPatternMap.put(pattern, handler.getServlet());
         }
