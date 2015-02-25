@@ -18,19 +18,31 @@
  */
 package org.apache.felix.http.base.internal.runtime.dto;
 
+import java.util.function.Supplier;
+
 import org.apache.felix.http.base.internal.runtime.ServletInfo;
 import org.osgi.service.http.runtime.dto.ResourceDTO;
 
-final class ResourceDTOBuilder extends BaseDTOBuilder<ServletRuntime, ResourceDTO>
+final class ResourceDTOBuilder<T extends ResourceDTO> extends BaseDTOBuilder<ServletRuntime, T>
 {
     private static final String[] STRING_ARRAY = new String[0];
 
+    static ResourceDTOBuilder<ResourceDTO> create()
+    {
+        return new ResourceDTOBuilder<ResourceDTO>(DTOSuppliers.RESOURCE);
+    }
+
+    ResourceDTOBuilder(Supplier<T> dtoFactory)
+    {
+        super(dtoFactory);
+    }
+
     @Override
-    ResourceDTO buildDTO(ServletRuntime runtime, long servletContextId)
+    T buildDTO(ServletRuntime runtime, long servletContextId)
     {
         ServletInfo servletInfo = runtime.getServletInfo();
 
-        ResourceDTO resourceDTO = new ResourceDTO();
+        T resourceDTO = getDTOFactory().get();
         resourceDTO.patterns = copyWithDefault(servletInfo.getPatterns(), STRING_ARRAY);
         resourceDTO.prefix = servletInfo.getPrefix();
         resourceDTO.serviceId = servletInfo.getServiceId();

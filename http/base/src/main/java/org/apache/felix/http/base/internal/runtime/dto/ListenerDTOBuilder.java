@@ -18,16 +18,28 @@
  */
 package org.apache.felix.http.base.internal.runtime.dto;
 
+import java.util.function.Supplier;
+
 import org.osgi.framework.Constants;
 import org.osgi.framework.ServiceReference;
 import org.osgi.service.http.runtime.dto.ListenerDTO;
 
-final class ListenerDTOBuilder extends BaseDTOBuilder<ServiceReference<?>, ListenerDTO>
+final class ListenerDTOBuilder<T extends ListenerDTO> extends BaseDTOBuilder<ServiceReference<?>, T>
 {
-    @Override
-    ListenerDTO buildDTO(ServiceReference<?> listenerRef, long servletContextId)
+    static ListenerDTOBuilder<ListenerDTO> create()
     {
-        ListenerDTO listenerDTO = new ListenerDTO();
+        return new ListenerDTOBuilder<ListenerDTO>(DTOSuppliers.LISTENER);
+    }
+
+    ListenerDTOBuilder(Supplier<T> dtoFactory)
+    {
+        super(dtoFactory);
+    }
+
+    @Override
+    T buildDTO(ServiceReference<?> listenerRef, long servletContextId)
+    {
+        T listenerDTO = getDTOFactory().get();
         listenerDTO.serviceId = (Long) listenerRef.getProperty(Constants.SERVICE_ID);
         listenerDTO.servletContextId = servletContextId;
         // TODO Is this the desired value?

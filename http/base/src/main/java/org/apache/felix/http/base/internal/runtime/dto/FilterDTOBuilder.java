@@ -18,21 +18,33 @@
  */
 package org.apache.felix.http.base.internal.runtime.dto;
 
+import java.util.function.Supplier;
+
 import javax.servlet.DispatcherType;
 
 import org.apache.felix.http.base.internal.runtime.FilterInfo;
 import org.osgi.service.http.runtime.dto.FilterDTO;
 
-final class FilterDTOBuilder extends BaseDTOBuilder<FilterRuntime, FilterDTO>
+final class FilterDTOBuilder<T extends FilterDTO> extends BaseDTOBuilder<FilterRuntime, T>
 {
     private static final String[] STRING_ARRAY = new String[0];
 
+    static FilterDTOBuilder<FilterDTO> create()
+    {
+        return new FilterDTOBuilder<FilterDTO>(DTOSuppliers.FILTER);
+    }
+
+    FilterDTOBuilder(Supplier<T> dtoFactory)
+    {
+        super(dtoFactory);
+    }
+
     @Override
-    FilterDTO buildDTO(FilterRuntime filterRuntime, long servletContextId)
+    T buildDTO(FilterRuntime filterRuntime, long servletContextId)
     {
         FilterInfo info = filterRuntime.getFilterInfo();
 
-        FilterDTO filterDTO = new FilterDTO();
+        T filterDTO = getDTOFactory().get();
         filterDTO.asyncSupported = info.isAsyncSupported();
         filterDTO.dispatcher = getNames(info.getDispatcher());
         filterDTO.initParams = copyWithDefault(info.getInitParameters());

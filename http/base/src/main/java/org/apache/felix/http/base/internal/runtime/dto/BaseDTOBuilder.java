@@ -26,13 +26,21 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 
 import org.osgi.dto.DTO;
 
 
 abstract class BaseDTOBuilder<T, U extends DTO>
 {
-    public Collection<U> build(Collection<T> whiteboardServices, long servletContextId)
+    private Supplier<U> dtoFactory;
+
+    BaseDTOBuilder(Supplier<U> dtoFactory)
+    {
+        this.dtoFactory = dtoFactory;
+    }
+
+    Collection<U> build(Collection<T> whiteboardServices, long servletContextId)
     {
         List<U> dtoList = new ArrayList<U>();
         for (T whiteboardService : whiteboardServices)
@@ -44,12 +52,17 @@ abstract class BaseDTOBuilder<T, U extends DTO>
 
     abstract U buildDTO(T whiteboardService, long servletContextId);
 
-    protected <K, V> Map<K, V> copyWithDefault(Map<K, V> map)
+    Supplier<U> getDTOFactory()
+    {
+        return dtoFactory;
+    }
+
+    <K, V> Map<K, V> copyWithDefault(Map<K, V> map)
     {
         return map == null ? Collections.<K, V>emptyMap() : new HashMap<K, V>(map);
     }
 
-    protected <V> V[] copyWithDefault(V[] array, V[] defaultArray)
+    <V> V[] copyWithDefault(V[] array, V[] defaultArray)
     {
         return array == null ? defaultArray : copyOf(array, array.length);
     }

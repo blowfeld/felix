@@ -27,7 +27,6 @@ import java.util.Map;
 import javax.servlet.ServletContext;
 
 import org.apache.felix.http.base.internal.runtime.ServletContextHelperInfo;
-import org.apache.felix.http.base.internal.whiteboard.ContextHandler;
 import org.osgi.dto.DTO;
 import org.osgi.service.http.runtime.dto.ErrorPageDTO;
 import org.osgi.service.http.runtime.dto.FilterDTO;
@@ -44,21 +43,24 @@ final class ServletContextDTOBuilder
     private static final ErrorPageDTO[] ERROR_PAGE_DTO_ARRAY = new ErrorPageDTO[0];
     private static final ListenerDTO[] LISTENER_DTO_ARRAY = new ListenerDTO[0];
 
-    private final ContextHandler contextHandler;
+    private final ServletContextDTO contextDTO;
+    private final ServletContextHelperRuntime contextRuntime;
     private final ServletDTO[] servletDTOs;
     private final ResourceDTO[] resourceDTOs;
     private final FilterDTO[] filterDTOs;
     private final ErrorPageDTO[] errorPageDTOs;
     private final ListenerDTO[] listenerDTOs;
 
-    public ServletContextDTOBuilder(ContextHandler contextHandler,
+    ServletContextDTOBuilder(ServletContextDTO contextDTO,
+            ServletContextHelperRuntime contextRuntime,
             Collection<ServletDTO> servletDTOs,
             Collection<ResourceDTO> resourceDTOs,
             Collection<FilterDTO> filterDTOs,
             Collection<ErrorPageDTO> errorPageDTOs,
             Collection<ListenerDTO> listenerDTOs)
     {
-        this.contextHandler = contextHandler;
+        this.contextDTO = contextDTO;
+        this.contextRuntime = contextRuntime;
         this.servletDTOs = servletDTOs != null ?
                 servletDTOs.toArray(SERVLET_DTO_ARRAY) : SERVLET_DTO_ARRAY;
         this.resourceDTOs = resourceDTOs != null ?
@@ -71,13 +73,27 @@ final class ServletContextDTOBuilder
                 listenerDTOs.toArray(LISTENER_DTO_ARRAY) : LISTENER_DTO_ARRAY;
     }
 
+    ServletContextDTOBuilder(ServletContextHelperRuntime contextRuntime,
+            Collection<ServletDTO> servletDTOs,
+            Collection<ResourceDTO> resourceDTOs,
+            Collection<FilterDTO> filterDTOs,
+            Collection<ErrorPageDTO> errorPageDTOs,
+            Collection<ListenerDTO> listenerDTOs)
+    {
+        this(new ServletContextDTO(), contextRuntime, servletDTOs, resourceDTOs, filterDTOs, errorPageDTOs, listenerDTOs);
+    }
+
+    ServletContextDTOBuilder(ServletContextDTO contextDTO, ServletContextHelperRuntime contextRuntime)
+    {
+        this(contextDTO, contextRuntime, null, null, null, null, null);
+    }
+
     ServletContextDTO build()
     {
-        ServletContext context  = contextHandler.getSharedContext();
-        ServletContextHelperInfo contextInfo = contextHandler.getContextInfo();
+        ServletContext context  = contextRuntime.getSharedContext();
+        ServletContextHelperInfo contextInfo = contextRuntime.getContextInfo();
         long contextId = contextInfo.getServiceId();
 
-        ServletContextDTO contextDTO = new ServletContextDTO();
         contextDTO.attributes = getAttributes(context);
         contextDTO.contextName = context.getServletContextName();
         contextDTO.contextPath = context.getContextPath();

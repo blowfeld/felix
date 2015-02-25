@@ -45,7 +45,9 @@ import org.apache.felix.http.base.internal.runtime.ServletContextListenerInfo;
 import org.apache.felix.http.base.internal.runtime.ServletInfo;
 import org.apache.felix.http.base.internal.runtime.WhiteboardServiceInfo;
 import org.apache.felix.http.base.internal.runtime.dto.ContextRuntime;
+import org.apache.felix.http.base.internal.runtime.dto.FailureRuntime;
 import org.apache.felix.http.base.internal.runtime.dto.RegistryRuntime;
+import org.apache.felix.http.base.internal.runtime.dto.ServletContextHelperRuntime;
 import org.apache.felix.http.base.internal.util.MimeTypes;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
@@ -508,7 +510,7 @@ public final class ServletContextHelperManager
     {
         List<ContextRuntime> handlerRuntimes;
         Map<Long, Collection<ServiceReference<?>>> listenerRuntimes;
-        Set<ContextHandler> contextHandlers = new TreeSet<ContextHandler>();
+        Collection<ServletContextHelperRuntime> contextHandlers = new TreeSet<ServletContextHelperRuntime>();
         synchronized ( this.contextMap )
         {
             for (List<ContextHandler> contextHandlerList : this.contextMap.values())
@@ -521,6 +523,6 @@ public final class ServletContextHelperManager
             handlerRuntimes = registry.getRuntime();
             listenerRuntimes = listenerRegistry.getContextRuntimes();
         }
-        return new RegistryRuntime(contextHandlers, handlerRuntimes, listenerRuntimes);
+        return new RegistryRuntime(contextHandlers, handlerRuntimes, listenerRuntimes, FailureRuntime.empty());
     }
 }

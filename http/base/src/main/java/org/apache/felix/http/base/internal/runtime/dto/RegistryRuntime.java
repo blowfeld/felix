@@ -23,20 +23,22 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.felix.http.base.internal.whiteboard.ContextHandler;
 import org.osgi.framework.ServiceReference;
 
 public final class RegistryRuntime
 {
-    private final Collection<ContextHandler> contexts;
+    private final Collection<ServletContextHelperRuntime> contexts;
     private final Map<Long, Collection<ServiceReference<?>>> listenerRuntimes;
     private final Map<Long, ContextRuntime> handlerRuntimes;
+    private final FailureRuntime failureRuntime;
 
-    public RegistryRuntime(Collection<ContextHandler> contexts,
+    public RegistryRuntime(Collection<ServletContextHelperRuntime> contexts,
             Collection<ContextRuntime> contextRuntimes,
-            Map<Long, Collection<ServiceReference<?>>> listenerRuntimes)
+            Map<Long, Collection<ServiceReference<?>>> listenerRuntimes,
+            FailureRuntime failureRuntime)
     {
         this.contexts = contexts;
+        this.failureRuntime = failureRuntime;
         this.handlerRuntimes = createServiceIdMap(contextRuntimes);
         this.listenerRuntimes = listenerRuntimes;
     }
@@ -51,9 +53,9 @@ public final class RegistryRuntime
         return runtimesMap;
     }
 
-    public ContextRuntime getHandlerRuntime(ContextHandler contextHandler)
+    public ContextRuntime getHandlerRuntime(ServletContextHelperRuntime contextRuntime)
     {
-        long serviceId = contextHandler.getContextInfo().getServiceId();
+        long serviceId = contextRuntime.getContextInfo().getServiceId();
 
         if (handlerRuntimes.containsKey(serviceId))
         {
@@ -62,17 +64,22 @@ public final class RegistryRuntime
         return ContextRuntime.empty(serviceId);
     }
 
-    public Collection<ServiceReference<?>> getListenerRuntime(ContextHandler contextHandler)
+    public Collection<ServiceReference<?>> getListenerRuntimes(ServletContextHelperRuntime contextRuntime)
     {
-        if (listenerRuntimes.containsKey(contextHandler.getContextInfo().getServiceId()))
+        if (listenerRuntimes.containsKey(contextRuntime.getContextInfo().getServiceId()))
         {
-            return listenerRuntimes.get(contextHandler.getContextInfo().getServiceId());
+            return listenerRuntimes.get(contextRuntime.getContextInfo().getServiceId());
         }
         return Collections.emptyList();
     }
 
-    public Collection<ContextHandler> getContexts()
+    public Collection<ServletContextHelperRuntime> getContexts()
     {
         return contexts;
+    }
+
+    public FailureRuntime getFailureRuntime()
+    {
+        return failureRuntime;
     }
 }

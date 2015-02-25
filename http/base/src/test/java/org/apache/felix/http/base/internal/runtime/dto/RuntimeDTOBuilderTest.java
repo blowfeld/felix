@@ -132,7 +132,7 @@ public class RuntimeDTOBuilderTest
         listenerRegistry = new ListenerRegistry(bundle);
     }
 
-	public ContextHandler setupContext(ServletContext context, String name, long serviceId)
+	public ServletContextHelperRuntime setupContext(ServletContext context, String name, long serviceId)
     {
         when(context.getServletContextName()).thenReturn(name);
 
@@ -150,7 +150,7 @@ public class RuntimeDTOBuilderTest
         ServletContextHelperInfo contextInfo = createContextInfo(0, serviceId, name, path, initParemters);
 
         PerContextEventListener eventListener = listenerRegistry.addContext(contextInfo);
-        ContextHandler contextHandler = new ContextHandler(contextInfo, context, eventListener, bundle);
+        ServletContextHelperRuntime contextHandler = new ContextHandler(contextInfo, context, eventListener, bundle);
 
         ServletContext sharedContext = contextHandler.getSharedContext();
         sharedContext.setAttribute("intAttr", 1);
@@ -165,8 +165,9 @@ public class RuntimeDTOBuilderTest
     public Map<Long, Collection<ServiceReference<?>>> setupListeners()
     {
         Map<Long, Collection<ServiceReference<?>>> listenerRuntimes = new HashMap<Long, Collection<ServiceReference<?>>>();
+
         listenerRuntimes.put(ID_0, asList(listener_1, listener_2));
-        listenerRuntimes.put(ID_A, Arrays.<ServiceReference<?>> asList(listener_1));
+        listenerRuntimes.put(ID_A, Arrays.<ServiceReference<?>>asList(listener_1));
         listenerRuntimes.put(ID_B, asList(listener_1, listener_2));
 
         when(listener_1.getProperty(Constants.SERVICE_ID)).thenReturn(ID_LISTENER_1);
@@ -180,19 +181,19 @@ public class RuntimeDTOBuilderTest
         return listenerRuntimes;
     }
 
-    public void setupRegistry(List<ContextHandler> contexts,
+    public void setupRegistry(List<ServletContextHelperRuntime> contexts,
             List<ContextRuntime> contextRuntimes,
             Map<Long, Collection<ServiceReference<?>>> listenerRuntimes)
     {
-        registry = new RegistryRuntime(contexts, contextRuntimes, listenerRuntimes);
+        registry = new RegistryRuntime(contexts, contextRuntimes, listenerRuntimes, FailureRuntime.empty());
     }
 
     @Test
     public void buildRuntimeDTO()
     {
-        ContextHandler contextHelper_0 = setupContext(context_0, "0", ID_0);
-        ContextHandler contextHelper_A = setupContext(context_A, "A", ID_A);
-        ContextHandler contextHelper_B = setupContext(context_B, "B", ID_B);
+        ServletContextHelperRuntime contextHelper_0 = setupContext(context_0, "0", ID_0);
+        ServletContextHelperRuntime contextHelper_A = setupContext(context_A, "A", ID_A);
+        ServletContextHelperRuntime contextHelper_B = setupContext(context_B, "B", ID_B);
 
         List<ServletRuntime> servlets_0 = asList(createTestServlet("1", context_0));
         List<FilterRuntime> filters_0 = asList(createTestFilter("1", context_0));
@@ -525,7 +526,7 @@ public class RuntimeDTOBuilderTest
 
     @Test
     public void nullValuesInEntities() {
-        ContextHandler contextHandler = setupContext(context_0, "0", ID_0);
+        ServletContextHelperRuntime contextHandler = setupContext(context_0, "0", ID_0);
 
         ServletInfo servletInfo = createServletInfo(0,
                 ID_COUNTER.incrementAndGet(),
@@ -582,8 +583,8 @@ public class RuntimeDTOBuilderTest
 
     @Test
     public void contextWithNoEntities() {
-        ContextHandler contextHandler_0 = setupContext(context_0, "0", ID_0);
-        ContextHandler contextHandler_A = setupContext(context_A, "A", ID_A);
+        ServletContextHelperRuntime contextHandler_0 = setupContext(context_0, "0", ID_0);
+        ServletContextHelperRuntime contextHandler_A = setupContext(context_A, "A", ID_A);
 
         setupRegistry(asList(contextHandler_0, contextHandler_A),
                 asList(ContextRuntime.empty(ID_0), ContextRuntime.empty(ID_A)),
@@ -604,7 +605,7 @@ public class RuntimeDTOBuilderTest
         expectedException.expect(IllegalArgumentException.class);
         expectedException.expectMessage("patterns");
 
-        ContextHandler contextHandler = setupContext(context_0, "0", ID_0);
+        ServletContextHelperRuntime contextHandler = setupContext(context_0, "0", ID_0);
 
         ServletInfo servletInfo = createServletInfo(0,
                 ID_COUNTER.incrementAndGet(),
@@ -623,7 +624,7 @@ public class RuntimeDTOBuilderTest
                 Collections.<ErrorPageRuntime>emptyList(),
                 ID_0);
         setupRegistry(asList(contextHandler), asList(contextRuntime),
-                Collections.<Long, Collection<ServiceReference<?>>> emptyMap());
+                Collections.<Long, Collection<ServiceReference<?>>>emptyMap());
 
         new RuntimeDTOBuilder(registry, runtimeAttributes).build();
     }

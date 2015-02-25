@@ -18,18 +18,29 @@
  */
 package org.apache.felix.http.base.internal.runtime.dto;
 
+import java.util.function.Supplier;
+
 import org.apache.felix.http.base.internal.runtime.ServletInfo;
 import org.osgi.service.http.runtime.dto.ServletDTO;
 
-final class ServletDTOBuilder extends BaseServletDTOBuilder<ServletRuntime, ServletDTO>
+final class ServletDTOBuilder<T extends ServletDTO> extends BaseServletDTOBuilder<ServletRuntime, T>
 {
+    static ServletDTOBuilder<ServletDTO> create()
+    {
+        return new ServletDTOBuilder<ServletDTO>(DTOSuppliers.SERVLET);
+    }
+
+    ServletDTOBuilder(Supplier<T> dtoFactory)
+    {
+        super(dtoFactory);
+    }
+
     @Override
-    ServletDTO buildDTO(ServletRuntime servletRuntime, long servletContextId)
+    T buildDTO(ServletRuntime servletRuntime, long servletContextId)
     {
         ServletInfo info = servletRuntime.getServletInfo();
 
-        ServletDTO servletDTO = new ServletDTO();
-        setBaseFields(servletDTO, servletRuntime, servletContextId);
+        T servletDTO = super.buildDTO(servletRuntime, servletContextId);
         servletDTO.patterns = copyWithDefault(checkNotEmpty(info.getPatterns()), null);
         return servletDTO;
     }
