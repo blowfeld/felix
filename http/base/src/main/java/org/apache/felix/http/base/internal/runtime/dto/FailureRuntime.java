@@ -20,7 +20,6 @@ package org.apache.felix.http.base.internal.runtime.dto;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -47,19 +46,19 @@ public final class FailureRuntime
     private static final FailedListenerDTO[] LISTENER_DTO_ARRAY = new FailedListenerDTO[0];
     private static final FailedServletContextDTO[] CONTEXT_DTO_ARRAY = new FailedServletContextDTO[0];
 
-    private final Map<ServletContextHelperRuntime, Integer> contextRuntimes;
-    private final Map<ServletRuntime, Integer> servletRuntimes;
-    private final Map<FilterRuntime, Integer> filterRuntimes;
-    private final Map<ServletRuntime, Integer> resourceRuntimes;
-    private final Map<ErrorPageRuntime, Integer> errorPageRuntimes;
-    private final Map<ServiceReference<?>, Integer> listenerRuntimes;
+    private final List<Failure<ServletContextHelperRuntime>> contextRuntimes;
+    private final List<Failure<ServletRuntime>> servletRuntimes;
+    private final List<Failure<FilterRuntime>> filterRuntimes;
+    private final List<Failure<ServletRuntime>> resourceRuntimes;
+    private final List<Failure<ErrorPageRuntime>> errorPageRuntimes;
+    private final List<Failure<ServiceReference<?>>> listenerRuntimes;
 
-    public FailureRuntime(Map<ServletContextHelperRuntime, Integer> contextRuntimes,
-            Map<ServiceReference<?>, Integer> listenerRuntimes,
-            Map<ServletRuntime, Integer> servletRuntimes,
-            Map<FilterRuntime, Integer> filterRuntimes,
-            Map<ServletRuntime, Integer> resourceRuntimes,
-            Map<ErrorPageRuntime, Integer> errorPageRuntimes)
+    public FailureRuntime(List<Failure<ServletContextHelperRuntime>> contextRuntimes,
+            List<Failure<ServiceReference<?>>> listenerRuntimes,
+            List<Failure<ServletRuntime>> servletRuntimes,
+            List<Failure<FilterRuntime>> filterRuntimes,
+            List<Failure<ServletRuntime>> resourceRuntimes,
+            List<Failure<ErrorPageRuntime>> errorPageRuntimes)
     {
         this.contextRuntimes = contextRuntimes;
         this.servletRuntimes = servletRuntimes;
@@ -71,49 +70,49 @@ public final class FailureRuntime
 
     public static FailureRuntime empty()
     {
-        return new FailureRuntime(Collections.<ServletContextHelperRuntime, Integer>emptyMap(),
-                Collections.<ServiceReference<?>, Integer>emptyMap(),
-                Collections.<ServletRuntime, Integer>emptyMap(),
-                Collections.<FilterRuntime, Integer>emptyMap(),
-                Collections.<ServletRuntime, Integer>emptyMap(),
-                Collections.<ErrorPageRuntime, Integer>emptyMap());
+        return new FailureRuntime(Collections.<Failure<ServletContextHelperRuntime>>emptyList(),
+                Collections.<Failure<ServiceReference<?>>>emptyList(),
+                Collections.<Failure<ServletRuntime>>emptyList(),
+                Collections.<Failure<FilterRuntime>>emptyList(),
+                Collections.<Failure<ServletRuntime>>emptyList(),
+                Collections.<Failure<ErrorPageRuntime>>emptyList());
     }
 
     public static FailureRuntime forServiceInfos(Map<AbstractInfo<?>, Integer> failureInfos)
     {
-        Map<ServletContextHelperRuntime, Integer> contextRuntimes = new HashMap<ServletContextHelperRuntime, Integer>();
-        Map<ServletRuntime, Integer> servletRuntimes = new HashMap<ServletRuntime, Integer>();
-        Map<FilterRuntime, Integer> filterRuntimes = new HashMap<FilterRuntime, Integer>();
-        Map<ServletRuntime, Integer> resourceRuntimes = new HashMap<ServletRuntime, Integer>();
-        Map<ErrorPageRuntime, Integer> errorPageRuntimes = new HashMap<ErrorPageRuntime, Integer>();
-        Map<ServiceReference<?>, Integer> listenerRuntimes = new HashMap<ServiceReference<?>, Integer>();
+        List<Failure<ServletContextHelperRuntime>> contextRuntimes = new ArrayList<FailureRuntime.Failure<ServletContextHelperRuntime>>();
+        List<Failure<ServletRuntime>> servletRuntimes = new ArrayList<Failure<ServletRuntime>>();
+        List<Failure<FilterRuntime>> filterRuntimes = new ArrayList<Failure<FilterRuntime>>();
+        List<Failure<ServletRuntime>> resourceRuntimes = new ArrayList<Failure<ServletRuntime>>();
+        List<Failure<ErrorPageRuntime>> errorPageRuntimes = new ArrayList<Failure<ErrorPageRuntime>>();
+        List<Failure<ServiceReference<?>>> listenerRuntimes = new ArrayList<Failure<ServiceReference<?>>>();
 
         for (AbstractInfo<?> info : failureInfos.keySet())
         {
             if (info instanceof ServletContextHelperInfo)
             {
                 ServletContextHelperRuntime servletRuntime = new FailureServletContextHelperRuntime((ServletContextHelperInfo) info);
-                contextRuntimes.put(servletRuntime, failureInfos.get(info));
+                contextRuntimes.add(new Failure<ServletContextHelperRuntime>(servletRuntime, failureInfos.get(info)));
             }
             else if (info instanceof ServletInfo)
             {
                 ServletRuntime servletRuntime = new FailureServletRuntime((ServletInfo) info);
-                servletRuntimes.put(servletRuntime, failureInfos.get(info));
+                servletRuntimes.add(new Failure<ServletRuntime>(servletRuntime, failureInfos.get(info)));
             }
             else if (info instanceof FilterInfo)
             {
                 FilterRuntime filterRuntime = new FailureFilterRuntime((FilterInfo) info);
-                filterRuntimes.put(filterRuntime, failureInfos.get(info));
+                filterRuntimes.add(new Failure<FilterRuntime>(filterRuntime, failureInfos.get(info)));
             }
             else if (info instanceof ResourceInfo)
             {
                 ServletRuntime servletRuntime = new FailureServletRuntime(new ServletInfo((ResourceInfo) info));
-                resourceRuntimes.put(servletRuntime, failureInfos.get(info));
+                resourceRuntimes.add(new Failure<ServletRuntime>(servletRuntime, failureInfos.get(info)));
             }
             else if (info instanceof ListenerInfo)
             {
                 ServiceReference<?> serviceReference = ((ListenerInfo<?>) info).getServiceReference();
-                listenerRuntimes.put(serviceReference, failureInfos.get(info));
+                listenerRuntimes.add(new Failure<ServiceReference<?>>(serviceReference, failureInfos.get(info)));
             }
             else
             {
@@ -132,9 +131,9 @@ public final class FailureRuntime
     public FailedServletDTO[] getServletDTOs()
     {
         List<FailedServletDTO> servletDTOs = new ArrayList<FailedServletDTO>();
-        for (Map.Entry<ServletRuntime, Integer> failure : servletRuntimes.entrySet())
+        for (Failure<ServletRuntime> failure : servletRuntimes)
         {
-            servletDTOs.add(getServletDTO(failure.getKey(), failure.getValue()));
+            servletDTOs.add(getServletDTO(failure.service, failure.failureCode));
         }
         return servletDTOs.toArray(SERVLET_DTO_ARRAY);
     }
@@ -150,9 +149,9 @@ public final class FailureRuntime
     public FailedFilterDTO[] getFilterDTOs()
     {
         List<FailedFilterDTO> filterDTOs = new ArrayList<FailedFilterDTO>();
-        for (Map.Entry<FilterRuntime, Integer> failure : filterRuntimes.entrySet())
+        for (Failure<FilterRuntime> failure : filterRuntimes)
         {
-            filterDTOs.add(getFilterDTO(failure.getKey(), failure.getValue()));
+            filterDTOs.add(getFilterDTO(failure.service, failure.failureCode));
         }
         return filterDTOs.toArray(FILTER_DTO_ARRAY);
     }
@@ -168,9 +167,9 @@ public final class FailureRuntime
     public FailedResourceDTO[] getResourceDTOs()
     {
         List<FailedResourceDTO> resourceDTOs = new ArrayList<FailedResourceDTO>();
-        for (Map.Entry<ServletRuntime, Integer> failure : resourceRuntimes.entrySet())
+        for (Failure<ServletRuntime> failure : resourceRuntimes)
         {
-            resourceDTOs.add(getResourceDTO(failure.getKey(), failure.getValue()));
+            resourceDTOs.add(getResourceDTO(failure.service, failure.failureCode));
         }
         return resourceDTOs.toArray(RESOURCE_DTO_ARRAY);
     }
@@ -186,9 +185,9 @@ public final class FailureRuntime
     public FailedErrorPageDTO[] getErrorPageDTOs()
     {
         List<FailedErrorPageDTO> errorPageDTOs = new ArrayList<FailedErrorPageDTO>();
-        for (Map.Entry<ErrorPageRuntime, Integer> failure : errorPageRuntimes.entrySet())
+        for (Failure<ErrorPageRuntime> failure : errorPageRuntimes)
         {
-            errorPageDTOs.add(getErrorPageDTO(failure.getKey(), failure.getValue()));
+            errorPageDTOs.add(getErrorPageDTO(failure.service, failure.failureCode));
         }
         return errorPageDTOs.toArray(ERROR_PAGE_DTO_ARRAY);
     }
@@ -204,9 +203,9 @@ public final class FailureRuntime
     public FailedListenerDTO[] getListenerDTOs()
     {
         List<FailedListenerDTO> listenerDTOs = new ArrayList<FailedListenerDTO>();
-        for (Map.Entry<ServiceReference<?>, Integer> failure : listenerRuntimes.entrySet())
+        for (Failure<ServiceReference<?>> failure : listenerRuntimes)
         {
-            listenerDTOs.add(getListenerDTO(failure.getKey(), failure.getValue()));
+            listenerDTOs.add(getListenerDTO(failure.service, failure.failureCode));
         }
         return listenerDTOs.toArray(LISTENER_DTO_ARRAY);
     }
@@ -222,9 +221,9 @@ public final class FailureRuntime
     public FailedServletContextDTO[] getServletContextDTOs()
     {
         List<FailedServletContextDTO> contextDTOs = new ArrayList<FailedServletContextDTO>();
-        for (Map.Entry<ServletContextHelperRuntime, Integer> failure : contextRuntimes.entrySet())
+        for (Failure<ServletContextHelperRuntime> failure : contextRuntimes)
         {
-            contextDTOs.add(getServletContextDTO(failure.getKey(), failure.getValue()));
+            contextDTOs.add(getServletContextDTO(failure.service, failure.failureCode));
         }
         return contextDTOs.toArray(CONTEXT_DTO_ARRAY);
     }
@@ -235,6 +234,18 @@ public final class FailureRuntime
         FailedServletContextDTO servletContextDTO = (FailedServletContextDTO) dtoBuilder.build();
         servletContextDTO.failureReason = failureCode;
         return servletContextDTO;
+    }
+
+    private static class Failure<T>
+    {
+        final T service;
+        final int failureCode;
+
+        Failure(T service, int failureCode)
+        {
+            this.service = service;
+            this.failureCode = failureCode;
+        }
     }
 }
 

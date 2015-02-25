@@ -29,7 +29,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.TreeSet;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentSkipListMap;
 
 import javax.annotation.Nonnull;
 import javax.servlet.ServletContext;
@@ -76,7 +76,7 @@ public final class ServletContextHelperManager
 
     private final BundleContext bundleContext;
 
-    private final Map<AbstractInfo<?>, Integer> serviceFailures = new ConcurrentHashMap<AbstractInfo<?>, Integer>();
+    private final Map<AbstractInfo<?>, Integer> serviceFailures = new ConcurrentSkipListMap<AbstractInfo<?>, Integer>();
 
     private volatile ServletContext webContext;
 
@@ -516,21 +516,23 @@ public final class ServletContextHelperManager
 
     public RegistryRuntime getRuntime(HandlerRegistry registry)
     {
+        Collection<ServletContextHelperRuntime> contextRuntimes = new TreeSet<ServletContextHelperRuntime>();
         List<ContextRuntime> handlerRuntimes;
         Map<Long, Collection<ServiceReference<?>>> listenerRuntimes;
-        Collection<ServletContextHelperRuntime> contextHandlers = new TreeSet<ServletContextHelperRuntime>();
+        FailureRuntime failureRuntime;
         synchronized ( this.contextMap )
         {
             for (List<ContextHandler> contextHandlerList : this.contextMap.values())
             {
                 if ( !contextHandlerList.isEmpty() )
                 {
-                    contextHandlers.add(contextHandlerList.get(0));
+                    contextRuntimes.add(contextHandlerList.get(0));
                 }
             }
             handlerRuntimes = registry.getRuntime();
             listenerRuntimes = listenerRegistry.getContextRuntimes();
+            failureRuntime = FailureRuntime.forServiceInfos(serviceFailures);
         }
-        return new RegistryRuntime(contextHandlers, handlerRuntimes, listenerRuntimes, FailureRuntime.empty());
+        return new RegistryRuntime(contextRuntimes, handlerRuntimes, listenerRuntimes, failureRuntime);
     }
 }
