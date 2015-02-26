@@ -16,63 +16,70 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.felix.http.base.internal.runtime;
+package org.apache.felix.http.base.internal.runtime.dto;
 
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.felix.http.base.internal.whiteboard.ContextHandler;
 import org.osgi.framework.ServiceReference;
 
 public final class RegistryRuntime
 {
-    private final Collection<ContextHandler> contexts;
+    private final Collection<ServletContextHelperRuntime> contexts;
     private final Map<Long, Collection<ServiceReference<?>>> listenerRuntimes;
-    private final Map<Long, HandlerRuntime> handlerRuntimes;
+    private final Map<Long, ContextRuntime> handlerRuntimes;
+    private final FailureRuntime failureRuntime;
 
-    public RegistryRuntime(Collection<ContextHandler> contexts,
-            Collection<HandlerRuntime> contextRuntimes,
-            Map<Long, Collection<ServiceReference<?>>> listenerRuntimes)
+    public RegistryRuntime(Collection<ServletContextHelperRuntime> contexts,
+            Collection<ContextRuntime> contextRuntimes,
+            Map<Long, Collection<ServiceReference<?>>> listenerRuntimes,
+            FailureRuntime failureRuntime)
     {
         this.contexts = contexts;
+        this.failureRuntime = failureRuntime;
         this.handlerRuntimes = createServiceIdMap(contextRuntimes);
         this.listenerRuntimes = listenerRuntimes;
     }
 
-    private static Map<Long, HandlerRuntime> createServiceIdMap(Collection<HandlerRuntime> contextRuntimes)
+    private static Map<Long, ContextRuntime> createServiceIdMap(Collection<ContextRuntime> contextRuntimes)
     {
-        Map<Long, HandlerRuntime> runtimesMap = new HashMap<Long, HandlerRuntime>();
-        for (HandlerRuntime contextRuntime : contextRuntimes)
+        Map<Long, ContextRuntime> runtimesMap = new HashMap<Long, ContextRuntime>();
+        for (ContextRuntime contextRuntime : contextRuntimes)
         {
             runtimesMap.put(contextRuntime.getServiceId(), contextRuntime);
         }
         return runtimesMap;
     }
 
-    public HandlerRuntime getHandlerRuntime(ContextHandler contextHandler)
+    public ContextRuntime getHandlerRuntime(ServletContextHelperRuntime contextRuntime)
     {
-        long serviceId = contextHandler.getContextInfo().getServiceId();
+        long serviceId = contextRuntime.getContextInfo().getServiceId();
 
         if (handlerRuntimes.containsKey(serviceId))
         {
             return handlerRuntimes.get(serviceId);
         }
-        return HandlerRuntime.empty(serviceId);
+        return ContextRuntime.empty(serviceId);
     }
 
-    public Collection<ServiceReference<?>> getListenerRuntime(ContextHandler contextHandler)
+    public Collection<ServiceReference<?>> getListenerRuntimes(ServletContextHelperRuntime contextRuntime)
     {
-        if (listenerRuntimes.containsKey(contextHandler.getContextInfo().getServiceId()))
+        if (listenerRuntimes.containsKey(contextRuntime.getContextInfo().getServiceId()))
         {
-            return listenerRuntimes.get(contextHandler.getContextInfo().getServiceId());
+            return listenerRuntimes.get(contextRuntime.getContextInfo().getServiceId());
         }
         return Collections.emptyList();
     }
 
-    public Collection<ContextHandler> getContexts()
+    public Collection<ServletContextHelperRuntime> getContexts()
     {
         return contexts;
+    }
+
+    public FailureRuntime getFailureRuntime()
+    {
+        return failureRuntime;
     }
 }

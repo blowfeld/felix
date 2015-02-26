@@ -18,32 +18,28 @@
  */
 package org.apache.felix.http.base.internal.runtime.dto;
 
-import java.util.function.Supplier;
+import org.apache.felix.http.base.internal.runtime.FilterInfo;
 
-import org.osgi.framework.Constants;
-import org.osgi.framework.ServiceReference;
-import org.osgi.service.http.runtime.dto.ListenerDTO;
 
-final class ListenerDTOBuilder<T extends ListenerDTO> extends BaseDTOBuilder<ServiceReference<?>, T>
+
+public class FailureFilterRuntime implements FilterRuntime
 {
-    static ListenerDTOBuilder<ListenerDTO> create()
-    {
-        return new ListenerDTOBuilder<ListenerDTO>(DTOSuppliers.LISTENER);
-    }
+    private final FilterInfo FilterInfo;
 
-    ListenerDTOBuilder(Supplier<T> dtoFactory)
+    FailureFilterRuntime(FilterInfo FilterInfo)
     {
-        super(dtoFactory);
+        this.FilterInfo = FilterInfo;
     }
 
     @Override
-    T buildDTO(ServiceReference<?> listenerRef, long servletContextId)
+    public FilterInfo getFilterInfo()
     {
-        T listenerDTO = getDTOFactory().get();
-        listenerDTO.serviceId = (Long) listenerRef.getProperty(Constants.SERVICE_ID);
-        listenerDTO.servletContextId = servletContextId;
-        // TODO Is this the desired value?
-        listenerDTO.types = (String[]) listenerRef.getProperty(Constants.OBJECTCLASS);
-        return listenerDTO;
+        return FilterInfo;
+    }
+
+    @Override
+    public Long getContextServiceId()
+    {
+        return 0L;
     }
 }

@@ -18,29 +18,40 @@
  */
 package org.apache.felix.http.base.internal.runtime.dto;
 
+import java.util.function.Supplier;
+
 import javax.servlet.DispatcherType;
 
-import org.apache.felix.http.base.internal.handler.FilterHandler;
 import org.apache.felix.http.base.internal.runtime.FilterInfo;
 import org.osgi.service.http.runtime.dto.FilterDTO;
 
-final class FilterDTOBuilder extends BaseDTOBuilder<FilterHandler, FilterDTO>
+final class FilterDTOBuilder<T extends FilterDTO> extends BaseDTOBuilder<FilterRuntime, T>
 {
     private static final String[] STRING_ARRAY = new String[0];
 
-    @Override
-    FilterDTO buildDTO(FilterHandler filterHandler, long servletContextId)
+    static FilterDTOBuilder<FilterDTO> create()
     {
-        FilterInfo info = filterHandler.getFilterInfo();
+        return new FilterDTOBuilder<FilterDTO>(DTOSuppliers.FILTER);
+    }
 
-        FilterDTO filterDTO = new FilterDTO();
+    FilterDTOBuilder(Supplier<T> dtoFactory)
+    {
+        super(dtoFactory);
+    }
+
+    @Override
+    T buildDTO(FilterRuntime filterRuntime, long servletContextId)
+    {
+        FilterInfo info = filterRuntime.getFilterInfo();
+
+        T filterDTO = getDTOFactory().get();
         filterDTO.asyncSupported = info.isAsyncSupported();
         filterDTO.dispatcher = getNames(info.getDispatcher());
         filterDTO.initParams = copyWithDefault(info.getInitParameters());
         filterDTO.name = info.getName();
         filterDTO.patterns = copyWithDefault(info.getPatterns(), STRING_ARRAY);
         filterDTO.regexs = copyWithDefault(info.getRegexs(), STRING_ARRAY);
-        filterDTO.serviceId = filterHandler.getFilterInfo().getServiceId();
+        filterDTO.serviceId = info.getServiceId();
         filterDTO.servletContextId = servletContextId;
         filterDTO.servletNames = copyWithDefault(info.getServletNames(), STRING_ARRAY);
 

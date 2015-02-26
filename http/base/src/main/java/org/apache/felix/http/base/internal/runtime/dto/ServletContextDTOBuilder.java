@@ -21,13 +21,13 @@ package org.apache.felix.http.base.internal.runtime.dto;
 import static java.util.Collections.list;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
 import javax.servlet.ServletContext;
 
 import org.apache.felix.http.base.internal.runtime.ServletContextHelperInfo;
-import org.apache.felix.http.base.internal.whiteboard.ContextHandler;
 import org.osgi.dto.DTO;
 import org.osgi.service.http.runtime.dto.ErrorPageDTO;
 import org.osgi.service.http.runtime.dto.FilterDTO;
@@ -44,21 +44,24 @@ final class ServletContextDTOBuilder
     private static final ErrorPageDTO[] ERROR_PAGE_DTO_ARRAY = new ErrorPageDTO[0];
     private static final ListenerDTO[] LISTENER_DTO_ARRAY = new ListenerDTO[0];
 
-    private final ContextHandler contextHandler;
+    private final ServletContextDTO contextDTO;
+    private final ServletContextHelperRuntime contextRuntime;
     private final ServletDTO[] servletDTOs;
     private final ResourceDTO[] resourceDTOs;
     private final FilterDTO[] filterDTOs;
     private final ErrorPageDTO[] errorPageDTOs;
     private final ListenerDTO[] listenerDTOs;
 
-    public ServletContextDTOBuilder(ContextHandler contextHandler,
+    ServletContextDTOBuilder(ServletContextDTO contextDTO,
+            ServletContextHelperRuntime contextRuntime,
             Collection<ServletDTO> servletDTOs,
             Collection<ResourceDTO> resourceDTOs,
             Collection<FilterDTO> filterDTOs,
             Collection<ErrorPageDTO> errorPageDTOs,
             Collection<ListenerDTO> listenerDTOs)
     {
-        this.contextHandler = contextHandler;
+        this.contextDTO = contextDTO;
+        this.contextRuntime = contextRuntime;
         this.servletDTOs = servletDTOs != null ?
                 servletDTOs.toArray(SERVLET_DTO_ARRAY) : SERVLET_DTO_ARRAY;
         this.resourceDTOs = resourceDTOs != null ?
@@ -71,18 +74,32 @@ final class ServletContextDTOBuilder
                 listenerDTOs.toArray(LISTENER_DTO_ARRAY) : LISTENER_DTO_ARRAY;
     }
 
+    ServletContextDTOBuilder(ServletContextHelperRuntime contextRuntime,
+            Collection<ServletDTO> servletDTOs,
+            Collection<ResourceDTO> resourceDTOs,
+            Collection<FilterDTO> filterDTOs,
+            Collection<ErrorPageDTO> errorPageDTOs,
+            Collection<ListenerDTO> listenerDTOs)
+    {
+        this(new ServletContextDTO(), contextRuntime, servletDTOs, resourceDTOs, filterDTOs, errorPageDTOs, listenerDTOs);
+    }
+
+    ServletContextDTOBuilder(ServletContextDTO contextDTO, ServletContextHelperRuntime contextRuntime)
+    {
+        this(contextDTO, contextRuntime, null, null, null, null, null);
+    }
+
     ServletContextDTO build()
     {
-        ServletContext context  = contextHandler.getSharedContext();
-        ServletContextHelperInfo contextInfo = contextHandler.getContextInfo();
+        ServletContext context  = contextRuntime.getSharedContext();
+        ServletContextHelperInfo contextInfo = contextRuntime.getContextInfo();
         long contextId = contextInfo.getServiceId();
 
-        ServletContextDTO contextDTO = new ServletContextDTO();
         contextDTO.attributes = getAttributes(context);
-        contextDTO.contextPath = context.getContextPath();
+        contextDTO.contextPath = context == null ? contextInfo.getPath() : context.getContextPath();
         contextDTO.errorPageDTOs = errorPageDTOs;
         contextDTO.filterDTOs = filterDTOs;
-        contextDTO.initParams = getInitParameters(context);
+        contextDTO.initParams = contextInfo.getInitParameters();
         contextDTO.listenerDTOs = listenerDTOs;
         contextDTO.name = context.getServletContextName();
         contextDTO.resourceDTOs = resourceDTOs;
@@ -93,6 +110,11 @@ final class ServletContextDTOBuilder
 
     private Map<String, Object> getAttributes(ServletContext context)
     {
+        if (context == null)
+        {
+            return Collections.emptyMap();
+        }
+
         Map<String, Object> attributes = new HashMap<String, Object>();
         for (String name : list(context.getAttributeNames()))
         {
@@ -123,15 +145,5 @@ final class ServletContextDTOBuilder
                 short.class.isAssignableFrom(type) ||
                 byte.class.isAssignableFrom(type) ||
                 char.class.isAssignableFrom(type);
-    }
-
-    private Map<String, String> getInitParameters(ServletContext context)
-    {
-        Map<String, String> initParameters = new HashMap<String, String>();
-        for (String name : list(context.getInitParameterNames()))
-        {
-            initParameters.put(name, context.getInitParameter(name));
-        }
-        return initParameters;
     }
 }

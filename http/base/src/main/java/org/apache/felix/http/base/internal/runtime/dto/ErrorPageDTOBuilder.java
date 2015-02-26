@@ -20,19 +20,28 @@ package org.apache.felix.http.base.internal.runtime.dto;
 
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.function.Supplier;
 
-import org.apache.felix.http.base.internal.runtime.HandlerRuntime.ErrorPage;
 import org.osgi.service.http.runtime.dto.ErrorPageDTO;
 
-final class ErrorPageDTOBuilder extends BaseServletDTOBuilder<ErrorPage, ErrorPageDTO>
+final class ErrorPageDTOBuilder<T extends ErrorPageDTO> extends BaseServletDTOBuilder<ErrorPageRuntime, T>
 {
     private static final String[] STRING_ARRAY = new String[0];
 
-    @Override
-    ErrorPageDTO buildDTO(ErrorPage errorPage, long servletConextId)
+    static ErrorPageDTOBuilder<ErrorPageDTO> create()
     {
-        ErrorPageDTO errorPageDTO = new ErrorPageDTO();
-        setBaseFields(errorPageDTO, errorPage.getServletHandler(), servletConextId);
+        return new ErrorPageDTOBuilder<ErrorPageDTO>(DTOSuppliers.ERROR_PAGE);
+    }
+
+    ErrorPageDTOBuilder(Supplier<T> dtoFactory)
+    {
+        super(dtoFactory);
+    }
+
+    @Override
+    T buildDTO(ErrorPageRuntime errorPage, long servletConextId)
+    {
+        T errorPageDTO = super.buildDTO(errorPage, servletConextId);
         errorPageDTO.errorCodes = getErrorCodes(errorPage.getErrorCodes());
         errorPageDTO.exceptions = errorPage.getExceptions().toArray(STRING_ARRAY);
         return errorPageDTO;

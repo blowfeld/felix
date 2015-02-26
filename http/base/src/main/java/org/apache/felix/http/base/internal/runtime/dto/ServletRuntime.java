@@ -18,33 +18,15 @@
  */
 package org.apache.felix.http.base.internal.runtime.dto;
 
-import java.util.function.Supplier;
-
 import javax.servlet.Servlet;
 
 import org.apache.felix.http.base.internal.runtime.ServletInfo;
-import org.osgi.service.http.runtime.dto.BaseServletDTO;
 
-abstract class BaseServletDTOBuilder<T extends ServletRuntime, U extends BaseServletDTO> extends BaseDTOBuilder<T, U>
+
+
+public interface ServletRuntime extends WhiteboardServiceRuntime
 {
-    BaseServletDTOBuilder(Supplier<U> servletDTOFactory)
-    {
-        super(servletDTOFactory);
-    }
+    Servlet getServlet();
 
-    @Override
-    U buildDTO(T servletRuntime, long servletContextId)
-    {
-        ServletInfo info = servletRuntime.getServletInfo();
-        Servlet servlet = servletRuntime.getServlet();
-
-        U dto = getDTOFactory().get();
-        dto.asyncSupported = info.isAsyncSupported();
-        dto.initParams = copyWithDefault(info.getInitParameters());
-        dto.name = info.getName();
-        dto.serviceId = servletRuntime.getServletInfo().getServiceId();
-        dto.servletContextId = servletContextId;
-        dto.servletInfo = servlet != null ? servlet.getServletInfo() : null;
-        return dto;
-    }
+    ServletInfo getServletInfo();
 }

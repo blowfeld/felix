@@ -96,7 +96,8 @@ public final class ListenerRegistry
         Map<Long, Collection<ServiceReference<?>>> listenersByContext = new HashMap<Long, Collection<ServiceReference<?>>>();
         for (ServletContextHelperInfo contextInfo : registriesByContext.keySet())
         {
-            listenersByContext.put(contextInfo.getServiceId(), registriesByContext.get(contextInfo).getRuntime());
+            long serviceId = contextInfo.getServiceId();
+            listenersByContext.put(serviceId, registriesByContext.get(contextInfo).getRuntime());
         }
         return listenersByContext;
     }

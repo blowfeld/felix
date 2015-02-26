@@ -220,8 +220,5 @@ public class ServletInfo extends WhiteboardServiceInfo<Servlet>
             throw new UnsupportedOperationException();
         };
         super.ungetService(bundle, service);
-            throw new UnsupportedOperationException();
-        };
-        super.ungetService(bundle, service);
     }
 }

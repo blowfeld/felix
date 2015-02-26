@@ -18,39 +18,36 @@
  */
 package org.apache.felix.http.base.internal.runtime.dto;
 
-import java.util.function.Supplier;
+import javax.servlet.Servlet;
 
 import org.apache.felix.http.base.internal.runtime.ServletInfo;
-import org.osgi.service.http.runtime.dto.ServletDTO;
 
-final class ServletDTOBuilder<T extends ServletDTO> extends BaseServletDTOBuilder<ServletRuntime, T>
+
+
+public class FailureServletRuntime implements ServletRuntime
 {
-    static ServletDTOBuilder<ServletDTO> create()
-    {
-        return new ServletDTOBuilder<ServletDTO>(DTOSuppliers.SERVLET);
-    }
+    private final ServletInfo servletInfo;
 
-    ServletDTOBuilder(Supplier<T> dtoFactory)
+    FailureServletRuntime(ServletInfo servletInfo)
     {
-        super(dtoFactory);
+        this.servletInfo = servletInfo;
     }
 
     @Override
-    T buildDTO(ServletRuntime servletRuntime, long servletContextId)
+    public ServletInfo getServletInfo()
     {
-        ServletInfo info = servletRuntime.getServletInfo();
-
-        T servletDTO = super.buildDTO(servletRuntime, servletContextId);
-        servletDTO.patterns = copyWithDefault(checkNotEmpty(info.getPatterns()), null);
-        return servletDTO;
+        return servletInfo;
     }
 
-    private String[] checkNotEmpty(String[] patterns)
+    @Override
+    public Long getContextServiceId()
     {
-        if (patterns == null || patterns.length == 0)
-        {
-            throw new IllegalArgumentException("No patterns specified in servlet info");
-        }
-        return patterns;
+        return 0L;
+    }
+
+    @Override
+    public Servlet getServlet()
+    {
+        return null;
     }
 }

@@ -22,7 +22,7 @@ import java.util.Dictionary;
 import java.util.Hashtable;
 
 import org.apache.felix.http.base.internal.handler.HandlerRegistry;
-import org.apache.felix.http.base.internal.runtime.RegistryRuntime;
+import org.apache.felix.http.base.internal.runtime.dto.RegistryRuntime;
 import org.apache.felix.http.base.internal.runtime.dto.RuntimeDTOBuilder;
 import org.apache.felix.http.base.internal.whiteboard.ServletContextHelperManager;
 import org.osgi.service.http.runtime.HttpServiceRuntime;
