@@ -16,6 +16,7 @@
  */
 package org.apache.felix.http.base.internal.whiteboard;
 
+import static org.osgi.service.http.runtime.dto.DTOConstants.FAILURE_REASON_SHADOWED_BY_OTHER_SERVICE;
 import static org.osgi.service.http.runtime.dto.DTOConstants.FAILURE_REASON_VALIDATION_FAILED;
 
 import java.util.ArrayList;
@@ -320,10 +321,7 @@ public final class ServletContextHelperManager
                     }
                 }
             }
-            else
-            {
-                this.serviceFailures.remove(info);
-            }
+            this.serviceFailures.remove(info);
         }
     }
 
@@ -395,10 +393,7 @@ public final class ServletContextHelperManager
                     }
                 }
             }
-            else
-            {
-                this.serviceFailures.remove(info);
-            }
+            this.serviceFailures.remove(info);
         }
     }
 
