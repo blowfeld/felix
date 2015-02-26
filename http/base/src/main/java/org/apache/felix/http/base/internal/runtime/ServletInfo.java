@@ -198,10 +198,7 @@ public class ServletInfo extends WhiteboardServiceInfo<Servlet>
     @Override
     public ServiceReference<Servlet> getServiceReference()
     {
-        if (isResource)
-        {
-            throw new UnsupportedOperationException();
-        };
+        // TODO This method returns a ServiceReference<Object> in case of a resource
         return super.getServiceReference();
     }
 
