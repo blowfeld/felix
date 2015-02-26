@@ -130,7 +130,7 @@ public class ServletInfo extends WhiteboardServiceInfo<Servlet>
             this.patterns = new String[] {pattern, pattern + "/*"};
         }
         this.initParams = initParams;
-        this.asyncSupported = false;
+        this.asyncSupported = true;
         this.errorPage = null;
         this.isResource = false;
         this.prefix = null;
@@ -198,10 +198,7 @@ public class ServletInfo extends WhiteboardServiceInfo<Servlet>
     @Override
     public ServiceReference<Servlet> getServiceReference()
     {
-        if (isResource)
-        {
-            throw new UnsupportedOperationException();
-        };
+        // TODO This method returns a ServiceReference<Object> in case of a resource
         return super.getServiceReference();
     }
 
@@ -220,6 +217,9 @@ public class ServletInfo extends WhiteboardServiceInfo<Servlet>
     {
         if (isResource)
         {
+            throw new UnsupportedOperationException();
+        };
+        super.ungetService(bundle, service);
             throw new UnsupportedOperationException();
         };
         super.ungetService(bundle, service);
