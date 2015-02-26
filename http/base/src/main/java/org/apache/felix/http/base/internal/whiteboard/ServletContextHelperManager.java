@@ -260,7 +260,9 @@ public final class ServletContextHelperManager
                         // check for deactivate
                         if ( handlerList.size() > 1 )
                         {
-                            this.deactivate(handlerList.get(1));
+                            ContextHandler oldHead = handlerList.get(1);
+                            this.deactivate(oldHead);
+                            this.serviceFailures.put(oldHead.getContextInfo(), FAILURE_REASON_SHADOWED_BY_OTHER_SERVICE);
                         }
                         this.activate(handler);
                     }
@@ -315,7 +317,9 @@ public final class ServletContextHelperManager
                         }
                         else if ( activateNext )
                         {
-                            this.activate(handlerList.get(0));
+                            ContextHandler newHead = handlerList.get(0);
+                            this.activate(newHead);
+                            this.serviceFailures.remove(newHead.getContextInfo());
                         }
                         listenerRegistry.removeContext(info);
                     }
