@@ -53,7 +53,7 @@ public final class FailureRuntime
     private final List<Failure<ErrorPageRuntime>> errorPageRuntimes;
     private final List<Failure<ServiceReference<?>>> listenerRuntimes;
 
-    public FailureRuntime(List<Failure<ServletContextHelperRuntime>> contextRuntimes,
+    private FailureRuntime(List<Failure<ServletContextHelperRuntime>> contextRuntimes,
             List<Failure<ServiceReference<?>>> listenerRuntimes,
             List<Failure<ServletRuntime>> servletRuntimes,
             List<Failure<FilterRuntime>> filterRuntimes,
@@ -93,6 +93,12 @@ public final class FailureRuntime
             {
                 ServletContextHelperRuntime servletRuntime = new FailureServletContextHelperRuntime((ServletContextHelperInfo) info);
                 contextRuntimes.add(new Failure<ServletContextHelperRuntime>(servletRuntime, failureInfos.get(info)));
+            }
+            else if (info instanceof ServletInfo && ((ServletInfo) info).getErrorPage() != null)
+            {
+                FailureServletRuntime servletRuntime = new FailureServletRuntime((ServletInfo) info);
+                ErrorPageRuntime errorPageRuntime = ErrorPageRuntime.fromRuntime(servletRuntime);
+                errorPageRuntimes.add(new Failure<ErrorPageRuntime>(errorPageRuntime, failureInfos.get(info)));
             }
             else if (info instanceof ServletInfo)
             {

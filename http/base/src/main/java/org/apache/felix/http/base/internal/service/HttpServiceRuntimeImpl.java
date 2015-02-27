@@ -53,7 +53,6 @@ public final class HttpServiceRuntimeImpl implements HttpServiceRuntime
     @Override
     public RequestInfoDTO calculateRequestInfoDTO(String path)
     {
-        // TODO Auto-generated method stub
         return null;
     }
 

@@ -18,13 +18,19 @@
  */
 package org.apache.felix.http.base.internal.runtime.dto;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
+import java.util.regex.Pattern;
 
 import javax.servlet.Servlet;
 
 import org.apache.felix.http.base.internal.runtime.ServletInfo;
 
-public final class ErrorPageRuntime implements ServletRuntime {
+public class ErrorPageRuntime implements ServletRuntime
+{
+    private static final Pattern ERROR_CODE_PATTERN = Pattern.compile("\\d{3}");
+
     private final ServletRuntime servletRuntime;
     private final Collection<Integer> errorCodes;
     private final Collection<String> exceptions;
@@ -36,6 +42,26 @@ public final class ErrorPageRuntime implements ServletRuntime {
         this.servletRuntime = servletRuntime;
         this.errorCodes = errorCodes;
         this.exceptions = exceptions;
+    }
+
+    public static ErrorPageRuntime fromRuntime(ServletRuntime servletRuntime)
+    {
+        List<Integer> errorCodes = new ArrayList<Integer>();
+        List<String> exceptions = new ArrayList<String>();
+
+        for (String string : servletRuntime.getServletInfo().getErrorPage())
+        {
+            if (ERROR_CODE_PATTERN.matcher(string).matches())
+            {
+                errorCodes.add(Integer.valueOf(string));
+            }
+            else
+            {
+                exceptions.add(string);
+            }
+        }
+
+        return new ErrorPageRuntime(servletRuntime, errorCodes, exceptions);
     }
 
     public Collection<Integer> getErrorCodes()

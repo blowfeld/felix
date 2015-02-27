@@ -37,6 +37,7 @@ import org.apache.felix.http.base.internal.handler.ServletHandler;
 import org.apache.felix.http.base.internal.runtime.dto.ErrorPageRuntime;
 import org.apache.felix.http.base.internal.runtime.dto.FilterRuntime;
 import org.apache.felix.http.base.internal.runtime.dto.ServletRuntime;
+import org.osgi.framework.ServiceReference;
 
 public final class WhiteboardServiceHelper
 {
@@ -138,7 +139,7 @@ public final class WhiteboardServiceHelper
                 serviceId,
                 name,
                 patterns,
-                null,
+                errorPages,
                 asyncSupported,
                 initParams);
     }
@@ -187,5 +188,10 @@ public final class WhiteboardServiceHelper
                 name,
                 path,
                 initParams);
+    }
+
+    public static ResourceInfo createContextInfo(ServiceReference<Object> ref)
+    {
+        return new ResourceInfo(ref);
     }
 }
