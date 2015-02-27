@@ -24,7 +24,7 @@ import org.apache.felix.http.base.internal.runtime.ServletInfo;
 
 
 
-public class FailureServletRuntime implements ServletRuntime
+public class FailureServletRuntime implements ServletRuntime, Comparable<FailureServletRuntime>
 {
     private final ServletInfo servletInfo;
 
@@ -49,5 +49,11 @@ public class FailureServletRuntime implements ServletRuntime
     public Servlet getServlet()
     {
         return null;
+    }
+
+    @Override
+    public int compareTo(FailureServletRuntime other)
+    {
+        return servletInfo.compareTo(other.getServletInfo());
     }
 }

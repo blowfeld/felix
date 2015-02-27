@@ -27,7 +27,7 @@ import javax.servlet.Servlet;
 
 import org.apache.felix.http.base.internal.runtime.ServletInfo;
 
-public class ErrorPageRuntime implements ServletRuntime
+public class ErrorPageRuntime implements ServletRuntime, Comparable<ErrorPageRuntime>
 {
     private static final Pattern ERROR_CODE_PATTERN = Pattern.compile("\\d{3}");
 
@@ -90,5 +90,11 @@ public class ErrorPageRuntime implements ServletRuntime
     public ServletInfo getServletInfo()
     {
         return servletRuntime.getServletInfo();
+    }
+
+    @Override
+    public int compareTo(ErrorPageRuntime other)
+    {
+        return getServletInfo().compareTo(other.getServletInfo());
     }
 }
