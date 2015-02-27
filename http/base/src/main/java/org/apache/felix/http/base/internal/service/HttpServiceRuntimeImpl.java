@@ -23,6 +23,7 @@ import java.util.Hashtable;
 
 import org.apache.felix.http.base.internal.handler.HandlerRegistry;
 import org.apache.felix.http.base.internal.runtime.dto.RegistryRuntime;
+import org.apache.felix.http.base.internal.runtime.dto.RequestInfoDTOBuilder;
 import org.apache.felix.http.base.internal.runtime.dto.RuntimeDTOBuilder;
 import org.apache.felix.http.base.internal.whiteboard.ServletContextHelperManager;
 import org.osgi.service.http.runtime.HttpServiceRuntime;
@@ -53,7 +54,7 @@ public final class HttpServiceRuntimeImpl implements HttpServiceRuntime
     @Override
     public RequestInfoDTO calculateRequestInfoDTO(String path)
     {
-        return null;
+        return new RequestInfoDTOBuilder(registry, path).build();
     }
 
     public synchronized void setAttribute(String name, Object value)
@@ -64,7 +65,7 @@ public final class HttpServiceRuntimeImpl implements HttpServiceRuntime
     public synchronized void setAllAttributes(Dictionary<String, Object> attributes)
     {
         this.attributes.clear();
-        for (String key :list(attributes.keys()))
+        for (String key : list(attributes.keys()))
         {
             this.attributes.put(key, attributes.get(key));
         }
