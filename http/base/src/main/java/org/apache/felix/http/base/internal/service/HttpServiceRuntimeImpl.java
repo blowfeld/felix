@@ -36,7 +36,6 @@ public final class HttpServiceRuntimeImpl implements HttpServiceRuntime
     private final HandlerRegistry registry;
     private final ServletContextHelperManager contextManager;
 
-
     public HttpServiceRuntimeImpl(HandlerRegistry registry,
             ServletContextHelperManager contextManager)
     {

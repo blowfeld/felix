@@ -159,9 +159,9 @@ public final class FailureRuntime
     private FailedFilterDTO getFilterDTO(FilterRuntime failedFilter, int failureCode)
     {
         FilterDTOBuilder<FailedFilterDTO> dtoBuilder = new FilterDTOBuilder<FailedFilterDTO>(DTOSuppliers.FAILED_FILTER);
-        FailedFilterDTO filerDTO = dtoBuilder.buildDTO(failedFilter, 0);
-        filerDTO.failureReason = failureCode;
-        return filerDTO;
+        FailedFilterDTO filterDTO = dtoBuilder.buildDTO(failedFilter, 0);
+        filterDTO.failureReason = failureCode;
+        return filterDTO;
     }
 
     public FailedResourceDTO[] getResourceDTOs()
