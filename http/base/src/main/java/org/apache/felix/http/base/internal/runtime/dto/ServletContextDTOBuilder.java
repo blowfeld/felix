@@ -101,7 +101,7 @@ final class ServletContextDTOBuilder
         contextDTO.filterDTOs = filterDTOs;
         contextDTO.initParams = contextInfo.getInitParameters();
         contextDTO.listenerDTOs = listenerDTOs;
-        contextDTO.name = context.getServletContextName();
+        contextDTO.name = contextInfo.getName();
         contextDTO.resourceDTOs = resourceDTOs;
         contextDTO.servletDTOs = servletDTOs;
         contextDTO.serviceId = contextId;
