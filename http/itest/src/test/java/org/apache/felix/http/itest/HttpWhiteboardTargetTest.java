@@ -47,7 +47,7 @@ import org.osgi.framework.ServiceRegistration;
 import org.osgi.service.http.whiteboard.HttpWhiteboardConstants;
 
 @RunWith(JUnit4TestRunner.class)
-public class HttpWhiteboardTest extends BaseIntegrationTest
+public class HttpWhiteboardTargetTest extends BaseIntegrationTest
 {
 	
 	private static final String SERVICE_HTTP_PORT = "org.osgi.service.http.port"; 
