@@ -40,7 +40,7 @@ public class FailureServletRuntime implements ServletRuntime, Comparable<Failure
     }
 
     @Override
-    public Long getContextServiceId()
+    public long getContextServiceId()
     {
         return 0L;
     }

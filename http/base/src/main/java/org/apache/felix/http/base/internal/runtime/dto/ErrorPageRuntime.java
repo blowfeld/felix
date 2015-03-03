@@ -75,7 +75,7 @@ public class ErrorPageRuntime implements ServletRuntime, Comparable<ErrorPageRun
     }
 
     @Override
-    public Long getContextServiceId()
+    public long getContextServiceId()
     {
         return servletRuntime.getContextServiceId();
     }

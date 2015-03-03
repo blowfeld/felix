@@ -150,7 +150,7 @@ public final class FilterHandler extends AbstractHandler<FilterHandler> implemen
         return this.patterns;
     }
 
-    public Long getContextServiceId()
+    public long getContextServiceId()
     {
         return this.contextServiceId;
     }

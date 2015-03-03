@@ -38,7 +38,7 @@ public class FailureFilterRuntime implements FilterRuntime, Comparable<FailureFi
     }
 
     @Override
-    public Long getContextServiceId()
+    public long getContextServiceId()
     {
         return 0L;
     }

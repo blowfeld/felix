@@ -155,7 +155,7 @@ public final class ServletHandler extends AbstractHandler<ServletHandler> implem
         return this.servlet;
     }
 
-    public Long getContextServiceId()
+    public long getContextServiceId()
     {
         return this.contextServiceId;
     }
