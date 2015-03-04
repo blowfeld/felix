@@ -173,7 +173,7 @@ public abstract class BaseIntegrationTest
         }
     }
 
-    private static final int DEFAULT_TIMEOUT = 10000;
+    protected static final int DEFAULT_TIMEOUT = 10000;
 
     protected static final String ORG_APACHE_FELIX_HTTP_JETTY = "org.apache.felix.http.jetty";
 
@@ -373,18 +373,37 @@ public abstract class BaseIntegrationTest
      */
     protected <T> T awaitService(String serviceName) throws Exception
     {
-        ServiceTracker<?, ?> tracker = null;
+        ServiceTracker<T, T> tracker = null;
+        tracker = getTracker(serviceName);
+        return tracker.waitForService(DEFAULT_TIMEOUT);
+    }
+
+    /**
+     * Return an array of {@code ServiceReference}s for all services for the
+     * given serviceName
+     * @param serviceName
+     * @return Array of {@code ServiceReference}s or {@code null} if no services
+     *         are being tracked.
+     */
+    protected <T> ServiceReference<T>[] getServiceReferences(String serviceName)
+    {
+        ServiceTracker<T, T> tracker = getTracker(serviceName);
+        return tracker.getServiceReferences();
+    }
+
+    private <T> ServiceTracker<T, T> getTracker(String serviceName)
+    {
         synchronized ( this.trackers )
         {
-            tracker = trackers.get(serviceName);
+            ServiceTracker<?, ?> tracker = trackers.get(serviceName);
             if ( tracker == null )
             {
-                tracker = new ServiceTracker(m_context, serviceName, null);
+                tracker = new ServiceTracker<T, T>(m_context, serviceName, null);
                 trackers.put(serviceName, tracker);
                 tracker.open();
             }
+            return (ServiceTracker<T, T>) tracker;
         }
-        return (T) tracker.waitForService(DEFAULT_TIMEOUT);
     }
 
     protected void configureHttpService(Dictionary<?, ?> props) throws Exception
