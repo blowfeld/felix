@@ -22,7 +22,7 @@ import org.apache.felix.http.base.internal.runtime.FilterInfo;
 
 
 
-public class FailureFilterRuntime implements FilterRuntime, Comparable<FailureFilterRuntime>
+public class FailureFilterRuntime implements FilterRuntime
 {
     private final FilterInfo filterInfo;
 
@@ -41,11 +41,5 @@ public class FailureFilterRuntime implements FilterRuntime, Comparable<FailureFi
     public long getContextServiceId()
     {
         return 0L;
-    }
-
-    @Override
-    public int compareTo(FailureFilterRuntime other)
-    {
-        return filterInfo.compareTo(other.getFilterInfo());
     }
 }

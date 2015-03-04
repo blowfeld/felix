@@ -18,12 +18,23 @@
  */
 package org.apache.felix.http.base.internal.runtime.dto;
 
+import java.util.Comparator;
+
 import javax.servlet.ServletContext;
 
 import org.apache.felix.http.base.internal.runtime.ServletContextHelperInfo;
 
 public interface ServletContextHelperRuntime
 {
+    static final Comparator<ServletContextHelperRuntime> COMPARATOR = new Comparator<ServletContextHelperRuntime>()
+    {
+        @Override
+        public int compare(ServletContextHelperRuntime o1, ServletContextHelperRuntime o2)
+        {
+            return o1.getContextInfo().compareTo(o2.getContextInfo());
+        }
+    };
+
     ServletContext getSharedContext();
 
     ServletContextHelperInfo getContextInfo();

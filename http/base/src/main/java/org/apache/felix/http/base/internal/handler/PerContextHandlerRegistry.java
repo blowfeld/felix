@@ -25,6 +25,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeSet;
 
 import javax.servlet.DispatcherType;
 import javax.servlet.Filter;
@@ -359,17 +360,21 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
     }
 
     public synchronized ContextRuntime getRuntime() {
-        Collection<ErrorPageRuntime> errorPages = new ArrayList<ErrorPageRuntime>();
+        Collection<ErrorPageRuntime> errorPages = new TreeSet<ErrorPageRuntime>(ServletRuntime.COMPARATOR);
         Collection<ServletHandler> errorHandlers = errorsMapping.getMappedHandlers();
         for (ServletHandler servletHandler : errorHandlers)
         {
             errorPages.add(errorsMapping.getErrorPage(servletHandler));
         }
 
-        List<FilterRuntime> filterRuntimes = new ArrayList<FilterRuntime>(filterMap.values());
+        Collection<FilterRuntime> filterRuntimes = new TreeSet<FilterRuntime>(FilterRuntime.COMPARATOR);
+        for (FilterRuntime filterRuntime : filterMap.values())
+        {
+            filterRuntimes.add(filterRuntime);
+        }
 
-        List<ServletRuntime> servletRuntimes = new ArrayList<ServletRuntime>();
-        List<ServletRuntime> resourceRuntimes = new ArrayList<ServletRuntime>();
+        Collection<ServletRuntime> servletRuntimes = new TreeSet<ServletRuntime>(ServletRuntime.COMPARATOR);
+        Collection<ServletRuntime> resourceRuntimes = new TreeSet<ServletRuntime>(ServletRuntime.COMPARATOR);
         for (ServletHandler servletHandler : servletMap.values())
         {
             if (servletHandler.getServletInfo().isResource())

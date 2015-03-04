@@ -20,6 +20,7 @@ package org.apache.felix.http.base.internal.runtime.dto;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
@@ -39,6 +40,20 @@ import org.osgi.service.http.runtime.dto.FailedServletDTO;
 
 public final class FailureRuntime
 {
+
+    private static final FailureComparator<ErrorPageRuntime> ERROR_PAGE_COMPARATOR = FailureComparator.<ErrorPageRuntime>create(ServletRuntime.COMPARATOR);
+    private static final FailureComparator<FilterRuntime> FILTER_COMPARATOR = FailureComparator.create(FilterRuntime.COMPARATOR);
+    private static final FailureComparator<ServletContextHelperRuntime> CONTEXT_COMPARATOR = FailureComparator.create(ServletContextHelperRuntime.COMPARATOR);
+    private static final FailureComparator<ServletRuntime> SERVLET_COMPARATOR = FailureComparator.create(ServletRuntime.COMPARATOR);
+    private static final Comparator<Failure<ServiceReference<?>>> REFERENCE_COMPARATOR = new Comparator<Failure<ServiceReference<?>>>()
+    {
+        @Override
+        public int compare(Failure<ServiceReference<?>> o1, Failure<ServiceReference<?>> o2)
+        {
+            return o1.service.compareTo(o2.service);
+        }
+    };
+
     private static final FailedServletDTO[] SERVLET_DTO_ARRAY = new FailedServletDTO[0];
     private static final FailedFilterDTO[] FILTER_DTO_ARRAY = new FailedFilterDTO[0];
     private static final FailedResourceDTO[] RESOURCE_DTO_ARRAY = new FailedResourceDTO[0];
@@ -125,6 +140,13 @@ public final class FailureRuntime
                 throw new IllegalArgumentException("Unsupported info type: " + info.getClass());
             }
         }
+
+        Collections.sort(contextRuntimes, CONTEXT_COMPARATOR);
+        Collections.sort(listenerRuntimes, REFERENCE_COMPARATOR);
+        Collections.sort(servletRuntimes, SERVLET_COMPARATOR);
+        Collections.sort(filterRuntimes, FILTER_COMPARATOR);
+        Collections.sort(resourceRuntimes, SERVLET_COMPARATOR);
+        Collections.sort(errorPageRuntimes, ERROR_PAGE_COMPARATOR);
 
         return new FailureRuntime(contextRuntimes,
                 listenerRuntimes,
@@ -244,6 +266,7 @@ public final class FailureRuntime
 
     private static class Failure<T>
     {
+
         final T service;
         final int failureCode;
 
@@ -251,6 +274,27 @@ public final class FailureRuntime
         {
             this.service = service;
             this.failureCode = failureCode;
+        }
+    }
+
+    private static class FailureComparator<T> implements Comparator<Failure<T>>
+    {
+        final Comparator<? super T> serviceComparator;
+
+        FailureComparator(Comparator<? super T> serviceComparator)
+        {
+            this.serviceComparator = serviceComparator;
+        }
+
+        static <T> FailureComparator<T> create(Comparator<? super T> serviceComparator)
+        {
+            return new FailureComparator<T>(serviceComparator);
+        }
+
+        @Override
+        public int compare(Failure<T> o1, Failure<T> o2)
+        {
+            return serviceComparator.compare(o1.service, o2.service);
         }
     }
 }

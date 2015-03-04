@@ -18,11 +18,22 @@
  */
 package org.apache.felix.http.base.internal.runtime.dto;
 
+import java.util.Comparator;
+
 import org.apache.felix.http.base.internal.runtime.FilterInfo;
 
 
 
 public interface FilterRuntime extends WhiteboardServiceRuntime
 {
+    static final Comparator<FilterRuntime> COMPARATOR = new Comparator<FilterRuntime>()
+    {
+        @Override
+        public int compare(FilterRuntime o1, FilterRuntime o2)
+        {
+            return o1.getFilterInfo().compareTo(o2.getFilterInfo());
+        }
+    };
+
     FilterInfo getFilterInfo();
 }

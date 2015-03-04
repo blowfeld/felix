@@ -18,6 +18,8 @@
  */
 package org.apache.felix.http.base.internal.runtime.dto;
 
+import java.util.Comparator;
+
 import javax.servlet.Servlet;
 
 import org.apache.felix.http.base.internal.runtime.ServletInfo;
@@ -26,6 +28,15 @@ import org.apache.felix.http.base.internal.runtime.ServletInfo;
 
 public interface ServletRuntime extends WhiteboardServiceRuntime
 {
+    static final Comparator<ServletRuntime> COMPARATOR = new Comparator<ServletRuntime>()
+    {
+        @Override
+        public int compare(ServletRuntime o1, ServletRuntime o2)
+        {
+            return o1.getServletInfo().compareTo(o2.getServletInfo());
+        }
+    };
+
     Servlet getServlet();
 
     ServletInfo getServletInfo();
