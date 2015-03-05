@@ -24,15 +24,13 @@ import org.osgi.service.http.runtime.dto.ResourceDTO;
 
 final class ResourceDTOBuilder extends BaseDTOBuilder<ServletHandler, ResourceDTO>
 {
-    private static final String[] STRING_ARRAY = new String[0];
-
     @Override
     ResourceDTO buildDTO(ServletHandler handler, long servletContextId)
     {
         ServletInfo servletInfo = handler.getServletInfo();
 
         ResourceDTO resourceDTO = new ResourceDTO();
-        resourceDTO.patterns = copyWithDefault(servletInfo.getPatterns(), STRING_ARRAY);
+        resourceDTO.patterns = copyWithDefault(servletInfo.getPatterns(), BuilderConstants.STRING_ARRAY);
         resourceDTO.prefix = servletInfo.getPrefix();
         resourceDTO.serviceId = servletInfo.getServiceId();
         resourceDTO.servletContextId = servletContextId;

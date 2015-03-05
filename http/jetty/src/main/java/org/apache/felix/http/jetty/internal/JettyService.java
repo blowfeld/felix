@@ -79,7 +79,7 @@ import org.osgi.util.tracker.ServiceTrackerCustomizer;
 public final class JettyService extends AbstractLifeCycle.AbstractLifeCycleListener implements BundleTrackerCustomizer, ServiceTrackerCustomizer
 {
     /** PID for configuration of the HTTP service. */
-    private static final String PID = "org.apache.felix.http";
+    public static final String PID = "org.apache.felix.http";
 
     private static final String HEADER_WEB_CONTEXT_PATH = "Web-ContextPath";
     private static final String HEADER_ACTIVATION_POLICY = "Bundle-ActivationPolicy";

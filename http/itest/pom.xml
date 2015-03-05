@@ -63,7 +63,7 @@
 		<dependency>
 			<groupId>${project.groupId}</groupId>
 			<artifactId>org.apache.felix.http.jetty</artifactId>
-			<version>3.0.1-SNAPSHOT</version>
+			<version>3.0.3-SNAPSHOT</version>
 		</dependency>
 		<dependency>
 			<groupId>${project.groupId}</groupId>
@@ -134,7 +134,7 @@
 		<dependency>
 			<groupId>org.apache.felix</groupId>
 			<artifactId>org.apache.felix.framework</artifactId>
-			<version>4.6.0</version>
+			<version>4.7.0-SNAPSHOT</version>
 			<scope>test</scope>
 		</dependency>
 		<dependency>
