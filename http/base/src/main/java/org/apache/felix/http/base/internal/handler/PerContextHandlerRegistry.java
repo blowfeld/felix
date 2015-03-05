@@ -39,6 +39,7 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
 {
     private final Map<Servlet, ServletHandler> servletMap = new HashMap<Servlet, ServletHandler>();
     private final Map<Filter, FilterHandler> filterMap = new HashMap<Filter, FilterHandler>();
+
     private final Map<String, Servlet> servletPatternMap = new HashMap<String, Servlet>();
     private volatile HandlerMapping<ServletHandler> servletMapping = new HandlerMapping<ServletHandler>();
     private volatile HandlerMapping<FilterHandler> filterMapping = new HandlerMapping<FilterHandler>();
@@ -76,15 +77,14 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
 
     public synchronized void addFilter(FilterHandler handler) throws ServletException
     {
-        if (this.filterMap.containsKey(handler.getFilter()))
-        {
-            throw new ServletException("Filter instance already registered");
-        }
+    	if(this.filterMapping.contains(handler))
+    	{
+    		throw new ServletException("Filter instance already registered");
+    	}
 
         handler.init();
+        this.filterMapping = this.filterMapping.add(handler);
         this.filterMap.put(handler.getFilter(), handler);
-
-        updateFilterMapping();
     }
 
     @Override
@@ -132,9 +132,8 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
             }
         }
         handler.init();
+        this.servletMapping = this.servletMapping.add(handler);
         this.servletMap.put(handler.getServlet(), handler);
-
-        updateServletMapping();
     }
 
     public ErrorsMapping getErrorsMapping()
@@ -160,7 +159,7 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
 
         String servletName = (servletHandler != null) ? servletHandler.getName() : null;
         // TODO this is not the most efficient/fastest way of doing this...
-        for (FilterHandler filterHandler : this.filterMapping.getAllElements())
+        for (FilterHandler filterHandler : this.filterMapping.values())
         {
             if (referencesServletByName(filterHandler, servletName))
             {
@@ -193,27 +192,26 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
 
     public synchronized void removeAll()
     {
-        for (Iterator<ServletHandler> it = servletMap.values().iterator(); it.hasNext(); )
+        Collection<ServletHandler> servletHandlers = servletMapping.values();
+        Collection<FilterHandler> filterHandlers = filterMapping.values();
+
+        this.servletMapping = new HandlerMapping<ServletHandler>();
+        this.filterMapping = new HandlerMapping<FilterHandler>();
+
+        for (ServletHandler handler : servletHandlers)
         {
-            ServletHandler handler = it.next();
-            it.remove();
             handler.destroy();
         }
 
-        for (Iterator<FilterHandler> it = filterMap.values().iterator(); it.hasNext(); )
+        for (FilterHandler handler : filterHandlers)
         {
-            FilterHandler handler = it.next();
-            it.remove();
             handler.destroy();
         }
 
-        this.servletMap.clear();
-        this.filterMap.clear();
         this.servletPatternMap.clear();
         this.errorsMapping.clear();
-
-        updateServletMapping();
-        updateFilterMapping();
+        this.servletMap.clear();
+        this.filterMap.clear();
     }
 
     public synchronized void removeFilter(Filter filter, final boolean destroy)
@@ -221,7 +219,7 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
         FilterHandler handler = this.filterMap.remove(filter);
         if (handler != null)
         {
-            updateFilterMapping();
+            this.filterMapping = this.filterMapping.remove(handler);
             if (destroy)
             {
                 handler.destroy();
@@ -231,17 +229,29 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
 
     public synchronized Filter removeFilter(final FilterInfo filterInfo, final boolean destroy)
     {
+        FilterHandler handler = getFilterHandler(filterInfo);
+
+        if (handler == null)
+        {
+            return null;
+        }
+
+        this.filterMapping = this.filterMapping.remove(handler);
+
+        if (destroy)
+        {
+            handler.destroy();
+        }
+        return handler.getFilter();
+    }
+
+    private FilterHandler getFilterHandler(final FilterInfo filterInfo)
+    {
         for(final FilterHandler handler : this.filterMap.values())
         {
             if ( handler.getFilterInfo().compareTo(filterInfo) == 0)
             {
-                this.filterMap.remove(handler.getFilter());
-                updateFilterMapping();
-                if (destroy)
-                {
-                    handler.destroy();
-                }
-                return handler.getFilter();
+                return handler;
             }
         }
         return null;
@@ -249,29 +259,40 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
 
     public synchronized Servlet removeServlet(ServletInfo servletInfo, final boolean destroy)
     {
+        ServletHandler handler = getServletHandler(servletInfo);
+        if (handler == null)
+        {
+            return null;
+        }
+
+        this.servletMapping = this.servletMapping.remove(handler);
+
+        // Can be null in case of error-handling servlets...
+        String[] patterns = handler.getServletInfo().getPatterns();
+        int length = patterns == null ? 0 : patterns.length;
+
+        for (int i = 0; i < length; i++)
+        {
+            this.servletPatternMap.remove(patterns[i]);
+        }
+
+        this.errorsMapping.removeServlet(handler.getServlet());
+
+        if (destroy)
+        {
+            handler.destroy();
+        }
+
+        return handler.getServlet();
+    }
+
+    private ServletHandler getServletHandler(final ServletInfo servletInfo)
+    {
         for(final ServletHandler handler : this.servletMap.values())
         {
-            if ( handler.getServletInfo().compareTo(servletInfo) == 0 )
+            if ( handler.getServletInfo().compareTo(servletInfo) == 0)
             {
-                this.servletMap.remove(handler.getServlet());
-                updateServletMapping();
-
-                // Can be null in case of error-handling servlets...
-                String[] patterns = handler.getServletInfo().getPatterns();
-                int length = patterns == null ? 0 : patterns.length;
-
-                for (int i = 0; i < length; i++)
-                {
-                    this.servletPatternMap.remove(patterns[i]);
-                }
-
-                this.errorsMapping.removeServlet(handler.getServlet());
-
-                if (destroy)
-                {
-                    handler.destroy();
-                }
-                return handler.getServlet();
+                return handler;
             }
         }
         return null;
@@ -282,7 +303,7 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
         ServletHandler handler = this.servletMap.remove(servlet);
         if (handler != null)
         {
-            updateServletMapping();
+            this.servletMapping = this.servletMapping.remove(handler);
 
             // Can be null in case of error-handling servlets...
             String[] patterns = handler.getServletInfo().getPatterns();
@@ -319,16 +340,6 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
             return Arrays.asList(names).contains(servletName);
         }
         return false;
-    }
-
-    private void updateFilterMapping()
-    {
-        this.filterMapping = new HandlerMapping<FilterHandler>(this.filterMap.values());
-    }
-
-    private void updateServletMapping()
-    {
-        this.servletMapping = new HandlerMapping<ServletHandler>(this.servletMap.values());
     }
 
     public String isMatching(final String requestURI)
