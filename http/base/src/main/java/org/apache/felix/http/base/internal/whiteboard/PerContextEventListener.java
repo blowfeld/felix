@@ -37,7 +37,6 @@ import javax.servlet.http.HttpSessionListener;
 
 import org.apache.felix.http.base.internal.runtime.HttpSessionAttributeListenerInfo;
 import org.apache.felix.http.base.internal.runtime.HttpSessionListenerInfo;
-import org.apache.felix.http.base.internal.runtime.ListenerInfo;
 import org.apache.felix.http.base.internal.runtime.ServletContextAttributeListenerInfo;
 import org.apache.felix.http.base.internal.runtime.ServletContextListenerInfo;
 import org.apache.felix.http.base.internal.runtime.ServletRequestAttributeListenerInfo;
@@ -260,19 +259,6 @@ public final class PerContextEventListener implements
         {
             info.ungetService(bundle, service);
         }
-    }
-
-    // Make calling from ListenerRegistry easier
-    <T extends ListenerInfo<?>> void addListener(@Nonnull T info)
-    {
-        throw new UnsupportedOperationException("Listeners of type "
-                + info.getClass() + "are not supported");
-    }
-
-    <T extends ListenerInfo<?>> void removeListener(@Nonnull T info)
-    {
-        throw new UnsupportedOperationException("Listeners of type "
-                + info.getClass() + "are not supported");
     }
 
     @Override

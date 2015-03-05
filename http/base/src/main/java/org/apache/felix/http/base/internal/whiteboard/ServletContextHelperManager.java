@@ -40,11 +40,15 @@ import org.apache.felix.http.base.internal.handler.HandlerRegistry;
 import org.apache.felix.http.base.internal.logger.SystemLogger;
 import org.apache.felix.http.base.internal.runtime.AbstractInfo;
 import org.apache.felix.http.base.internal.runtime.FilterInfo;
-import org.apache.felix.http.base.internal.runtime.ListenerInfo;
+import org.apache.felix.http.base.internal.runtime.HttpSessionAttributeListenerInfo;
+import org.apache.felix.http.base.internal.runtime.HttpSessionListenerInfo;
 import org.apache.felix.http.base.internal.runtime.ResourceInfo;
+import org.apache.felix.http.base.internal.runtime.ServletContextAttributeListenerInfo;
 import org.apache.felix.http.base.internal.runtime.ServletContextHelperInfo;
 import org.apache.felix.http.base.internal.runtime.ServletContextListenerInfo;
 import org.apache.felix.http.base.internal.runtime.ServletInfo;
+import org.apache.felix.http.base.internal.runtime.ServletRequestAttributeListenerInfo;
+import org.apache.felix.http.base.internal.runtime.ServletRequestListenerInfo;
 import org.apache.felix.http.base.internal.runtime.WhiteboardServiceInfo;
 import org.apache.felix.http.base.internal.runtime.dto.ContextRuntime;
 import org.apache.felix.http.base.internal.runtime.dto.FailureRuntime;
@@ -422,9 +426,26 @@ public final class ServletContextHelperManager
             {
                 this.httpService.registerResource(handler, (ResourceInfo)info);
             }
-            else if ( info instanceof ListenerInfo )
+
+            else if ( info instanceof ServletContextAttributeListenerInfo )
             {
-                this.listenerRegistry.addListener((ListenerInfo<?>)info, handler);
+                this.listenerRegistry.addListener((ServletContextAttributeListenerInfo) info, handler);
+            }
+            else if ( info instanceof HttpSessionListenerInfo )
+            {
+                this.listenerRegistry.addListener((HttpSessionListenerInfo) info, handler);
+            }
+            else if ( info instanceof HttpSessionAttributeListenerInfo )
+            {
+                this.listenerRegistry.addListener((HttpSessionAttributeListenerInfo) info, handler);
+            }
+            else if ( info instanceof ServletRequestListenerInfo )
+            {
+                this.listenerRegistry.addListener((ServletRequestListenerInfo) info, handler);
+            }
+            else if ( info instanceof ServletRequestAttributeListenerInfo )
+            {
+                this.listenerRegistry.addListener((ServletRequestAttributeListenerInfo) info, handler);
             }
         }
         catch (RegistrationFailureException e)
@@ -452,9 +473,26 @@ public final class ServletContextHelperManager
         {
             this.httpService.unregisterResource(handler, (ResourceInfo)info);
         }
-        else if ( info instanceof ListenerInfo )
+
+        else if ( info instanceof ServletContextAttributeListenerInfo )
         {
-            this.listenerRegistry.removeListener((ListenerInfo<?>)info, handler);
+            this.listenerRegistry.removeListener((ServletContextAttributeListenerInfo) info, handler);
+        }
+        else if ( info instanceof HttpSessionListenerInfo )
+        {
+            this.listenerRegistry.removeListener((HttpSessionListenerInfo) info, handler);
+        }
+        else if ( info instanceof HttpSessionAttributeListenerInfo )
+        {
+            this.listenerRegistry.removeListener((HttpSessionAttributeListenerInfo) info, handler);
+        }
+        else if ( info instanceof ServletRequestListenerInfo )
+        {
+            this.listenerRegistry.removeListener((ServletRequestListenerInfo) info, handler);
+        }
+        else if ( info instanceof ServletRequestAttributeListenerInfo )
+        {
+            this.listenerRegistry.removeListener((ServletRequestAttributeListenerInfo) info, handler);
         }
         serviceFailures.remove(info);
     }
