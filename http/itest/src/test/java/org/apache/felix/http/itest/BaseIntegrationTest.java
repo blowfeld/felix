@@ -334,6 +334,9 @@ public abstract class BaseIntegrationTest
             mavenBundle("org.apache.felix", ORG_APACHE_FELIX_HTTP_JETTY).versionAsInProject().startLevel(START_LEVEL_SYSTEM_BUNDLES),
             mavenBundle("org.apache.felix", "org.apache.felix.configadmin").versionAsInProject().startLevel(START_LEVEL_SYSTEM_BUNDLES),
 
+            mavenBundle("org.mockito", "mockito-core").versionAsInProject().startLevel(START_LEVEL_SYSTEM_BUNDLES),
+            mavenBundle("org.objenesis", "objenesis").versionAsInProject().startLevel(START_LEVEL_SYSTEM_BUNDLES),
+
             junitBundles(), frameworkStartLevel(START_LEVEL_TEST_BUNDLE), felix());
     }
 

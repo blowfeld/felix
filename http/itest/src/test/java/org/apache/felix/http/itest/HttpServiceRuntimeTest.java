@@ -35,7 +35,6 @@ import java.util.NoSuchElementException;
 import javax.servlet.Filter;
 import javax.servlet.Servlet;
 import javax.servlet.ServletContextAttributeListener;
-import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
 import javax.servlet.ServletException;
 import javax.servlet.ServletRequestAttributeListener;
@@ -46,6 +45,7 @@ import javax.servlet.http.HttpSessionListener;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.ops4j.pax.exam.junit.JUnit4TestRunner;
+import org.osgi.service.http.context.ServletContextHelper;
 import org.osgi.service.http.runtime.HttpServiceRuntime;
 import org.osgi.service.http.runtime.HttpServiceRuntimeConstants;
 import org.osgi.service.http.runtime.dto.RuntimeDTO;
@@ -91,6 +91,23 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
                 HttpWhiteboardConstants.HTTP_WHITEBOARD_SERVLET_NAME, name);
 
         m_context.registerService(Servlet.class.getName(), new TestServlet(), properties);
+    }
+
+    private void registerListener(Class<?> listenerClass, boolean useWithWhiteboard)
+    {
+        Dictionary<String, ?> properties = createDictionary(
+                HttpWhiteboardConstants.HTTP_WHITEBOARD_LISTENER, useWithWhiteboard ? "true" : "false");
+
+        m_context.registerService(listenerClass.getName(), mock(listenerClass), properties);
+    }
+
+    private void registerContext(String name, String path)
+    {
+        Dictionary<String, ?> properties = createDictionary(
+                HttpWhiteboardConstants.HTTP_WHITEBOARD_CONTEXT_NAME, name,
+                HttpWhiteboardConstants.HTTP_WHITEBOARD_CONTEXT_PATH, path);
+
+        m_context.registerService(ServletContextHelper.class.getName(), mock(ServletContextHelper.class), properties);
     }
 
     @Test
@@ -142,8 +159,8 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
 
         RuntimeDTO runtimeDTOWithFirstSerlvet = serviceRuntime.getRuntimeDTO();
 
-        assertEquals(1, runtimeDTOWithFirstSerlvet.servletContextDTOs.length);
         assertEquals(0, runtimeDTOWithFirstSerlvet.failedServletDTOs.length);
+        assertEquals(1, runtimeDTOWithFirstSerlvet.servletContextDTOs.length);
 
         ServletContextDTO contextDTO = runtimeDTOWithFirstSerlvet.servletContextDTOs[0];
         assertEquals(1, contextDTO.servletDTOs.length);
@@ -155,8 +172,8 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
         RuntimeDTO runtimeDTOWithBothSerlvets = serviceRuntime.getRuntimeDTO();
 
         assertNotSame(runtimeDTOWithFirstSerlvet, runtimeDTOWithBothSerlvets);
-        assertEquals(1, runtimeDTOWithBothSerlvets.servletContextDTOs.length);
         assertEquals(0, runtimeDTOWithBothSerlvets.failedServletDTOs.length);
+        assertEquals(1, runtimeDTOWithBothSerlvets.servletContextDTOs.length);
 
         contextDTO = runtimeDTOWithBothSerlvets.servletContextDTOs[0];
         assertEquals(2, contextDTO.servletDTOs.length);
@@ -175,8 +192,8 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
 
         RuntimeDTO runtimeDTOWithFirstFilter = serviceRuntime.getRuntimeDTO();
 
-        assertEquals(1, runtimeDTOWithFirstFilter.servletContextDTOs.length);
         assertEquals(0, runtimeDTOWithFirstFilter.failedFilterDTOs.length);
+        assertEquals(1, runtimeDTOWithFirstFilter.servletContextDTOs.length);
 
         ServletContextDTO contextDTO = runtimeDTOWithFirstFilter.servletContextDTOs[0];
         assertEquals(1, contextDTO.filterDTOs.length);
@@ -188,8 +205,8 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
         RuntimeDTO runtimeDTOWithBothFilters = serviceRuntime.getRuntimeDTO();
 
         assertNotSame(runtimeDTOWithFirstFilter, runtimeDTOWithBothFilters);
-        assertEquals(1, runtimeDTOWithBothFilters.servletContextDTOs.length);
         assertEquals(0, runtimeDTOWithBothFilters.failedFilterDTOs.length);
+        assertEquals(1, runtimeDTOWithBothFilters.servletContextDTOs.length);
 
         contextDTO = runtimeDTOWithBothFilters.servletContextDTOs[0];
         assertEquals(2, contextDTO.filterDTOs.length);
@@ -208,8 +225,8 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
 
         RuntimeDTO runtimeDTOWithFirstResource = serviceRuntime.getRuntimeDTO();
 
-        assertEquals(1, runtimeDTOWithFirstResource.servletContextDTOs.length);
         assertEquals(0, runtimeDTOWithFirstResource.failedResourceDTOs.length);
+        assertEquals(1, runtimeDTOWithFirstResource.servletContextDTOs.length);
 
         ServletContextDTO contextDTO = runtimeDTOWithFirstResource.servletContextDTOs[0];
         assertEquals(1, contextDTO.resourceDTOs.length);
@@ -222,8 +239,8 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
         RuntimeDTO runtimeDTOWithBothResources = serviceRuntime.getRuntimeDTO();
 
         assertNotSame(runtimeDTOWithFirstResource, runtimeDTOWithBothResources);
-        assertEquals(1, runtimeDTOWithBothResources.servletContextDTOs.length);
         assertEquals(0, runtimeDTOWithBothResources.failedResourceDTOs.length);
+        assertEquals(1, runtimeDTOWithBothResources.servletContextDTOs.length);
 
         contextDTO = runtimeDTOWithBothResources.servletContextDTOs[0];
         assertEquals(2, contextDTO.resourceDTOs.length);
@@ -244,9 +261,9 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
 
         RuntimeDTO runtimeDTOWithFirstErrorPage = serviceRuntime.getRuntimeDTO();
 
-        assertEquals(1, runtimeDTOWithFirstErrorPage.servletContextDTOs.length);
         assertEquals(0, runtimeDTOWithFirstErrorPage.failedServletDTOs.length);
         assertEquals(0, runtimeDTOWithFirstErrorPage.failedErrorPageDTOs.length);
+        assertEquals(1, runtimeDTOWithFirstErrorPage.servletContextDTOs.length);
 
         ServletContextDTO contextDTO = runtimeDTOWithFirstErrorPage.servletContextDTOs[0];
         assertEquals(1, contextDTO.errorPageDTOs.length);
@@ -260,9 +277,9 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
         RuntimeDTO runtimeDTOWithBothErrorPages = serviceRuntime.getRuntimeDTO();
 
         assertNotSame(runtimeDTOWithFirstErrorPage, runtimeDTOWithBothErrorPages);
-        assertEquals(1, runtimeDTOWithBothErrorPages.servletContextDTOs.length);
         assertEquals(0, runtimeDTOWithBothErrorPages.failedServletDTOs.length);
         assertEquals(0, runtimeDTOWithBothErrorPages.failedErrorPageDTOs.length);
+        assertEquals(1, runtimeDTOWithBothErrorPages.servletContextDTOs.length);
 
         contextDTO = runtimeDTOWithBothErrorPages.servletContextDTOs[0];
         assertEquals(2, contextDTO.errorPageDTOs.length);
@@ -270,6 +287,93 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
         assertEquals("error page 2", contextDTO.errorPageDTOs[1].name);
         assertArrayEquals(new String[] { ServletException.class.getName() }, contextDTO.errorPageDTOs[1].exceptions);
         assertArrayEquals(new long[] { 500 }, contextDTO.errorPageDTOs[1].errorCodes);
+    }
+
+    @Test
+    public void testListenersInRuntime() throws Exception
+    {
+        registerListener(ServletContextListener.class, true);
+        awaitService(ServletContextListener.class.getName());
+
+        HttpServiceRuntime serviceRuntime = (HttpServiceRuntime) getService(HttpServiceRuntime.class.getName());
+        assertNotNull("HttpServiceRuntime unavailable", serviceRuntime);
+
+        RuntimeDTO runtimeDTOWithFirstListener = serviceRuntime.getRuntimeDTO();
+
+        assertEquals(0, runtimeDTOWithFirstListener.failedListenerDTOs.length);
+        assertEquals(1, runtimeDTOWithFirstListener.servletContextDTOs.length);
+
+        ServletContextDTO contextDTO = runtimeDTOWithFirstListener.servletContextDTOs[0];
+        // TODO fix : servlet context listener is only added when registerd before context activation
+        assertEquals(0, contextDTO.listenerDTOs.length);
+        // TODO
+//        assertEquals(ServletContextListener.class.getName(), contextDTO.listenerDTOs[0].types[0]);
+
+        registerListener(ServletContextAttributeListener.class, true);
+        registerListener(ServletRequestListener.class, true);
+        registerListener(ServletRequestAttributeListener.class, true);
+        registerListener(HttpSessionListener.class, true);
+        registerListener(HttpSessionAttributeListener.class, true);
+
+        awaitService(ServletContextAttributeListener.class.getName());
+        awaitService(ServletRequestListener.class.getName());
+        awaitService(ServletRequestAttributeListener.class.getName());
+        awaitService(HttpSessionListener.class.getName());
+        awaitService(HttpSessionAttributeListener.class.getName());
+
+        RuntimeDTO runtimeDTOWithAllListeners = serviceRuntime.getRuntimeDTO();
+
+        assertNotSame(runtimeDTOWithFirstListener, runtimeDTOWithAllListeners);
+        assertEquals(0, runtimeDTOWithAllListeners.failedListenerDTOs.length);
+        assertEquals(1, runtimeDTOWithAllListeners.servletContextDTOs.length);
+
+        contextDTO = runtimeDTOWithAllListeners.servletContextDTOs[0];
+        // TODO
+        assertEquals(5, contextDTO.listenerDTOs.length);
+//        assertEquals(ServletContextListener.class.getName(), contextDTO.listenerDTOs[0].types[0]);
+        // TODO for listeners ordering is reverse compared to other services
+        assertEquals(ServletContextAttributeListener.class.getName(), contextDTO.listenerDTOs[4].types[0]);
+        assertEquals(ServletRequestListener.class.getName(), contextDTO.listenerDTOs[3].types[0]);
+        assertEquals(ServletRequestAttributeListener.class.getName(), contextDTO.listenerDTOs[2].types[0]);
+        assertEquals(HttpSessionListener.class.getName(), contextDTO.listenerDTOs[1].types[0]);
+        assertEquals(HttpSessionAttributeListener.class.getName(), contextDTO.listenerDTOs[0].types[0]);
+    }
+
+    @Test
+    public void testContextsInRuntime() throws Exception
+    {
+        registerContext("contextA", "/contextA");
+        awaitServices(ServletContextHelper.class.getName(), 2);
+
+        HttpServiceRuntime serviceRuntime = (HttpServiceRuntime) getService(HttpServiceRuntime.class.getName());
+        assertNotNull("HttpServiceRuntime unavailable", serviceRuntime);
+
+        RuntimeDTO runtimeDTOWithAdditionalContext = serviceRuntime.getRuntimeDTO();
+
+        assertEquals(0, runtimeDTOWithAdditionalContext.failedServletContextDTOs.length);
+        assertEquals(2, runtimeDTOWithAdditionalContext.servletContextDTOs.length);
+
+        // TODO order ?
+        assertEquals("contextA", runtimeDTOWithAdditionalContext.servletContextDTOs[0].name);
+        assertEquals("/contextA", runtimeDTOWithAdditionalContext.servletContextDTOs[0].contextPath);
+        assertEquals("default", runtimeDTOWithAdditionalContext.servletContextDTOs[1].name);
+        assertEquals("", runtimeDTOWithAdditionalContext.servletContextDTOs[1].contextPath);
+
+        registerContext("contextB", "/contextB");
+        awaitServices(ServletContextHelper.class.getName(), 3);
+
+        RuntimeDTO runtimeDTOWithAllContexts = serviceRuntime.getRuntimeDTO();
+
+        assertEquals(0, runtimeDTOWithAllContexts.failedServletContextDTOs.length);
+        assertEquals(3, runtimeDTOWithAllContexts.servletContextDTOs.length);
+
+        // TODO order ?
+        assertEquals("contextA", runtimeDTOWithAllContexts.servletContextDTOs[0].name);
+        assertEquals("/contextA", runtimeDTOWithAllContexts.servletContextDTOs[0].contextPath);
+        assertEquals("contextB", runtimeDTOWithAllContexts.servletContextDTOs[1].name);
+        assertEquals("/contextB", runtimeDTOWithAllContexts.servletContextDTOs[1].contextPath);
+        assertEquals("default", runtimeDTOWithAllContexts.servletContextDTOs[2].name);
+        assertEquals("", runtimeDTOWithAllContexts.servletContextDTOs[2].contextPath);
     }
 
     private void awaitServices(String serviceName, int count)
