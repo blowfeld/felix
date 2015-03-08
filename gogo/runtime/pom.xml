@@ -27,7 +27,7 @@
     <packaging>bundle</packaging>
     <name>Apache Felix Gogo Runtime</name>
     <artifactId>org.apache.felix.gogo.runtime</artifactId>
-    <version>0.14.1-SNAPSHOT</version>
+    <version>0.16.3-SNAPSHOT</version>
     <dependencies>
         <dependency>
             <groupId>org.osgi</groupId>
