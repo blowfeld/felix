@@ -177,9 +177,12 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
     	this.servletMapping = this.servletMapping.add(toAdd);
     	this.allServletHandlers.add(handler);
     	
-    	for(String errorPage : errorPages)
+    	if(errorPages != null)
     	{
-    		this.errorsMapping.addErrorServlet(errorPage, handler);
+    		for(String errorPage : errorPages)
+    		{
+    			this.errorsMapping.addErrorServlet(errorPage, handler);
+    		}
     	}
     }
 
