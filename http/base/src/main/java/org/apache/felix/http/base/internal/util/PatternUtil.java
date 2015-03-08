@@ -132,8 +132,10 @@ public class PatternUtil
      * and in case of equal lengths, they are sorted in natural (ascending) order.
      * </p>
      */
-    public static class PatternComparator implements Comparator<Pattern>
+    public enum PatternComparator implements Comparator<Pattern>
     {
+    	INSTANCE;
+    	
         @Override
         public int compare(Pattern p1, Pattern p2)
         {
@@ -205,59 +207,5 @@ public class PatternUtil
     public static boolean isWildcardPattern(Pattern p)
     {
         return p.pattern().contains(".*");
-    }
-    
-    /**
-     * Performs the actual matching, yielding a list of either the first or all matching patterns.
-     *
-     * @param path the path to match, can be <code>null</code> in which case an empty string is
-     *        used;
-     * @param exact a list of exact patterns
-     * @param wildcard a list of wildcard patterns
-     * @param firstOnly <code>true</code> if only the first matching pattern should be returned,
-     *        <code>false</code> if all matching patterns should be returned.
-     * @return a list with matching patterns, never <code>null</code>.
-     */
-    public static List<Pattern> getAllMatches(String path, 
-    		SortedSet<Pattern> exact, 
-    		SortedSet<Pattern> wildcard,
-    		boolean firstOnly)
-    {
-        path = (path == null) ? "" : path.trim();
-
-        List<Pattern> result = new ArrayList<Pattern>();
-        // Look for exact matches only, that is, those patterns without wildcards...
-        for (Pattern p : exact)
-        {
-            Matcher matcher = p.matcher(path);
-            // !!! we should always match the *entire* pattern, instead of the longest prefix...
-            if (matcher.matches())
-            {
-            	result.add(p);
-            	if(firstOnly)
-            	{
-            		return result;
-            	}
-            }
-        }
-
-        // Try to apply the wildcard patterns...
-        for (Pattern p : wildcard)
-        {
-            Matcher matcher = p.matcher(path);
-            if (matcher.find(0))
-            {
-            	result.add(p);
-            	if(firstOnly)
-            	{
-            		return result;
-            	}
-            }
-        }
-
-        // Make sure the results are properly sorted...
-        // TODO: check if this is still needed, patterns are added from SortedSets, i.e. they are already sorted according to the rules in Servlet Specification 3.0 
-        Collections.sort(result, new PatternComparator());
-        return result;
     }
 }

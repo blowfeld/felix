@@ -23,14 +23,11 @@ import static java.util.Collections.unmodifiableCollection;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.SortedMap;
-import java.util.SortedSet;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.regex.Matcher;
@@ -68,8 +65,8 @@ final class HandlerMapping<V extends AbstractHandler<V>>
      */
     private HandlerMapping(Map<Pattern, Collection<V>> mappings)
     {
-        this.exactMap = new TreeMap<Pattern, Set<V>>(new PatternUtil.PatternComparator());
-        this.wildcardMap = new TreeMap<Pattern, Set<V>>(new PatternUtil.PatternComparator());
+        this.exactMap = new TreeMap<Pattern, Set<V>>(PatternUtil.PatternComparator.INSTANCE);
+        this.wildcardMap = new TreeMap<Pattern, Set<V>>(PatternUtil.PatternComparator.INSTANCE);
         this.mappedHandlers = new TreeSet<V>();
 
         for (Map.Entry<Pattern, Collection<V>> mapping : mappings.entrySet())
@@ -112,7 +109,7 @@ final class HandlerMapping<V extends AbstractHandler<V>>
      */
     HandlerMapping<V> add(V handler)
     {
-        Map<Pattern, V> mappings = new HashMap<Pattern, V>();
+        Map<Pattern, V> mappings = new TreeMap<Pattern, V>(PatternUtil.PatternComparator.INSTANCE);
         for (Pattern pattern : handler.getPatterns())
         {
             mappings.put(pattern, handler);
@@ -144,7 +141,7 @@ final class HandlerMapping<V extends AbstractHandler<V>>
      */
     HandlerMapping<V> remove(V handler)
     {
-        Map<Pattern, V> mappings = new HashMap<Pattern, V>();
+        Map<Pattern, V> mappings = new TreeMap<Pattern, V>(PatternUtil.PatternComparator.INSTANCE);
         for (Pattern pattern : handler.getPatterns())
         {
             mappings.put(pattern, handler);
@@ -173,7 +170,7 @@ final class HandlerMapping<V extends AbstractHandler<V>>
 
     private Map<Pattern, Collection<V>> getAllMappings()
     {
-        Map<Pattern, Collection<V>> newMappings = new TreeMap<Pattern, Collection<V>>(new PatternUtil.PatternComparator());
+        Map<Pattern, Collection<V>> newMappings = new TreeMap<Pattern, Collection<V>>(PatternUtil.PatternComparator.INSTANCE);
         newMappings.putAll(exactMap);
         newMappings.putAll(wildcardMap);
         return newMappings;

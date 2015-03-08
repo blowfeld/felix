@@ -81,13 +81,13 @@ public class HttpWhiteboardTargetTest extends BaseIntegrationTest
 		ServiceRegistration<?> reg = m_context.registerService(Servlet.class.getName(), servlet, props);
 
 		try {
-			assertTrue(initLatch.await(600, TimeUnit.SECONDS));
+			assertTrue(initLatch.await(5, TimeUnit.SECONDS));
 			URL testURL = createURL("/servletAlias");
             assertContent("It works!", testURL);            
 		} finally {
 				reg.unregister();	
 		}
-		assertTrue(destroyLatch.await(600, TimeUnit.SECONDS));
+		assertTrue(destroyLatch.await(5, TimeUnit.SECONDS));
 	}
 	
 	/**
