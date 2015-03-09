@@ -16,6 +16,7 @@
  */
 package org.apache.felix.http.base.internal.whiteboard;
 
+import static org.osgi.service.http.runtime.dto.DTOConstants.FAILURE_REASON_NO_SERVLET_CONTEXT_MATCHING;
 import static org.osgi.service.http.runtime.dto.DTOConstants.FAILURE_REASON_SHADOWED_BY_OTHER_SERVICE;
 import static org.osgi.service.http.runtime.dto.DTOConstants.FAILURE_REASON_VALIDATION_FAILED;
 
@@ -184,6 +185,7 @@ public final class ServletContextHelperManager
                 {
                     services.add(entry.getKey());
                 }
+                serviceFailures.remove(entry.getKey(), FAILURE_REASON_NO_SERVLET_CONTEXT_MATCHING);
             }
         }
         // context listeners first
@@ -328,7 +330,7 @@ public final class ServletContextHelperManager
                         {
                             ContextHandler newHead = handlerList.get(0);
                             this.activate(newHead);
-                            this.serviceFailures.remove(newHead.getContextInfo());
+                            this.serviceFailures.remove(newHead.getContextInfo(), FAILURE_REASON_SHADOWED_BY_OTHER_SERVICE);
                         }
                         listenerRegistry.removeContext(info);
                     }
@@ -372,6 +374,10 @@ public final class ServletContextHelperManager
                     for(final ContextHandler h : handlerList)
                     {
                         this.registerWhiteboardService(h, info);
+                    }
+                    if (handlerList.isEmpty())
+                    {
+                        this.serviceFailures.put(info, FAILURE_REASON_NO_SERVLET_CONTEXT_MATCHING);
                     }
                 }
             }
