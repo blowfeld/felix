@@ -41,10 +41,26 @@ abstract class BaseServletDTOBuilder<T extends ServletRuntime, U extends BaseSer
         U dto = getDTOFactory().get();
         dto.asyncSupported = info.isAsyncSupported();
         dto.initParams = info.getInitParameters();
-        dto.name = info.getName();
+        dto.name = getName(info, servlet);
         dto.serviceId = servletRuntime.getServletInfo().getServiceId();
         dto.servletContextId = servletContextId;
         dto.servletInfo = servlet != null ? servlet.getServletInfo() : null;
         return dto;
+    }
+
+    private String getName(ServletInfo info, Servlet servlet)
+    {
+        String name = info.getName();
+        if (name != null)
+        {
+            return name;
+        }
+
+        if (servlet != null)
+        {
+            return servlet.getServletConfig().getServletName();
+        }
+
+        return null;
     }
 }
