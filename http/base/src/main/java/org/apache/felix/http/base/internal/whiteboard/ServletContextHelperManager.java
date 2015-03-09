@@ -268,7 +268,12 @@ public final class ServletContextHelperManager
                             this.deactivate(oldHead);
                             this.serviceFailures.put(oldHead.getContextInfo(), FAILURE_REASON_SHADOWED_BY_OTHER_SERVICE);
                         }
+                        this.serviceFailures.remove(handler.getContextInfo(), FAILURE_REASON_SHADOWED_BY_OTHER_SERVICE);
                         this.activate(handler);
+                    }
+                    else
+                    {
+                        this.serviceFailures.put(handler.getContextInfo(), FAILURE_REASON_SHADOWED_BY_OTHER_SERVICE);
                     }
                 }
             }
