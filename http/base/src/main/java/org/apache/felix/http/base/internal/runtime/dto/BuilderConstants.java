@@ -18,33 +18,23 @@
  */
 package org.apache.felix.http.base.internal.runtime.dto;
 
-import java.util.function.Supplier;
-
-import org.apache.felix.http.base.internal.runtime.ServletInfo;
+import org.osgi.service.http.runtime.dto.ErrorPageDTO;
+import org.osgi.service.http.runtime.dto.FilterDTO;
+import org.osgi.service.http.runtime.dto.ListenerDTO;
 import org.osgi.service.http.runtime.dto.ResourceDTO;
+import org.osgi.service.http.runtime.dto.ServletContextDTO;
+import org.osgi.service.http.runtime.dto.ServletDTO;
 
-final class ResourceDTOBuilder<T extends ResourceDTO> extends BaseDTOBuilder<ServletRuntime, T>
+public abstract class BuilderConstants
 {
-    static ResourceDTOBuilder<ResourceDTO> create()
-    {
-        return new ResourceDTOBuilder<ResourceDTO>(DTOSuppliers.RESOURCE);
-    }
 
-    ResourceDTOBuilder(Supplier<T> dtoFactory)
-    {
-        super(dtoFactory);
-    }
+    public static final String[] STRING_ARRAY = new String[0];
 
-    @Override
-    T buildDTO(ServletRuntime runtime, long servletContextId)
-    {
-        ServletInfo servletInfo = runtime.getServletInfo();
+    public static final ServletContextDTO[] CONTEXT_DTO_ARRAY = new ServletContextDTO[0];
 
-        T resourceDTO = getDTOFactory().get();
-        resourceDTO.patterns = copyWithDefault(servletInfo.getPatterns(), BuilderConstants.STRING_ARRAY);
-        resourceDTO.prefix = servletInfo.getPrefix();
-        resourceDTO.serviceId = servletInfo.getServiceId();
-        resourceDTO.servletContextId = servletContextId;
-        return resourceDTO;
-    }
+    public static final ServletDTO[] SERVLET_DTO_ARRAY = new ServletDTO[0];
+    public static final ResourceDTO[] RESOURCE_DTO_ARRAY = new ResourceDTO[0];
+    public static final FilterDTO[] FILTER_DTO_ARRAY = new FilterDTO[0];
+    public static final ErrorPageDTO[] ERROR_PAGE_DTO_ARRAY = new ErrorPageDTO[0];
+    public static final ListenerDTO[] LISTENER_DTO_ARRAY = new ListenerDTO[0];
 }

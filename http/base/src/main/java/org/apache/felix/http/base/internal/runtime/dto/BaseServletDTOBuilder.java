@@ -40,7 +40,7 @@ abstract class BaseServletDTOBuilder<T extends ServletRuntime, U extends BaseSer
 
         U dto = getDTOFactory().get();
         dto.asyncSupported = info.isAsyncSupported();
-        dto.initParams = copyWithDefault(info.getInitParameters());
+        dto.initParams = info.getInitParameters();
         dto.name = info.getName();
         dto.serviceId = servletRuntime.getServletInfo().getServiceId();
         dto.servletContextId = servletContextId;

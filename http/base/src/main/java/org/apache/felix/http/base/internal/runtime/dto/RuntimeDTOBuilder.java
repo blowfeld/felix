@@ -35,7 +35,6 @@ import org.osgi.service.http.runtime.dto.ServletDTO;
 
 public final class RuntimeDTOBuilder
 {
-    private static final ServletContextDTO[] CONTEXT_DTO_ARRAY = new ServletContextDTO[0];
 
     private final RegistryRuntime registry;
     private final Map<String, Object> serviceProperties;
@@ -81,7 +80,7 @@ public final class RuntimeDTOBuilder
                     registry.getHandlerRuntime(context),
                     registry.getListenerRuntimes(context)));
         }
-        return contextDTOs.toArray(CONTEXT_DTO_ARRAY);
+        return contextDTOs.toArray(BuilderConstants.CONTEXT_DTO_ARRAY);
     }
 
     private ServletContextDTO createContextDTO(ServletContextHelperRuntime context,

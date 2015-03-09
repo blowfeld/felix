@@ -26,7 +26,7 @@
   <modelVersion>4.0.0</modelVersion>
   <name>Apache Felix Utils</name>
   <description>Utility classes for OSGi.</description>
-  <version>1.6.1-SNAPSHOT</version>
+  <version>1.8.1-SNAPSHOT</version>
   <artifactId>org.apache.felix.utils</artifactId>
   <scm>
       <connection>scm:svn:http://svn.apache.org/repos/asf/felix/trunk/utils</connection>

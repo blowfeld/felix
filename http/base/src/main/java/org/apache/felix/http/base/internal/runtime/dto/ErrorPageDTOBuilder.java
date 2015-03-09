@@ -26,8 +26,6 @@ import org.osgi.service.http.runtime.dto.ErrorPageDTO;
 
 final class ErrorPageDTOBuilder<T extends ErrorPageDTO> extends BaseServletDTOBuilder<ErrorPageRuntime, T>
 {
-    private static final String[] STRING_ARRAY = new String[0];
-
     static ErrorPageDTOBuilder<ErrorPageDTO> create()
     {
         return new ErrorPageDTOBuilder<ErrorPageDTO>(DTOSuppliers.ERROR_PAGE);
@@ -43,7 +41,7 @@ final class ErrorPageDTOBuilder<T extends ErrorPageDTO> extends BaseServletDTOBu
     {
         T errorPageDTO = super.buildDTO(errorPage, servletConextId);
         errorPageDTO.errorCodes = getErrorCodes(errorPage.getErrorCodes());
-        errorPageDTO.exceptions = errorPage.getExceptions().toArray(STRING_ARRAY);
+        errorPageDTO.exceptions = errorPage.getExceptions().toArray(BuilderConstants.STRING_ARRAY);
         return errorPageDTO;
     }
 
@@ -53,7 +51,7 @@ final class ErrorPageDTOBuilder<T extends ErrorPageDTO> extends BaseServletDTOBu
         long[] result = new long[errorCodes.size()];
         for (int i = 0; i < result.length; i++)
         {
-            result[i] = (long) itr.next();
+            result[i] = itr.next();
         }
         return result;
     }
