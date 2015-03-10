@@ -184,6 +184,7 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
     	{
     		for(String errorPage : errorPages)
     		{
+    		    useServletHandler(handler);
     			this.errorsMapping.addErrorServlet(errorPage, handler);
     		}
     	}
@@ -431,7 +432,7 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
     	}
     	
     	Servlet servlet = null;
-    	if(handler != null)
+    	if(handler != null && handler.getServlet() != null)
     	{
     		servlet = handler.getServlet();
     		if(destroy)
