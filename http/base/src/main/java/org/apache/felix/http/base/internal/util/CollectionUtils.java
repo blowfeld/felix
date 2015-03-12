@@ -18,18 +18,18 @@ package org.apache.felix.http.base.internal.util;
 
 import java.util.Collection;
 import java.util.Comparator;
-import java.util.Set;
+import java.util.SortedSet;
 import java.util.TreeSet;
 
 public class CollectionUtils {
-    public static <T extends Comparable<?>> Set<T> sortedUnion(Collection<? extends T>... collections)
+    public static <T extends Comparable<?>> SortedSet<T> sortedUnion(Collection<? extends T>... collections)
     {
         return sortedUnion(null, collections);
     }
 
-    public static <T> Set<T> sortedUnion(Comparator<T> comparator, Collection<? extends T>... collections)
+    public static <T> SortedSet<T> sortedUnion(Comparator<T> comparator, Collection<? extends T>... collections)
     {
-        Set<T> union = comparator == null ? new TreeSet<T>() : new TreeSet<T>(comparator);
+        SortedSet<T> union = comparator == null ? new TreeSet<T>() : new TreeSet<T>(comparator);
         for (Collection<? extends T> collection : collections)
         {
             union.addAll(collection);
