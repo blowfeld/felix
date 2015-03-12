@@ -58,6 +58,7 @@ import org.osgi.service.http.HttpService;
 import org.osgi.service.http.context.ServletContextHelper;
 import org.osgi.service.http.runtime.HttpServiceRuntime;
 import org.osgi.service.http.runtime.HttpServiceRuntimeConstants;
+import org.osgi.service.http.runtime.dto.FailedServletDTO;
 import org.osgi.service.http.runtime.dto.RuntimeDTO;
 import org.osgi.service.http.runtime.dto.ServletContextDTO;
 import org.osgi.service.http.whiteboard.HttpWhiteboardConstants;
@@ -208,8 +209,8 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
     {
         //register first servlet
         registerServlet("testServlet 1", "/servlet_1");
-        // TODO Why 2?
-        awaitServices(Servlet.class.getName(), 2);
+
+        awaitServices(Servlet.class.getName(), 2); // Felix web console also registers a servlet
 
         HttpServiceRuntime serviceRuntime = (HttpServiceRuntime) getService(HttpServiceRuntime.class.getName());
         assertNotNull("HttpServiceRuntime unavailable", serviceRuntime);
@@ -461,8 +462,7 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
         registerResource("/", "/test-contextd/resource", "(" + HTTP_WHITEBOARD_CONTEXT_NAME + "=test-context)");
         registerListener(ServletRequestListener.class, true, "(" + HTTP_WHITEBOARD_CONTEXT_NAME + "=test-context)");
 
-        // TODO Why 5?
-        awaitServices(Servlet.class.getName(), 5);
+        awaitServices(Servlet.class.getName(), 5); // Felix web console also registers a servlet
         awaitServices(Filter.class.getName(), 2);
         awaitServices(TestResource.class.getName(), 2);
         awaitServices(ServletRequestListener.class.getName(), 2);
@@ -516,7 +516,7 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
         assertEquals(contextServiceId, testContextDTO.listenerDTOs[0].servletContextId);
     }
 
-    //140.1 ??
+    // As specified in OSGi Compendium Release 6, Chapter 140.1 (TODO : exact version)
     @Test
     public void hiddenDefaultContextAppearsAsFailure()
     {
@@ -533,7 +533,7 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
         assertEquals("default", runtimeDTO.servletContextDTOs[0].name);
     }
 
-    //140.1 ??
+    // As specified in OSGi Compendium Release 6, Chapter 140.1
     @Test
     public void contextHelperWithDuplicateNameAppearsAsFailure()
     {
@@ -571,7 +571,7 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
         assertEquals("/second", runtimeDTO.servletContextDTOs[0].contextPath);
     }
 
-    //140.1
+    // As specified in OSGi Compendium Release 6, Chapter 140.1
     @Test
     public void missingContextHelperNameAppearsAsFailure()
     {
@@ -591,7 +591,7 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
         assertEquals(FAILURE_REASON_VALIDATION_FAILED, runtimeDTO.failedServletContextDTOs[0].failureReason);
     }
 
-    //140.1
+    // As specified in OSGi Compendium Release 6, Chapter 140.1
     @Test
     public void invalidContextHelperNameAppearsAsFailure()
     {
@@ -608,7 +608,7 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
         assertEquals(FAILURE_REASON_VALIDATION_FAILED, runtimeDTO.failedServletContextDTOs[0].failureReason);
     }
 
-    //140.1
+    // As specified in OSGi Compendium Release 6, Chapter 140.1
     @Test
     public void invalidContextHelperPathAppearsAsFailure()
     {
@@ -625,7 +625,7 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
         assertEquals(FAILURE_REASON_VALIDATION_FAILED, runtimeDTO.failedServletContextDTOs[0].failureReason);
     }
 
-    //140.3
+    // As specified in OSGi Compendium Release 6, Chapter 140.3
     @Test
     public void selectionOfNonExistingContextHelperAppearsAsFailure()
     {
@@ -651,7 +651,7 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
         assertEquals("servlet 1", runtimeDTO.servletContextDTOs[0].servletDTOs[0].name);
     }
 
-    //140.3
+    // As specified in OSGi Compendium Release 6, Chapter 140.3
     @Test
     public void differentTargetIsIgnored()
     {
@@ -672,7 +672,7 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
         assertEquals(0, runtimeDTO.servletContextDTOs[0].servletDTOs.length);
     }
 
-    //140.4
+    // As specified in OSGi Compendium Release 6, Chapter 140.4
     @Test
     public void servletWithoutNameGetsFullyQualifiedName()
     {
@@ -692,7 +692,7 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
         assertEquals(TestServlet.class.getName(), runtimeDTO.servletContextDTOs[0].servletDTOs[0].name);
     }
 
-    //140.4
+    // As specified in OSGi Compendium Release 6, Chapter 140.4
     @Test
     @Ignore
     public void mulitpleServletsWithSamePatternChoosenByServiceRankingRules() throws Exception
@@ -700,7 +700,7 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
         // TODO
     }
 
-    //140.4.1
+    // As specified in OSGi Compendium Release 6, Chapter 140.4.1
     @Test
     public void patternAndErrorPageSpecifiedInvalidAndAppearsAsFailure()
     {
@@ -711,8 +711,7 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
 
         m_context.registerService(Servlet.class.getName(), new TestServlet(), properties);
 
-        // TODO Why 2?
-        awaitServices(Servlet.class.getName(), 2);
+        awaitServices(Servlet.class.getName(), 2); // Felix web console also registers a servlet
 
         HttpServiceRuntime serviceRuntime = (HttpServiceRuntime) getService(HttpServiceRuntime.class.getName());
         assertNotNull("HttpServiceRuntime unavailable", serviceRuntime);
@@ -729,7 +728,63 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
         assertEquals(FAILURE_REASON_VALIDATION_FAILED, runtimeDTO.failedErrorPageDTOs[0].failureReason);
     }
 
-    //140.4.1
+    // As specified in OSGi Compendium Release 6, Chapter 140.4.1
+    @Test
+    public void multipleServletsForSamePatternChoosenByServiceRankingRules()
+    {
+        registerServlet("servlet 1", "/pathcollision");
+
+        awaitServices(Servlet.class.getName(), 2);
+
+        HttpServiceRuntime serviceRuntime = (HttpServiceRuntime) getService(HttpServiceRuntime.class.getName());
+        assertNotNull("HttpServiceRuntime unavailable", serviceRuntime);
+
+        RuntimeDTO runtimeDTO = serviceRuntime.getRuntimeDTO();
+
+        assertEquals(1, runtimeDTO.servletContextDTOs.length);
+        assertEquals("default", runtimeDTO.servletContextDTOs[0].name);
+        ServletContextDTO defaultContext = runtimeDTO.servletContextDTOs[0];
+
+        assertEquals(0, runtimeDTO.failedServletDTOs.length);
+        assertEquals(1, defaultContext.servletDTOs.length);
+
+        Dictionary<String, ?> properties = createDictionary(
+                HttpWhiteboardConstants.HTTP_WHITEBOARD_SERVLET_PATTERN, "/pathcollision",
+                HttpWhiteboardConstants.HTTP_WHITEBOARD_SERVLET_NAME, "servlet 2",
+                Constants.SERVICE_RANKING, Integer.MAX_VALUE);
+
+        ServiceRegistration<?> higherRankingServlet = m_context.registerService(Servlet.class.getName(), new TestServlet(), properties);
+
+        awaitServices(Servlet.class.getName(), 3);
+
+        RuntimeDTO runtimeWithShadowedServlet = serviceRuntime.getRuntimeDTO();
+
+        assertEquals(1, runtimeWithShadowedServlet.servletContextDTOs.length);
+        assertEquals("default", runtimeWithShadowedServlet.servletContextDTOs[0].name);
+        defaultContext = runtimeWithShadowedServlet.servletContextDTOs[0];
+
+        assertEquals(1, defaultContext.servletDTOs.length);
+
+        assertEquals(1, runtimeWithShadowedServlet.failedServletDTOs.length);
+        FailedServletDTO failedServletDTO = runtimeWithShadowedServlet.failedServletDTOs[0];
+        assertEquals("servlet 1", failedServletDTO.name);
+        assertEquals(FAILURE_REASON_SHADOWED_BY_OTHER_SERVICE, failedServletDTO.failureReason);
+
+        higherRankingServlet.unregister();
+        awaitServices(Servlet.class.getName(), 2);
+
+        runtimeDTO = serviceRuntime.getRuntimeDTO();
+
+        assertEquals(1, runtimeDTO.servletContextDTOs.length);
+        assertEquals("default", runtimeDTO.servletContextDTOs[0].name);
+        defaultContext = runtimeDTO.servletContextDTOs[0];
+
+        assertEquals(0, runtimeDTO.failedServletDTOs.length);
+        assertEquals(1, defaultContext.servletDTOs.length);
+        assertEquals("servlet 1", defaultContext.servletDTOs[0].name);
+    }
+
+    // As specified in OSGi Compendium Release 6, Chapter 140.4.1
     @Test
     @Ignore
     public void multipleErrorPagesForSameExceptionsChoosenByServiceRankingRules()
@@ -737,7 +792,7 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
         // TODO
     }
 
-    //140.4
+    // As specified in OSGi Compendium Release 6, Chapter 140.4
     @Test
     @Ignore
     public void mulitpleServletsWithSamePatternHttpServiceRegistrationWins()
@@ -745,14 +800,16 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
         // TODO
     }
 
-    //140.7
+    // As specified in OSGi Compendium Release 6, Chapter 140.7
     @Test
-    public void invalidListenerPopertyValueAppearsAsFailure()
+    public void invalidListenerPopertyValueAppearsAsFailure() throws Exception
     {
         Dictionary<String, ?> properties = createDictionary(
                 HttpWhiteboardConstants.HTTP_WHITEBOARD_LISTENER, "invalid");
 
         m_context.registerService(ServletRequestListener.class.getName(), mock(ServletRequestListener.class), properties);
+
+        awaitService(ServletRequestListener.class.getName());
 
         HttpServiceRuntime serviceRuntime = (HttpServiceRuntime) getService(HttpServiceRuntime.class.getName());
         assertNotNull("HttpServiceRuntime unavailable", serviceRuntime);
@@ -763,7 +820,7 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
         assertEquals(FAILURE_REASON_VALIDATION_FAILED, runtimeDTO.failedListenerDTOs[0].failureReason);
     }
 
-    //140.8
+    // As specified in OSGi Compendium Release 6, Chapter 140.8
     @Test
     public void contextReplacedWithHigherRankingContext() throws Exception
     {
@@ -832,7 +889,7 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
         assertEquals("servlet", runtimeDTO.servletContextDTOs[0].servletDTOs[0].name);
     }
 
-    //140.9
+    // As specified in OSGi Compendium Release 6, Chapter 140.9
     @Test
     public void httServiceIdIsSet()
     {
@@ -845,16 +902,69 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
         assertEquals(expectedId, actualId);
     }
 
-    //140.9
+    // As specified in OSGi Compendium Release 6, Chapter 140.9
     @Test
-    @Ignore
-    public void serviceRegisteredWithHttServiceHasNegativeServiceId()
+    @Ignore // This is still broken
+    public void serviceRegisteredWithHttServiceHasNegativeServiceId() throws Exception
     {
-        // TODO
+        register("/test", new TestServlet());
+
+        HttpServiceRuntime serviceRuntime = (HttpServiceRuntime) getService(HttpServiceRuntime.class.getName());
+        assertNotNull("HttpServiceRuntime unavailable", serviceRuntime);
+
+        RuntimeDTO runtimeDTO = serviceRuntime.getRuntimeDTO();
+
+        assertEquals(1, runtimeDTO.servletContextDTOs.length);
+        assertEquals(1, runtimeDTO.servletContextDTOs[0].servletDTOs.length);
+        assertTrue(0 > runtimeDTO.servletContextDTOs[0].servletDTOs[0].serviceId);
     }
 
-    // 140.9
+    // As specified in OSGi Compendium Release 6, Chapter 140.9
     // required properties not set -> ignored
+
+    @Test
+    public void dtosAreIndependentCopies() throws Exception
+    {
+        //register first servlet
+        Dictionary<String, ?> properties = createDictionary(
+                HttpWhiteboardConstants.HTTP_WHITEBOARD_SERVLET_PATTERN, "/test",
+                HttpWhiteboardConstants.HTTP_WHITEBOARD_SERVLET_NAME, "servlet 1",
+                HttpWhiteboardConstants.HTTP_WHITEBOARD_SERVLET_INIT_PARAM_PREFIX + "test", "testValue");
+
+        m_context.registerService(Servlet.class.getName(), new TestServlet(), properties);
+        awaitServices(Servlet.class.getName(), 2);
+
+        HttpServiceRuntime serviceRuntime = (HttpServiceRuntime) getService(HttpServiceRuntime.class.getName());
+        assertNotNull("HttpServiceRuntime unavailable", serviceRuntime);
+
+        RuntimeDTO runtimeDTOWithFirstSerlvet = serviceRuntime.getRuntimeDTO();
+
+        //register second servlet
+        registerServlet("testServlet 2", "/servlet_2");
+        awaitServices(Servlet.class.getName(), 3);
+
+        RuntimeDTO runtimeDTOWithTwoSerlvets = serviceRuntime.getRuntimeDTO();
+
+        assertNotSame(runtimeDTOWithFirstSerlvet, runtimeDTOWithTwoSerlvets);
+
+        assertNotSame(runtimeDTOWithFirstSerlvet.servletContextDTOs[0].servletDTOs[0].patterns,
+                runtimeDTOWithTwoSerlvets.servletContextDTOs[0].servletDTOs[0].patterns);
+
+        boolean mapsModifiable = true;
+        try
+        {
+            runtimeDTOWithTwoSerlvets.servletContextDTOs[0].servletDTOs[0].initParams.clear();
+        } catch (UnsupportedOperationException e)
+        {
+            mapsModifiable = false;
+        }
+
+        if (mapsModifiable)
+        {
+            assertNotSame(runtimeDTOWithFirstSerlvet.servletContextDTOs[0].servletDTOs[0].initParams,
+                    runtimeDTOWithTwoSerlvets.servletContextDTOs[0].servletDTOs[0].initParams);
+        }
+    }
 
     private void awaitServices(String serviceName, int count)
     {
