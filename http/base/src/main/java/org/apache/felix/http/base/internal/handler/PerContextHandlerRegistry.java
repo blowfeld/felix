@@ -16,6 +16,7 @@
  */
 package org.apache.felix.http.base.internal.handler;
 
+import static org.osgi.service.http.runtime.dto.DTOConstants.FAILURE_REASON_EXCEPTION_ON_INIT;
 import static org.osgi.service.http.runtime.dto.DTOConstants.FAILURE_REASON_SERVICE_ALREAY_USED;
 import static org.osgi.service.http.runtime.dto.DTOConstants.FAILURE_REASON_SHADOWED_BY_OTHER_SERVICE;
 
@@ -63,8 +64,8 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
     private volatile HandlerMapping<FilterHandler> filterMapping = new HandlerMapping<FilterHandler>();
     private final ErrorsMapping errorsMapping = new ErrorsMapping();
 
-    private SortedMap<Pattern, SortedSet<ServletHandler>> patternToServletHandler = new TreeMap<Pattern, SortedSet<ServletHandler>>(PatternUtil.PatternComparator.INSTANCE);
-    private Map<ServletHandler, Integer> servletHandlerToUses = new HashMap<ServletHandler, Integer>();
+    private final SortedMap<Pattern, SortedSet<ServletHandler>> patternToServletHandler = new TreeMap<Pattern, SortedSet<ServletHandler>>(PatternUtil.PatternComparator.INSTANCE);
+    private final Map<ServletHandler, Integer> servletHandlerToUses = new HashMap<ServletHandler, Integer>();
     private final SortedSet<ServletHandler> allServletHandlers = new TreeSet<ServletHandler>();
 
     private final long serviceId;
@@ -395,7 +396,7 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
         return null;
     }
     
-    public synchronized Servlet removeServlet(ServletInfo servletInfo, final boolean destroy)
+    public synchronized Servlet removeServlet(ServletInfo servletInfo, final boolean destroy) throws RegistrationFailureException
     {
     	ServletHandler handler = getServletHandler(servletInfo);
     	
@@ -424,7 +425,7 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
 						increaseUseCount(activeHandler);
 						toAdd.put(p, activeHandler);
 					} catch (ServletException e) {
-						// TODO: next servlet handling this pattern could not be initialized, it belongs to failure DTOs
+					    throw new RegistrationFailureException(activeHandler.getServletInfo(), FAILURE_REASON_EXCEPTION_ON_INIT, e);
 					}
     			}
     			else 
@@ -471,7 +472,7 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
     	return null;
     }
     
-    public synchronized void removeServlet(Servlet servlet, final boolean destroy)
+    public synchronized void removeServlet(Servlet servlet, final boolean destroy) throws RegistrationFailureException
     {
     	Iterator<ServletHandler> it = this.allServletHandlers.iterator();
     	while(it.hasNext())

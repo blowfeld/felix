@@ -40,6 +40,13 @@ public class RegistrationFailureException extends ServletException
         this.errorCode = errorCode;
     }
 
+    public RegistrationFailureException(WhiteboardServiceInfo<?> info, int errorCode, Throwable exception)
+    {
+        super(exception);
+        this.info = info;
+        this.errorCode = errorCode;
+    }
+
     public WhiteboardServiceInfo<?> getInfo()
     {
         return info;

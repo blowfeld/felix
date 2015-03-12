@@ -18,6 +18,7 @@ package org.apache.felix.http.base.internal.whiteboard;
 
 import static org.osgi.service.http.runtime.dto.DTOConstants.FAILURE_REASON_NO_SERVLET_CONTEXT_MATCHING;
 import static org.osgi.service.http.runtime.dto.DTOConstants.FAILURE_REASON_SHADOWED_BY_OTHER_SERVICE;
+import static org.osgi.service.http.runtime.dto.DTOConstants.FAILURE_REASON_UNKNOWN;
 import static org.osgi.service.http.runtime.dto.DTOConstants.FAILURE_REASON_VALIDATION_FAILED;
 
 import java.util.ArrayList;
@@ -461,7 +462,13 @@ public final class ServletContextHelperManager
         }
         catch (RegistrationFailureException e)
         {
-            serviceFailures.put(info, e.getErrorCode());
+            serviceFailures.put(e.getInfo(), e.getErrorCode());
+            SystemLogger.error("Exception while adding servlet", e);
+        }
+        catch (RuntimeException e)
+        {
+            serviceFailures.put(info, FAILURE_REASON_UNKNOWN);
+            throw e;
         }
     }
 
@@ -472,38 +479,46 @@ public final class ServletContextHelperManager
      */
     private void unregisterWhiteboardService(final ContextHandler handler, final WhiteboardServiceInfo<?> info)
     {
-        if ( info instanceof ServletInfo )
+        try
         {
-            this.httpService.unregisterServlet(handler, (ServletInfo)info);
-        }
-        else if ( info instanceof FilterInfo )
-        {
-            this.httpService.unregisterFilter(handler, (FilterInfo)info);
-        }
-        else if ( info instanceof ResourceInfo )
-        {
-            this.httpService.unregisterResource(handler, (ResourceInfo)info);
-        }
+            if ( info instanceof ServletInfo )
+            {
+                this.httpService.unregisterServlet(handler, (ServletInfo)info);
+            }
+            else if ( info instanceof FilterInfo )
+            {
+                this.httpService.unregisterFilter(handler, (FilterInfo)info);
+            }
+            else if ( info instanceof ResourceInfo )
+            {
+                this.httpService.unregisterResource(handler, (ResourceInfo)info);
+            }
 
-        else if ( info instanceof ServletContextAttributeListenerInfo )
-        {
-            this.listenerRegistry.removeListener((ServletContextAttributeListenerInfo) info, handler);
+            else if ( info instanceof ServletContextAttributeListenerInfo )
+            {
+                this.listenerRegistry.removeListener((ServletContextAttributeListenerInfo) info, handler);
+            }
+            else if ( info instanceof HttpSessionListenerInfo )
+            {
+                this.listenerRegistry.removeListener((HttpSessionListenerInfo) info, handler);
+            }
+            else if ( info instanceof HttpSessionAttributeListenerInfo )
+            {
+                this.listenerRegistry.removeListener((HttpSessionAttributeListenerInfo) info, handler);
+            }
+            else if ( info instanceof ServletRequestListenerInfo )
+            {
+                this.listenerRegistry.removeListener((ServletRequestListenerInfo) info, handler);
+            }
+            else if ( info instanceof ServletRequestAttributeListenerInfo )
+            {
+                this.listenerRegistry.removeListener((ServletRequestAttributeListenerInfo) info, handler);
+            }
         }
-        else if ( info instanceof HttpSessionListenerInfo )
+        catch (RegistrationFailureException e)
         {
-            this.listenerRegistry.removeListener((HttpSessionListenerInfo) info, handler);
-        }
-        else if ( info instanceof HttpSessionAttributeListenerInfo )
-        {
-            this.listenerRegistry.removeListener((HttpSessionAttributeListenerInfo) info, handler);
-        }
-        else if ( info instanceof ServletRequestListenerInfo )
-        {
-            this.listenerRegistry.removeListener((ServletRequestListenerInfo) info, handler);
-        }
-        else if ( info instanceof ServletRequestAttributeListenerInfo )
-        {
-            this.listenerRegistry.removeListener((ServletRequestAttributeListenerInfo) info, handler);
+            serviceFailures.put(e.getInfo(), e.getErrorCode());
+            SystemLogger.error("Exception while removing servlet", e);
         }
         serviceFailures.remove(info);
     }

@@ -81,7 +81,7 @@ public final class WhiteboardHttpService
             }
             catch (final ServletException e)
             {
-                throw new RegistrationFailureException(servletInfo, FAILURE_REASON_EXCEPTION_ON_INIT);
+                throw new RegistrationFailureException(servletInfo, FAILURE_REASON_EXCEPTION_ON_INIT, e);
             }
         } else
         {
@@ -93,8 +93,9 @@ public final class WhiteboardHttpService
      * Unregister a servlet
      * @param contextInfo The servlet context helper info
      * @param servletInfo The servlet info
+     * @throws RegistrationFailureException 
      */
-    public void unregisterServlet(@Nonnull final ContextHandler contextHandler, @Nonnull final ServletInfo servletInfo)
+    public void unregisterServlet(@Nonnull final ContextHandler contextHandler, @Nonnull final ServletInfo servletInfo) throws RegistrationFailureException
     {
         final PerContextHandlerRegistry registry = this.handlerRegistry.getRegistry(contextHandler.getContextInfo());
         if (registry != null )
@@ -133,7 +134,7 @@ public final class WhiteboardHttpService
             }
             catch (final ServletException e)
             {
-                throw new RegistrationFailureException(filterInfo, FAILURE_REASON_EXCEPTION_ON_INIT);
+                throw new RegistrationFailureException(filterInfo, FAILURE_REASON_EXCEPTION_ON_INIT, e);
             }
         }
         else
@@ -185,7 +186,7 @@ public final class WhiteboardHttpService
     				registry.addServlet(handler);
     		}
     	} catch (ServletException e) {
-            throw new RegistrationFailureException(resourceInfo, FAILURE_REASON_EXCEPTION_ON_INIT);
+            throw new RegistrationFailureException(resourceInfo, FAILURE_REASON_EXCEPTION_ON_INIT, e);
     	}
     }
 
@@ -193,8 +194,9 @@ public final class WhiteboardHttpService
      * Unregister a resource.
      * @param contextInfo The servlet context helper info
      * @param resourceInfo The resource info
+     * @throws RegistrationFailureException 
      */
-    public void unregisterResource(@Nonnull final ContextHandler contextHandler, @Nonnull final ResourceInfo resourceInfo)
+    public void unregisterResource(@Nonnull final ContextHandler contextHandler, @Nonnull final ResourceInfo resourceInfo) throws RegistrationFailureException
     {
         final ServletInfo servletInfo = new ServletInfo(resourceInfo);
         final PerContextHandlerRegistry registry = this.handlerRegistry.getRegistry(contextHandler.getContextInfo());

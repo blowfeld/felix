@@ -25,11 +25,14 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.osgi.framework.Constants.SERVICE_ID;
 import static org.osgi.framework.Constants.SERVICE_RANKING;
 import static org.osgi.service.http.runtime.HttpServiceRuntimeConstants.HTTP_SERVICE_ENDPOINT_ATTRIBUTE;
 import static org.osgi.service.http.runtime.HttpServiceRuntimeConstants.HTTP_SERVICE_ID_ATTRIBUTE;
+import static org.osgi.service.http.runtime.dto.DTOConstants.FAILURE_REASON_EXCEPTION_ON_INIT;
 import static org.osgi.service.http.runtime.dto.DTOConstants.FAILURE_REASON_NO_SERVLET_CONTEXT_MATCHING;
 import static org.osgi.service.http.runtime.dto.DTOConstants.FAILURE_REASON_SHADOWED_BY_OTHER_SERVICE;
 import static org.osgi.service.http.runtime.dto.DTOConstants.FAILURE_REASON_VALIDATION_FAILED;
@@ -54,7 +57,9 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 
 import javax.servlet.Filter;
+import javax.servlet.FilterConfig;
 import javax.servlet.Servlet;
+import javax.servlet.ServletConfig;
 import javax.servlet.ServletContextAttributeListener;
 import javax.servlet.ServletContextListener;
 import javax.servlet.ServletException;
@@ -525,6 +530,50 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
         assertEquals(contextServiceId, testContextDTO.listenerDTOs[0].servletContextId);
     }
 
+    @Test
+    public void exceptionInServletInitAppearsAsFailure() throws ServletException
+    {
+        Dictionary<String, ?> properties = createDictionary(
+                HTTP_WHITEBOARD_SERVLET_PATTERN, "/servlet",
+                HTTP_WHITEBOARD_SERVLET_NAME, "servlet");
+
+        Servlet failingServlet = mock(Servlet.class);
+        doThrow(new ServletException()).when(failingServlet).init(any(ServletConfig.class));
+
+        m_context.registerService(Servlet.class.getName(), failingServlet, properties);
+        awaitServices(Servlet.class.getName(), 2); // Felix web console also registers a servlet
+
+        HttpServiceRuntime serviceRuntime = (HttpServiceRuntime) getService(HttpServiceRuntime.class.getName());
+        assertNotNull("HttpServiceRuntime unavailable", serviceRuntime);
+
+        RuntimeDTO runtimeDTO = serviceRuntime.getRuntimeDTO();
+        assertEquals(1, runtimeDTO.failedServletDTOs.length);
+        assertEquals("servlet", runtimeDTO.failedServletDTOs[0].name);
+        assertEquals(FAILURE_REASON_EXCEPTION_ON_INIT, runtimeDTO.failedServletDTOs[0].failureReason);
+    }
+
+    @Test
+    public void exceptionInFilterInitAppearsAsFailure() throws ServletException
+    {
+        Dictionary<String, ?> properties = createDictionary(
+                HTTP_WHITEBOARD_FILTER_PATTERN, "/filter",
+                HTTP_WHITEBOARD_FILTER_NAME, "filter");
+
+        Filter failingFilter = mock(Filter.class);
+        doThrow(new ServletException()).when(failingFilter).init(any(FilterConfig.class));
+
+        m_context.registerService(Filter.class.getName(), failingFilter, properties);
+        awaitServices(Filter.class.getName(), 1);
+
+        HttpServiceRuntime serviceRuntime = (HttpServiceRuntime) getService(HttpServiceRuntime.class.getName());
+        assertNotNull("HttpServiceRuntime unavailable", serviceRuntime);
+
+        RuntimeDTO runtimeDTO = serviceRuntime.getRuntimeDTO();
+        assertEquals(1, runtimeDTO.failedFilterDTOs.length);
+        assertEquals("filter", runtimeDTO.failedFilterDTOs[0].name);
+        assertEquals(FAILURE_REASON_EXCEPTION_ON_INIT, runtimeDTO.failedFilterDTOs[0].failureReason);
+    }
+
     // As specified in OSGi Compendium Release 6, Chapter 140.1 (TODO : exact version)
     @Test
     public void hiddenDefaultContextAppearsAsFailure()
@@ -698,14 +747,6 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
         assertEquals(0, runtimeDTO.failedServletDTOs.length);
         assertEquals(1, runtimeDTO.servletContextDTOs[0].servletDTOs.length);
         assertEquals(TestServlet.class.getName(), runtimeDTO.servletContextDTOs[0].servletDTOs[0].name);
-    }
-
-    // As specified in OSGi Compendium Release 6, Chapter 140.4
-    @Test
-    @Ignore
-    public void mulitpleServletsWithSamePatternChoosenByServiceRankingRules() throws Exception
-    {
-        // TODO
     }
 
     // As specified in OSGi Compendium Release 6, Chapter 140.4.1
