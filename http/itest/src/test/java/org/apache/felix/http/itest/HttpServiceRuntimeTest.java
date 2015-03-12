@@ -230,7 +230,6 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
 
         RuntimeDTO runtimeDTOWithBothSerlvets = serviceRuntime.getRuntimeDTO();
 
-        assertNotSame(runtimeDTOWithFirstSerlvet, runtimeDTOWithBothSerlvets);
         assertEquals(0, runtimeDTOWithBothSerlvets.failedServletDTOs.length);
         assertEquals(1, runtimeDTOWithBothSerlvets.servletContextDTOs.length);
 
@@ -265,7 +264,6 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
 
         RuntimeDTO runtimeDTOWithBothFilters = serviceRuntime.getRuntimeDTO();
 
-        assertNotSame(runtimeDTOWithFirstFilter, runtimeDTOWithBothFilters);
         assertEquals(0, runtimeDTOWithBothFilters.failedFilterDTOs.length);
         assertEquals(1, runtimeDTOWithBothFilters.servletContextDTOs.length);
 
@@ -301,7 +299,6 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
 
         RuntimeDTO runtimeDTOWithBothResources = serviceRuntime.getRuntimeDTO();
 
-        assertNotSame(runtimeDTOWithFirstResource, runtimeDTOWithBothResources);
         assertEquals(0, runtimeDTOWithBothResources.failedResourceDTOs.length);
         assertEquals(1, runtimeDTOWithBothResources.servletContextDTOs.length);
 
@@ -341,7 +338,6 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
 
         RuntimeDTO runtimeDTOWithBothErrorPages = serviceRuntime.getRuntimeDTO();
 
-        assertNotSame(runtimeDTOWithFirstErrorPage, runtimeDTOWithBothErrorPages);
         assertEquals(0, runtimeDTOWithBothErrorPages.failedServletDTOs.length);
         assertEquals(0, runtimeDTOWithBothErrorPages.failedErrorPageDTOs.length);
         assertEquals(1, runtimeDTOWithBothErrorPages.servletContextDTOs.length);
@@ -390,7 +386,6 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
 
         RuntimeDTO runtimeDTOWithAllListeners = serviceRuntime.getRuntimeDTO();
 
-        assertNotSame(runtimeDTOWithFirstListener, runtimeDTOWithAllListeners);
         assertEquals(0, runtimeDTOWithAllListeners.failedListenerDTOs.length);
         assertEquals(1, runtimeDTOWithAllListeners.servletContextDTOs.length);
 
@@ -920,7 +915,24 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
     }
 
     // As specified in OSGi Compendium Release 6, Chapter 140.9
-    // required properties not set -> ignored
+    @Test
+    public void serviceWithoutRequiredPropertiesIsIgnored()
+    {
+        Dictionary<String, ?> properties = createDictionary(
+                // Neither pattern nor error page specified
+                HttpWhiteboardConstants.HTTP_WHITEBOARD_SERVLET_NAME, "servlet");
+
+        m_context.registerService(Servlet.class.getName(), new TestServlet(), properties);
+
+        HttpServiceRuntime serviceRuntime = (HttpServiceRuntime) getService(HttpServiceRuntime.class.getName());
+        assertNotNull("HttpServiceRuntime unavailable", serviceRuntime);
+
+        RuntimeDTO runtimeDTO = serviceRuntime.getRuntimeDTO();
+
+        assertEquals(0, runtimeDTO.failedServletContextDTOs.length);
+        assertEquals(1, runtimeDTO.servletContextDTOs.length);
+        assertEquals(0, runtimeDTO.servletContextDTOs[0].servletDTOs.length);
+    }
 
     @Test
     public void dtosAreIndependentCopies() throws Exception
