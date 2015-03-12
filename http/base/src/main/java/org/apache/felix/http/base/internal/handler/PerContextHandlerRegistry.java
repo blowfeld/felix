@@ -17,6 +17,7 @@
 package org.apache.felix.http.base.internal.handler;
 
 import static org.osgi.service.http.runtime.dto.DTOConstants.FAILURE_REASON_SERVICE_ALREAY_USED;
+import static org.osgi.service.http.runtime.dto.DTOConstants.FAILURE_REASON_SHADOWED_BY_OTHER_SERVICE;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -25,6 +26,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.SortedMap;
 import java.util.SortedSet;
 import java.util.TreeMap;
@@ -42,6 +44,7 @@ import org.apache.felix.http.base.internal.runtime.ServletContextHelperInfo;
 import org.apache.felix.http.base.internal.runtime.ServletInfo;
 import org.apache.felix.http.base.internal.runtime.dto.ContextRuntime;
 import org.apache.felix.http.base.internal.runtime.dto.ErrorPageRuntime;
+import org.apache.felix.http.base.internal.runtime.dto.FailureRuntime;
 import org.apache.felix.http.base.internal.runtime.dto.FilterRuntime;
 import org.apache.felix.http.base.internal.runtime.dto.ServletRuntime;
 import org.apache.felix.http.base.internal.service.ResourceServlet;
@@ -523,7 +526,7 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
         return this.serviceId;
     }
 
-    public synchronized ContextRuntime getRuntime() {
+    public synchronized ContextRuntime getRuntime(FailureRuntime.Builder failureRuntimeBuilder) {
         Collection<ErrorPageRuntime> errorPages = new TreeSet<ErrorPageRuntime>(ServletRuntime.COMPARATOR);
         Collection<ServletHandler> errorHandlers = errorsMapping.getMappedHandlers();
         for (ServletHandler servletHandler : errorHandlers)
@@ -539,22 +542,29 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
 
         Collection<ServletRuntime> servletRuntimes = new TreeSet<ServletRuntime>(ServletRuntime.COMPARATOR);
         Collection<ServletRuntime> resourceRuntimes = new TreeSet<ServletRuntime>(ServletRuntime.COMPARATOR);
-        
-        Iterator<ServletHandler> it = this.allServletHandlers.iterator();
-        while(it.hasNext())
+
+        for (Set<ServletHandler> patternHandlers : patternToServletHandler.values())
         {
-        	ServletHandler servletHandler = it.next();
-        	
-        	if (servletHandler.getServletInfo().isResource())
+            Iterator<ServletHandler> itr = patternHandlers.iterator();
+            ServletHandler activeHandler = itr.next();
+            if (activeHandler.getServletInfo().isResource())
             {
-                resourceRuntimes.add(servletHandler);
+                resourceRuntimes.add(activeHandler);
             }
-            else if (!errorHandlers.contains(servletHandler))
+            else
             {
-                servletRuntimes.add(servletHandler);
+                servletRuntimes.add(activeHandler);
+            }
+            while (itr.hasNext())
+            {
+                failureRuntimeBuilder.add(itr.next().getServletInfo(), FAILURE_REASON_SHADOWED_BY_OTHER_SERVICE);
             }
         }
 
-        return new ContextRuntime(servletRuntimes, filterRuntimes, resourceRuntimes, errorPages, serviceId);
-    }    
+        return new ContextRuntime(servletRuntimes,
+                filterRuntimes,
+                resourceRuntimes,
+                errorPages,
+                serviceId);
+    }
 }

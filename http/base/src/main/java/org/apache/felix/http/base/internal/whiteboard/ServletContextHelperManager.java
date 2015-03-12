@@ -567,7 +567,7 @@ public final class ServletContextHelperManager
         Collection<ServletContextHelperRuntime> contextRuntimes = new TreeSet<ServletContextHelperRuntime>(ServletContextHelperRuntime.COMPARATOR);
         List<ContextRuntime> handlerRuntimes;
         Map<Long, Collection<ServiceReference<?>>> listenerRuntimes;
-        FailureRuntime failureRuntime;
+        FailureRuntime.Builder failureRuntime = FailureRuntime.builder();
         synchronized ( this.contextMap )
         {
             for (List<ContextHandler> contextHandlerList : this.contextMap.values())
@@ -577,10 +577,10 @@ public final class ServletContextHelperManager
                     contextRuntimes.add(contextHandlerList.get(0));
                 }
             }
-            handlerRuntimes = registry.getRuntime();
+            handlerRuntimes = registry.getRuntime(failureRuntime);
             listenerRuntimes = listenerRegistry.getContextRuntimes();
-            failureRuntime = FailureRuntime.forServiceInfos(serviceFailures);
+            failureRuntime.add(serviceFailures);
         }
-        return new RegistryRuntime(contextRuntimes, handlerRuntimes, listenerRuntimes, failureRuntime);
+        return new RegistryRuntime(contextRuntimes, handlerRuntimes, listenerRuntimes, failureRuntime.build());
     }
 }

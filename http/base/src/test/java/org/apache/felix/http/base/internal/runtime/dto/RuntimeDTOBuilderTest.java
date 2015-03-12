@@ -727,7 +727,7 @@ public class RuntimeDTOBuilderTest
                 createInitParameterMap());
         serviceFailures.put(invalidErrorPageInfo, 7);
 
-        return FailureRuntime.forServiceInfos(serviceFailures);
+        return FailureRuntime.builder().add(serviceFailures).build();
     }
 
     @Test

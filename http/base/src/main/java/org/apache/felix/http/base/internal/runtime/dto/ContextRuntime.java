@@ -32,7 +32,8 @@ public final class ContextRuntime
     public ContextRuntime(Collection<ServletRuntime> servletRuntimes,
             Collection<FilterRuntime> filterRuntimes,
             Collection<ServletRuntime> resourceRuntimes,
-            Collection<ErrorPageRuntime> errorPageRuntimes, long serviceId)
+            Collection<ErrorPageRuntime> errorPageRuntimes,
+            long serviceId)
     {
         this.servletRuntimes = servletRuntimes;
         this.filterRuntimes = filterRuntimes;
