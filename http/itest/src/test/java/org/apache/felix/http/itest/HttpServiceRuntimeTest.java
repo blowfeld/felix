@@ -26,10 +26,26 @@ import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
+import static org.osgi.framework.Constants.SERVICE_ID;
+import static org.osgi.framework.Constants.SERVICE_RANKING;
+import static org.osgi.service.http.runtime.HttpServiceRuntimeConstants.HTTP_SERVICE_ENDPOINT_ATTRIBUTE;
+import static org.osgi.service.http.runtime.HttpServiceRuntimeConstants.HTTP_SERVICE_ID_ATTRIBUTE;
 import static org.osgi.service.http.runtime.dto.DTOConstants.FAILURE_REASON_NO_SERVLET_CONTEXT_MATCHING;
 import static org.osgi.service.http.runtime.dto.DTOConstants.FAILURE_REASON_SHADOWED_BY_OTHER_SERVICE;
 import static org.osgi.service.http.runtime.dto.DTOConstants.FAILURE_REASON_VALIDATION_FAILED;
 import static org.osgi.service.http.whiteboard.HttpWhiteboardConstants.HTTP_WHITEBOARD_CONTEXT_NAME;
+import static org.osgi.service.http.whiteboard.HttpWhiteboardConstants.HTTP_WHITEBOARD_CONTEXT_PATH;
+import static org.osgi.service.http.whiteboard.HttpWhiteboardConstants.HTTP_WHITEBOARD_CONTEXT_SELECT;
+import static org.osgi.service.http.whiteboard.HttpWhiteboardConstants.HTTP_WHITEBOARD_FILTER_NAME;
+import static org.osgi.service.http.whiteboard.HttpWhiteboardConstants.HTTP_WHITEBOARD_FILTER_PATTERN;
+import static org.osgi.service.http.whiteboard.HttpWhiteboardConstants.HTTP_WHITEBOARD_LISTENER;
+import static org.osgi.service.http.whiteboard.HttpWhiteboardConstants.HTTP_WHITEBOARD_RESOURCE_PATTERN;
+import static org.osgi.service.http.whiteboard.HttpWhiteboardConstants.HTTP_WHITEBOARD_RESOURCE_PREFIX;
+import static org.osgi.service.http.whiteboard.HttpWhiteboardConstants.HTTP_WHITEBOARD_SERVLET_ERROR_PAGE;
+import static org.osgi.service.http.whiteboard.HttpWhiteboardConstants.HTTP_WHITEBOARD_SERVLET_INIT_PARAM_PREFIX;
+import static org.osgi.service.http.whiteboard.HttpWhiteboardConstants.HTTP_WHITEBOARD_SERVLET_NAME;
+import static org.osgi.service.http.whiteboard.HttpWhiteboardConstants.HTTP_WHITEBOARD_SERVLET_PATTERN;
+import static org.osgi.service.http.whiteboard.HttpWhiteboardConstants.HTTP_WHITEBOARD_TARGET;
 
 import java.util.Arrays;
 import java.util.Dictionary;
@@ -57,11 +73,9 @@ import org.osgi.framework.ServiceRegistration;
 import org.osgi.service.http.HttpService;
 import org.osgi.service.http.context.ServletContextHelper;
 import org.osgi.service.http.runtime.HttpServiceRuntime;
-import org.osgi.service.http.runtime.HttpServiceRuntimeConstants;
 import org.osgi.service.http.runtime.dto.FailedServletDTO;
 import org.osgi.service.http.runtime.dto.RuntimeDTO;
 import org.osgi.service.http.runtime.dto.ServletContextDTO;
-import org.osgi.service.http.whiteboard.HttpWhiteboardConstants;
 
 @RunWith(JUnit4TestRunner.class)
 public class HttpServiceRuntimeTest extends BaseIntegrationTest
@@ -76,9 +90,9 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
     private void registerServlet(String name, String path, String context)
     {
         List<Object> propertyEntries = Arrays.<Object>asList(
-                HttpWhiteboardConstants.HTTP_WHITEBOARD_SERVLET_PATTERN, path,
-                HttpWhiteboardConstants.HTTP_WHITEBOARD_SERVLET_NAME, name,
-                HttpWhiteboardConstants.HTTP_WHITEBOARD_CONTEXT_SELECT, context);
+                HTTP_WHITEBOARD_SERVLET_PATTERN, path,
+                HTTP_WHITEBOARD_SERVLET_NAME, name,
+                HTTP_WHITEBOARD_CONTEXT_SELECT, context);
 
         Dictionary<String, ?> properties = createDictionary(context == null ?
                 propertyEntries.subList(0, 4).toArray() : propertyEntries.toArray());
@@ -94,9 +108,9 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
     private void registerFilter(String name, String path, String context)
     {
         List<Object> propertyEntries = Arrays.<Object>asList(
-                HttpWhiteboardConstants.HTTP_WHITEBOARD_FILTER_PATTERN, path,
-                HttpWhiteboardConstants.HTTP_WHITEBOARD_FILTER_NAME, name,
-                HttpWhiteboardConstants.HTTP_WHITEBOARD_CONTEXT_SELECT, context);
+                HTTP_WHITEBOARD_FILTER_PATTERN, path,
+                HTTP_WHITEBOARD_FILTER_NAME, name,
+                HTTP_WHITEBOARD_CONTEXT_SELECT, context);
 
         Dictionary<String, ?> properties = createDictionary(context == null ?
                 propertyEntries.subList(0, 4).toArray() : propertyEntries.toArray());
@@ -112,9 +126,9 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
     private void registerResource(String prefix, String path, String context)
     {
         List<Object> propertyEntries = Arrays.<Object>asList(
-                HttpWhiteboardConstants.HTTP_WHITEBOARD_RESOURCE_PATTERN, path,
-                HttpWhiteboardConstants.HTTP_WHITEBOARD_RESOURCE_PREFIX, prefix,
-                HttpWhiteboardConstants.HTTP_WHITEBOARD_CONTEXT_SELECT, context);
+                HTTP_WHITEBOARD_RESOURCE_PATTERN, path,
+                HTTP_WHITEBOARD_RESOURCE_PREFIX, prefix,
+                HTTP_WHITEBOARD_CONTEXT_SELECT, context);
 
         Dictionary<String, ?> properties = createDictionary(context == null ?
                 propertyEntries.subList(0, 4).toArray() : propertyEntries.toArray());
@@ -130,9 +144,9 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
     private void registerErrorPage(String name, List<String> errors, String context)
     {
         List<Object> propertyEntries = Arrays.<Object>asList(
-                HttpWhiteboardConstants.HTTP_WHITEBOARD_SERVLET_ERROR_PAGE, errors,
-                HttpWhiteboardConstants.HTTP_WHITEBOARD_SERVLET_NAME, name,
-                HttpWhiteboardConstants.HTTP_WHITEBOARD_CONTEXT_SELECT, context);
+                HTTP_WHITEBOARD_SERVLET_ERROR_PAGE, errors,
+                HTTP_WHITEBOARD_SERVLET_NAME, name,
+                HTTP_WHITEBOARD_CONTEXT_SELECT, context);
 
         Dictionary<String, ?> properties = createDictionary(context == null ?
                 propertyEntries.subList(0, 4).toArray() : propertyEntries.toArray());
@@ -148,8 +162,8 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
     private void registerListener(Class<?> listenerClass, boolean useWithWhiteboard, String context)
     {
         List<Object> propertyEntries = Arrays.<Object>asList(
-                HttpWhiteboardConstants.HTTP_WHITEBOARD_LISTENER, useWithWhiteboard ? "true" : "false",
-                HttpWhiteboardConstants.HTTP_WHITEBOARD_CONTEXT_SELECT, context);
+                HTTP_WHITEBOARD_LISTENER, useWithWhiteboard ? "true" : "false",
+                HTTP_WHITEBOARD_CONTEXT_SELECT, context);
 
         Dictionary<String, ?> properties = createDictionary(context == null ?
                 propertyEntries.subList(0, 2).toArray() : propertyEntries.toArray());
@@ -160,8 +174,8 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
     private ServiceRegistration<?> registerContext(String name, String path)
     {
         Dictionary<String, ?> properties = createDictionary(
-                HttpWhiteboardConstants.HTTP_WHITEBOARD_CONTEXT_NAME, name,
-                HttpWhiteboardConstants.HTTP_WHITEBOARD_CONTEXT_PATH, path);
+                HTTP_WHITEBOARD_CONTEXT_NAME, name,
+                HTTP_WHITEBOARD_CONTEXT_PATH, path);
 
         return m_context.registerService(ServletContextHelper.class.getName(), mock(ServletContextHelper.class), properties);
     }
@@ -178,9 +192,9 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
         Map<String, String> runtimeDTOAttributes = runtimeDTO.attributes;
 
         assertNotNull(runtimeDTOAttributes);
-        assertTrue(runtimeDTOAttributes.containsKey(HttpServiceRuntimeConstants.HTTP_SERVICE_ID_ATTRIBUTE));
-        assertTrue(runtimeDTOAttributes.containsKey(HttpServiceRuntimeConstants.HTTP_SERVICE_ENDPOINT_ATTRIBUTE));
-        assertTrue(0 < Integer.valueOf(runtimeDTOAttributes.get(HttpServiceRuntimeConstants.HTTP_SERVICE_ID_ATTRIBUTE)));
+        assertTrue(runtimeDTOAttributes.containsKey(HTTP_SERVICE_ID_ATTRIBUTE));
+        assertTrue(runtimeDTOAttributes.containsKey(HTTP_SERVICE_ENDPOINT_ATTRIBUTE));
+        assertTrue(0 < Integer.valueOf(runtimeDTOAttributes.get(HTTP_SERVICE_ID_ATTRIBUTE)));
 
         assertEquals(0, runtimeDTO.failedErrorPageDTOs.length);
         assertEquals(0, runtimeDTO.failedFilterDTOs.length);
@@ -570,8 +584,7 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
     @Test
     public void missingContextHelperNameAppearsAsFailure()
     {
-        Dictionary<String, ?> properties = createDictionary(
-                HttpWhiteboardConstants.HTTP_WHITEBOARD_CONTEXT_PATH, "");
+        Dictionary<String, ?> properties = createDictionary(HTTP_WHITEBOARD_CONTEXT_PATH, "");
 
         m_context.registerService(ServletContextHelper.class.getName(), mock(ServletContextHelper.class), properties);
         awaitServices(ServletContextHelper.class.getName(), 2);
@@ -651,9 +664,9 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
     public void differentTargetIsIgnored()
     {
         Dictionary<String, ?> properties = createDictionary(
-                HttpWhiteboardConstants.HTTP_WHITEBOARD_SERVLET_PATTERN, "/servlet",
-                HttpWhiteboardConstants.HTTP_WHITEBOARD_SERVLET_NAME, "servlet",
-                HttpWhiteboardConstants.HTTP_WHITEBOARD_TARGET, "(org.osgi.service.http.port=8282)");
+                HTTP_WHITEBOARD_SERVLET_PATTERN, "/servlet",
+                HTTP_WHITEBOARD_SERVLET_NAME, "servlet",
+                HTTP_WHITEBOARD_TARGET, "(org.osgi.service.http.port=8282)");
 
         m_context.registerService(Servlet.class.getName(), new TestServlet(), properties);
 
@@ -672,7 +685,7 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
     public void servletWithoutNameGetsFullyQualifiedName()
     {
         Dictionary<String, ?> properties = createDictionary(
-                HttpWhiteboardConstants.HTTP_WHITEBOARD_SERVLET_PATTERN, "/servlet");
+                HTTP_WHITEBOARD_SERVLET_PATTERN, "/servlet");
 
         m_context.registerService(Servlet.class.getName(), new TestServlet(), properties);
 
@@ -700,9 +713,9 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
     public void patternAndErrorPageSpecifiedInvalidAndAppearsAsFailure()
     {
         Dictionary<String, ?> properties = createDictionary(
-                HttpWhiteboardConstants.HTTP_WHITEBOARD_SERVLET_PATTERN, "/servlet",
-                HttpWhiteboardConstants.HTTP_WHITEBOARD_SERVLET_NAME, "servlet",
-                HttpWhiteboardConstants.HTTP_WHITEBOARD_SERVLET_ERROR_PAGE, asList("400"));
+                HTTP_WHITEBOARD_SERVLET_PATTERN, "/servlet",
+                HTTP_WHITEBOARD_SERVLET_NAME, "servlet",
+                HTTP_WHITEBOARD_SERVLET_ERROR_PAGE, asList("400"));
 
         m_context.registerService(Servlet.class.getName(), new TestServlet(), properties);
 
@@ -743,9 +756,9 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
         assertEquals(1, defaultContext.servletDTOs.length);
 
         Dictionary<String, ?> properties = createDictionary(
-                HttpWhiteboardConstants.HTTP_WHITEBOARD_SERVLET_PATTERN, "/pathcollision",
-                HttpWhiteboardConstants.HTTP_WHITEBOARD_SERVLET_NAME, "servlet 2",
-                Constants.SERVICE_RANKING, Integer.MAX_VALUE);
+                HTTP_WHITEBOARD_SERVLET_PATTERN, "/pathcollision",
+                HTTP_WHITEBOARD_SERVLET_NAME, "servlet 2",
+                SERVICE_RANKING, Integer.MAX_VALUE);
 
         ServiceRegistration<?> higherRankingServlet = m_context.registerService(Servlet.class.getName(), new TestServlet(), properties);
 
@@ -798,8 +811,7 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
     @Test
     public void invalidListenerPopertyValueAppearsAsFailure() throws Exception
     {
-        Dictionary<String, ?> properties = createDictionary(
-                HttpWhiteboardConstants.HTTP_WHITEBOARD_LISTENER, "invalid");
+        Dictionary<String, ?> properties = createDictionary(HTTP_WHITEBOARD_LISTENER, "invalid");
 
         m_context.registerService(ServletRequestListener.class.getName(), mock(ServletRequestListener.class), properties);
 
@@ -841,9 +853,9 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
         assertEquals("servlet", runtimeDTO.servletContextDTOs[0].servletDTOs[0].name);
 
         Dictionary<String, ?> properties = createDictionary(
-                HttpWhiteboardConstants.HTTP_WHITEBOARD_CONTEXT_NAME, "test-context",
-                HttpWhiteboardConstants.HTTP_WHITEBOARD_CONTEXT_PATH, "/second",
-                Constants.SERVICE_RANKING, Integer.MAX_VALUE);
+                HTTP_WHITEBOARD_CONTEXT_NAME, "test-context",
+                HTTP_WHITEBOARD_CONTEXT_PATH, "/second",
+                SERVICE_RANKING, Integer.MAX_VALUE);
 
         ServiceRegistration<?> secondContext = m_context.registerService(ServletContextHelper.class.getName(), mock(ServletContextHelper.class), properties);
         Long secondContextId = (Long) secondContext.getReference().getProperty(Constants.SERVICE_ID);
@@ -890,8 +902,8 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
         ServiceReference<?> httpServiceRef = m_context.getServiceReference(HttpService.class.getName());
         ServiceReference<?> httpServiceRuntimeRef = m_context.getServiceReference(HttpServiceRuntime.class.getName());
 
-        Long expectedId = (Long) httpServiceRef.getProperty(Constants.SERVICE_ID);
-        Long actualId = (Long) httpServiceRuntimeRef.getProperty(HttpServiceRuntimeConstants.HTTP_SERVICE_ID_ATTRIBUTE);
+        Long expectedId = (Long) httpServiceRef.getProperty(SERVICE_ID);
+        Long actualId = (Long) httpServiceRuntimeRef.getProperty(HTTP_SERVICE_ID_ATTRIBUTE);
 
         assertEquals(expectedId, actualId);
     }
@@ -917,9 +929,8 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
     @Test
     public void serviceWithoutRequiredPropertiesIsIgnored()
     {
-        Dictionary<String, ?> properties = createDictionary(
-                // Neither pattern nor error page specified
-                HttpWhiteboardConstants.HTTP_WHITEBOARD_SERVLET_NAME, "servlet");
+        // Neither pattern nor error page specified
+        Dictionary<String, ?> properties = createDictionary(HTTP_WHITEBOARD_SERVLET_NAME, "servlet");
 
         m_context.registerService(Servlet.class.getName(), new TestServlet(), properties);
 
@@ -938,9 +949,9 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
     {
         //register first servlet
         Dictionary<String, ?> properties = createDictionary(
-                HttpWhiteboardConstants.HTTP_WHITEBOARD_SERVLET_PATTERN, "/test",
-                HttpWhiteboardConstants.HTTP_WHITEBOARD_SERVLET_NAME, "servlet 1",
-                HttpWhiteboardConstants.HTTP_WHITEBOARD_SERVLET_INIT_PARAM_PREFIX + "test", "testValue");
+                HTTP_WHITEBOARD_SERVLET_PATTERN, "/test",
+                HTTP_WHITEBOARD_SERVLET_NAME, "servlet 1",
+                HTTP_WHITEBOARD_SERVLET_INIT_PARAM_PREFIX + "test", "testValue");
 
         m_context.registerService(Servlet.class.getName(), new TestServlet(), properties);
         awaitServices(Servlet.class.getName(), 2);
