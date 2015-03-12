@@ -192,7 +192,8 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
         assertEquals(1, runtimeDTO.servletContextDTOs.length);
         assertEquals("default", runtimeDTO.servletContextDTOs[0].name);
         assertEquals(0, runtimeDTO.servletContextDTOs[0].attributes.size());
-        // TODO ??
+
+        // TODO The default context should have a negative service Id
 //        assertTrue(0 > runtimeDTO.servletContextDTOs[0].serviceId);
         assertEquals("", runtimeDTO.servletContextDTOs[0].contextPath);
         assertEquals(0, runtimeDTO.servletContextDTOs[0].initParams.size());
@@ -393,12 +394,11 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
         // TODO
         assertEquals(5, contextDTO.listenerDTOs.length);
 //        assertEquals(ServletContextListener.class.getName(), contextDTO.listenerDTOs[0].types[0]);
-        // TODO for listeners ordering is reverse compared to other services
-        assertEquals(ServletContextAttributeListener.class.getName(), contextDTO.listenerDTOs[4].types[0]);
-        assertEquals(ServletRequestListener.class.getName(), contextDTO.listenerDTOs[3].types[0]);
+        assertEquals(ServletContextAttributeListener.class.getName(), contextDTO.listenerDTOs[0].types[0]);
+        assertEquals(ServletRequestListener.class.getName(), contextDTO.listenerDTOs[1].types[0]);
         assertEquals(ServletRequestAttributeListener.class.getName(), contextDTO.listenerDTOs[2].types[0]);
-        assertEquals(HttpSessionListener.class.getName(), contextDTO.listenerDTOs[1].types[0]);
-        assertEquals(HttpSessionAttributeListener.class.getName(), contextDTO.listenerDTOs[0].types[0]);
+        assertEquals(HttpSessionListener.class.getName(), contextDTO.listenerDTOs[3].types[0]);
+        assertEquals(HttpSessionAttributeListener.class.getName(), contextDTO.listenerDTOs[4].types[0]);
     }
 
     @Test
@@ -416,7 +416,7 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
         assertEquals(0, runtimeDTOWithAdditionalContext.failedServletContextDTOs.length);
         assertEquals(2, runtimeDTOWithAdditionalContext.servletContextDTOs.length);
 
-        // TODO order ?
+        // default context is last, as it has the lowest service ranking
         assertEquals("contextA", runtimeDTOWithAdditionalContext.servletContextDTOs[0].name);
         assertEquals("/contextA", runtimeDTOWithAdditionalContext.servletContextDTOs[0].contextPath);
         assertEquals("default", runtimeDTOWithAdditionalContext.servletContextDTOs[1].name);
@@ -431,7 +431,7 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
         assertEquals(0, runtimeDTOWithAllContexts.failedServletContextDTOs.length);
         assertEquals(3, runtimeDTOWithAllContexts.servletContextDTOs.length);
 
-        // TODO order ?
+        // default context is last, as it has the lowest service ranking
         assertEquals("contextA", runtimeDTOWithAllContexts.servletContextDTOs[0].name);
         assertEquals("/contextA", runtimeDTOWithAllContexts.servletContextDTOs[0].contextPath);
         assertEquals("contextB", runtimeDTOWithAllContexts.servletContextDTOs[1].name);
@@ -716,7 +716,6 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
         assertEquals(0, runtimeDTO.servletContextDTOs[0].servletDTOs.length);
         assertEquals(0, runtimeDTO.servletContextDTOs[0].errorPageDTOs.length);
 
-        // TODO Servlet or ErrorPage
         assertEquals(0, runtimeDTO.failedServletDTOs.length);
         assertEquals(1, runtimeDTO.failedErrorPageDTOs.length);
         assertEquals("servlet", runtimeDTO.failedErrorPageDTOs[0].name);

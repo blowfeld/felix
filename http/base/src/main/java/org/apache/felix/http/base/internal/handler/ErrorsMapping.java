@@ -16,7 +16,7 @@
  */
 package org.apache.felix.http.base.internal.handler;
 
-import static org.apache.felix.http.base.internal.util.CollectionUtils.union;
+import static org.apache.felix.http.base.internal.util.CollectionUtils.sortedUnion;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -126,7 +126,7 @@ public final class ErrorsMapping
     @SuppressWarnings("unchecked")
     public Collection<ServletHandler> getMappedHandlers()
     {
-        return union(errorCodesMap.values(), exceptionsMap.values());
+        return sortedUnion(errorCodesMap.values(), exceptionsMap.values());
     }
 
     public ErrorPageRuntime getErrorPage(ServletHandler servletHandler)

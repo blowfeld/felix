@@ -17,6 +17,7 @@
 package org.apache.felix.http.base.internal.whiteboard;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ConcurrentSkipListMap;
 
@@ -390,7 +391,8 @@ public final class PerContextEventListener implements
     @SuppressWarnings("unchecked")
     Collection<ServiceReference<?>> getRuntime()
     {
-        return CollectionUtils.<ServiceReference<?>> union(
+        return CollectionUtils.<ServiceReference<?>>sortedUnion(
+                Collections.<ServiceReference<?>>reverseOrder(),
                 contextListeners.keySet(),
                 contextAttributeListeners.keySet(),
                 sessionAttributeListeners.keySet(),
