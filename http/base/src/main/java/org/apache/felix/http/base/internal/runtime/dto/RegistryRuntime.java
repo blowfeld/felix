@@ -18,6 +18,8 @@
  */
 package org.apache.felix.http.base.internal.runtime.dto;
 
+import static org.osgi.service.http.whiteboard.HttpWhiteboardConstants.HTTP_WHITEBOARD_DEFAULT_CONTEXT_NAME;
+
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -57,11 +59,21 @@ public final class RegistryRuntime
     {
         long serviceId = contextRuntime.getContextInfo().getServiceId();
 
-        if (handlerRuntimes.containsKey(serviceId))
+        if (handlerRuntimes.containsKey(serviceId) && isDefaultContext(contextRuntime))
+        {
+            // TODO Merge with the default context of the HttpService ( handlerRuntimes.get(0) )
+            return handlerRuntimes.get(serviceId);
+        }
+        else if (handlerRuntimes.containsKey(serviceId))
         {
             return handlerRuntimes.get(serviceId);
         }
         return ContextRuntime.empty(serviceId);
+    }
+
+    private boolean isDefaultContext(ServletContextHelperRuntime contextRuntime)
+    {
+        return contextRuntime.getContextInfo().getName().equals(HTTP_WHITEBOARD_DEFAULT_CONTEXT_NAME);
     }
 
     public Collection<ServiceReference<?>> getListenerRuntimes(ServletContextHelperRuntime contextRuntime)
