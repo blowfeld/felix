@@ -26,6 +26,7 @@ import javax.servlet.ServletException;
 import org.apache.felix.http.base.internal.handler.FilterHandler;
 import org.apache.felix.http.base.internal.handler.HandlerRegistry;
 import org.apache.felix.http.base.internal.handler.PerContextHandlerRegistry;
+import org.apache.felix.http.base.internal.handler.ResourceServletHandler;
 import org.apache.felix.http.base.internal.handler.ServletHandler;
 import org.apache.felix.http.base.internal.handler.WhiteboardServletHandler;
 import org.apache.felix.http.base.internal.runtime.FilterInfo;
@@ -173,10 +174,9 @@ public final class WhiteboardHttpService
     {
     	final ServletInfo servletInfo = new ServletInfo(resourceInfo);
     	
-    	final ServletHandler handler = new WhiteboardServletHandler(contextHandler.getContextInfo(),
+    	final ServletHandler handler = new ResourceServletHandler(contextHandler.getContextInfo(),
     			contextHandler.getServletContext(servletInfo.getServiceReference().getBundle()),
-    			servletInfo,
-    			bundleContext);
+    			servletInfo);
  
     	try {
     		final PerContextHandlerRegistry registry = this.handlerRegistry.getRegistry(contextHandler.getContextInfo());	

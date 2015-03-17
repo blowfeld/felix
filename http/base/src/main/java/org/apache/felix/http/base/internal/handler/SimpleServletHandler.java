@@ -65,5 +65,4 @@ public final class SimpleServletHandler extends ServletHandler
     {
         return servlet;
     }
-
 }

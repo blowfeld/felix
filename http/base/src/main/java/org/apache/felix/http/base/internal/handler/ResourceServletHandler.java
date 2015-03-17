@@ -22,35 +22,23 @@ import javax.servlet.ServletException;
 import org.apache.felix.http.base.internal.context.ExtServletContext;
 import org.apache.felix.http.base.internal.runtime.ServletContextHelperInfo;
 import org.apache.felix.http.base.internal.runtime.ServletInfo;
-import org.osgi.framework.BundleContext;
-import org.osgi.framework.ServiceObjects;
-import org.osgi.framework.ServiceReference;
+import org.apache.felix.http.base.internal.whiteboard.ResourceServlet;
 
-public final class WhiteboardServletHandler extends ServletHandler
+public final class ResourceServletHandler extends ServletHandler
 {
-    private final BundleContext bundleContext;
-
     private Servlet servlet;
 
-    public WhiteboardServletHandler(ServletContextHelperInfo contextInfo,
+    public ResourceServletHandler(ServletContextHelperInfo contextInfo,
             ExtServletContext context,
-            ServletInfo servletInfo,
-            BundleContext bundleContext)
+            ServletInfo servletInfo)
     {
-        super(contextInfo.getServiceId(), context, checkIsResource(servletInfo, false));
-        this.bundleContext = bundleContext;
+        super(contextInfo.getServiceId(), context, checkIsResource(servletInfo, true));
     }
 
     @Override
     public Servlet getServlet()
     {
         return checkInitialized(servlet);
-    }
-
-    @Override
-    protected Object getSubject()
-    {
-        return getServlet();
     }
 
     @Override
@@ -61,23 +49,8 @@ public final class WhiteboardServletHandler extends ServletHandler
             return;
         }
 
-        ServiceReference<Servlet> serviceReference = getServletInfo().getServiceReference();
-        ServiceObjects<Servlet> so = this.bundleContext.getServiceObjects(serviceReference);
-
-        servlet = so.getService();
-
-        if (servlet == null)
-        {
-            // TODO throw Exception - service ungettable ?
-            return;
-        }
-
-        try {
-            servlet.init(new ServletConfigImpl(getName(), getContext(), getInitParams()));
-        } catch (ServletException e) {
-            so.ungetService(servlet);
-            throw e;
-        }
+        servlet = new ResourceServlet(getServletInfo().getPrefix());
+        servlet.init(new ServletConfigImpl(getName(), getContext(), getInitParams()));
     }
 
     @Override
@@ -89,9 +62,6 @@ public final class WhiteboardServletHandler extends ServletHandler
         }
 
         servlet.destroy();
-
-        ServiceObjects<Servlet> so = this.bundleContext.getServiceObjects(getServletInfo().getServiceReference());
-        so.ungetService(servlet);
         servlet = null;
     }
 }

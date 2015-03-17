@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.servlet.Servlet;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -128,5 +129,30 @@ public abstract class ServletHandler extends AbstractHandler<ServletHandler> imp
     protected long getServiceId()
     {
         return this.servletInfo.getServiceId();
+    }
+
+    @Override
+    protected Object getSubject()
+    {
+        return getServlet();
+    }
+
+    protected static Servlet checkInitialized(Servlet servlet)
+    {
+        if (servlet == null)
+        {
+            throw new IllegalStateException("ServletHandler is not initialized. Call init() first.");
+        }
+        return servlet;
+    }
+
+    protected static ServletInfo checkIsResource(ServletInfo servletInfo, boolean checkTrue)
+    {
+        if (checkTrue != servletInfo.isResource())
+        {
+            String message = "ServletInfo must " + (checkTrue ? "" : "not") + " represent a resource";
+            throw new IllegalArgumentException(message);
+        }
+        return servletInfo;
     }
 }
