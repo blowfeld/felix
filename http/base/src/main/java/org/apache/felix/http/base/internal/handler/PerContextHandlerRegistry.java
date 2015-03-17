@@ -48,9 +48,9 @@ import org.apache.felix.http.base.internal.runtime.dto.ErrorPageRuntime;
 import org.apache.felix.http.base.internal.runtime.dto.FailureRuntime;
 import org.apache.felix.http.base.internal.runtime.dto.FilterRuntime;
 import org.apache.felix.http.base.internal.runtime.dto.ServletRuntime;
-import org.apache.felix.http.base.internal.service.ResourceServlet;
 import org.apache.felix.http.base.internal.util.PatternUtil;
 import org.apache.felix.http.base.internal.whiteboard.RegistrationFailureException;
+import org.apache.felix.http.base.internal.whiteboard.ResourceServlet;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceObjects;
 
