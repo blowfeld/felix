@@ -27,6 +27,7 @@ import javax.servlet.ServletException;
 
 import org.apache.felix.http.base.internal.context.ExtServletContext;
 import org.apache.felix.http.base.internal.handler.FilterHandler;
+import org.apache.felix.http.base.internal.handler.SimpleServletHandler;
 import org.apache.felix.http.base.internal.handler.PerContextHandlerRegistry;
 import org.apache.felix.http.base.internal.handler.ServletHandler;
 import org.apache.felix.http.base.internal.runtime.FilterInfo;
@@ -78,7 +79,7 @@ public final class SharedHttpServiceImpl
             @Nonnull final Servlet servlet,
             @Nonnull final ServletInfo servletInfo) throws ServletException, NamespaceException
     {
-        final ServletHandler handler = new ServletHandler(null, httpContext, servletInfo, servlet);
+        final ServletHandler handler = new SimpleServletHandler(httpContext, servletInfo, servlet);
 
         synchronized (this.aliasMap)
         {

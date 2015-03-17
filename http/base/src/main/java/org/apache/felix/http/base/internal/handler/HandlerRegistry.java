@@ -27,7 +27,6 @@ import javax.servlet.DispatcherType;
 import org.apache.felix.http.base.internal.runtime.ServletContextHelperInfo;
 import org.apache.felix.http.base.internal.runtime.dto.ContextRuntime;
 import org.apache.felix.http.base.internal.runtime.dto.FailureRuntime;
-import org.osgi.framework.BundleContext;
 
 /**
  * Registry for all services.
@@ -38,22 +37,16 @@ import org.osgi.framework.BundleContext;
 public final class HandlerRegistry
 {
     private static FilterHandler[] EMPTY_FILTER_HANDLER = new FilterHandler[0];
-    private final BundleContext bundleContext;
 
     /** Current list of context registrations. */
     private volatile List<PerContextHandlerRegistry> registrations = Collections.emptyList();
 
-    public HandlerRegistry(BundleContext bundleContext)
-    {
-    	this.bundleContext = bundleContext;
-    }
-    
     /**
      * Register default context registry for Http Service
      */
     public void init()
     {
-        this.add(new PerContextHandlerRegistry(this.bundleContext));
+        this.add(new PerContextHandlerRegistry());
     }
 
     /**
@@ -82,7 +75,7 @@ public final class HandlerRegistry
      */
     public void add(@Nonnull ServletContextHelperInfo info)
     {
-        this.add(new PerContextHandlerRegistry(info, this.bundleContext));
+        this.add(new PerContextHandlerRegistry(info));
     }
 
     /**

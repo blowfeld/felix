@@ -23,13 +23,11 @@ import java.io.IOException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import javax.servlet.Servlet;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.felix.http.base.internal.context.ExtServletContext;
-import org.apache.felix.http.base.internal.runtime.ServletContextHelperInfo;
 import org.apache.felix.http.base.internal.runtime.ServletInfo;
 import org.apache.felix.http.base.internal.runtime.dto.ServletRuntime;
 import org.apache.felix.http.base.internal.util.PatternUtil;
@@ -37,37 +35,19 @@ import org.apache.felix.http.base.internal.util.PatternUtil;
 /**
  * @author <a href="mailto:dev@felix.apache.org">Felix Project Team</a>
  */
-public final class ServletHandler extends AbstractHandler<ServletHandler> implements ServletRuntime
+public abstract class ServletHandler extends AbstractHandler<ServletHandler> implements ServletRuntime
 {
     private final ServletInfo servletInfo;
-
-    private Servlet servlet;
-
     private final Pattern[] patterns;
-
     private final long contextServiceId;
-    
-    private final boolean isWhiteboardService;
 
-    public ServletHandler(final ServletContextHelperInfo contextInfo,
-                          final ExtServletContext context,
-                          final ServletInfo servletInfo,
-                          final Servlet servlet)
-    {
-    	this(contextInfo, context, servletInfo, servlet, false);
-    }
-    
-    public ServletHandler(final ServletContextHelperInfo contextInfo,
+    public ServletHandler(final long contextServiceId,
             final ExtServletContext context,
-            final ServletInfo servletInfo,
-            final Servlet servlet, 
-            final boolean isWhiteboardService)
+            final ServletInfo servletInfo)
     {
-    	super(context, servletInfo.getInitParameters(), servletInfo.getName());
-    	
-        this.servlet = servlet;
+        super(context, servletInfo.getInitParameters(), servletInfo.getName());
+
         this.servletInfo = servletInfo;
-        this.isWhiteboardService = isWhiteboardService;
 
         // Can be null in case of error-handling servlets...
         String[] patterns = this.servletInfo.getPatterns();
@@ -79,21 +59,33 @@ public final class ServletHandler extends AbstractHandler<ServletHandler> implem
             final String pattern = patterns[i];
             this.patterns[i] = Pattern.compile(PatternUtil.convertToRegEx(pattern));
         }
-        if ( contextInfo != null )
-        {
-            this.contextServiceId = contextInfo.getServiceId();
-        }
-        else
-        {
-            this.contextServiceId = 0;
-        }
+
+        this.contextServiceId = contextServiceId;
     }
-    
 
     @Override
-    public int compareTo(final ServletHandler other)
+    public final int compareTo(final ServletHandler other)
     {
         return this.servletInfo.compareTo(other.servletInfo);
+    }
+
+    public boolean handle(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException
+    {
+        if (getContext().handleSecurity(req, res))
+        {
+            getServlet().service(req, res);
+
+            return true;
+        }
+
+        // FELIX-3988: If the response is not yet committed and still has the default
+        // status, we're going to override this and send an error instead.
+        if (!res.isCommitted() && (res.getStatus() == SC_OK || res.getStatus() == 0))
+        {
+            res.sendError(SC_FORBIDDEN);
+        }
+
+        return false;
     }
 
     public String determineServletPath(String uri)
@@ -117,66 +109,14 @@ public final class ServletHandler extends AbstractHandler<ServletHandler> implem
     }
 
     @Override
-    public void destroy()
-    {
-        this.servlet.destroy();
-    }
-
-    public Servlet getServlet()
-    {
-        return this.servlet;
-    }
-    
-    void setServlet(Servlet servlet)
-    {
-    	this.servlet = servlet;
-    }
-    
-    public boolean isWhiteboardService()
-    {
-    	return this.isWhiteboardService;
-    }
-
-    @Override
     public Pattern[] getPatterns()
     {
         return this.patterns;
     }
 
-    @Override
-    public void init() throws ServletException
-    {
-        this.servlet.init(new ServletConfigImpl(getName(), getContext(), getInitParams()));
-    }
-
-    public boolean handle(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException
-    {
-        if (getContext().handleSecurity(req, res))
-        {
-            this.servlet.service(req, res);
-
-            return true;
-        }
-
-        // FELIX-3988: If the response is not yet committed and still has the default
-        // status, we're going to override this and send an error instead.
-        if (!res.isCommitted() && (res.getStatus() == SC_OK || res.getStatus() == 0))
-        {
-            res.sendError(SC_FORBIDDEN);
-        }
-
-        return false;
-    }
-
     public ServletInfo getServletInfo()
     {
         return this.servletInfo;
-    }
-
-    @Override
-    protected Object getSubject()
-    {
-        return this.servlet;
     }
 
     public long getContextServiceId()

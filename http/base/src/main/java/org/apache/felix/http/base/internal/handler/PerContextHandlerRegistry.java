@@ -50,14 +50,9 @@ import org.apache.felix.http.base.internal.runtime.dto.FilterRuntime;
 import org.apache.felix.http.base.internal.runtime.dto.ServletRuntime;
 import org.apache.felix.http.base.internal.util.PatternUtil;
 import org.apache.felix.http.base.internal.whiteboard.RegistrationFailureException;
-import org.apache.felix.http.base.internal.whiteboard.ResourceServlet;
-import org.osgi.framework.BundleContext;
-import org.osgi.framework.ServiceObjects;
 
 public final class PerContextHandlerRegistry implements Comparable<PerContextHandlerRegistry>
 {
-    private final BundleContext bundleContext;
-
     private final Map<Filter, FilterHandler> filterMap = new HashMap<Filter, FilterHandler>();
 
     private volatile HandlerMapping<ServletHandler> servletMapping = new HandlerMapping<ServletHandler>();
@@ -76,20 +71,18 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
 
     private final String prefix;
 
-    public PerContextHandlerRegistry(BundleContext bundleContext) {
+    public PerContextHandlerRegistry() {
         this.serviceId = 0;
         this.ranking = Integer.MAX_VALUE;
         this.path = "/";
         this.prefix = null;
-        this.bundleContext = bundleContext;
     }
 
-    public PerContextHandlerRegistry(final ServletContextHelperInfo info, BundleContext bundleContext)
+    public PerContextHandlerRegistry(final ServletContextHelperInfo info)
     {
         this.serviceId = info.getServiceId();
         this.ranking = info.getRanking();
         this.path = info.getPath();
-        this.bundleContext = bundleContext;
         if ( this.path.equals("/") )
         {
         	prefix = null;
@@ -164,11 +157,7 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
     		
             if ( handler.equals(this.patternToServletHandler.get(p).first()))
             {
-            	useServletHandler(handler);
-            	if (!handler.isWhiteboardService())
-            	{
-            		handler.init();
-            	}
+            	handler.init();
             	increaseUseCount(handler);
 
             	if (prevHandler != null)
@@ -188,63 +177,11 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
     	{
     		for(String errorPage : errorPages)
     		{
-    		    useServletHandler(handler);
+    		    handler.init();
     			this.errorsMapping.addErrorServlet(errorPage, handler);
     		}
     	}
     }
-
-    /**
-     * Ensures the servlet handler contains a valid servlet object.
-     * It gets one from the ServiceRegistry if the servlet handler was added by the whiteboard implementation
-     * and the object was not yet retrieved.
-     * 
-     * @param handler
-     * @throws ServletException
-     */
-    private void useServletHandler(ServletHandler handler) throws ServletException 
-    {
-    	if( (!handler.isWhiteboardService()) || (handler.getServlet() != null) )
-    	{
-    		return;
-    	}
-    	
-    	// isWhiteboardService && servlet == null
-    	boolean isResource = handler.getServletInfo().isResource();
-    	final ServiceObjects<Servlet> so = this.bundleContext.getServiceObjects(handler.getServletInfo().getServiceReference());
-    	
-    	Servlet servlet = getServiceObject(so, handler, isResource);
-    	handler.setServlet(servlet);
-    	
-    	try {
-			handler.init();
-		} catch (ServletException e) {
-			ungetServiceObject(so, servlet, isResource);
-			throw e;
-		}
-	}
-	
-	private Servlet getServiceObject(ServiceObjects<Servlet> so, ServletHandler handler, boolean isResource)
-	{
-		if(isResource) 
-		{
-			return new ResourceServlet(handler.getServletInfo().getPrefix());
-		}
-		if(so != null)
-		{
-			return so.getService();
-		}
-		return null;
-	}
-	
-	private void ungetServiceObject(ServiceObjects<Servlet> so, Servlet servlet, boolean isResource)
-	{
-		if(isResource || (so == null))
-		{
-			return;
-		}
-		so.ungetService(servlet);
-	}
 
 	private void increaseUseCount(ServletHandler handler) 
 	{
@@ -262,14 +199,9 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
 		if(uses != null)
 		{
 			int newUsesValue = uses.intValue() - 1;
-			if(newUsesValue == 0 && handler.isWhiteboardService())
+			if(newUsesValue == 0 && handler instanceof WhiteboardServletHandler)
 			{		
-				// if the servlet is no longer used and it is registered as a whiteboard service
-				// call destroy, unget the service object and set the servlet in the handler to null
 				handler.destroy();
-				ServiceObjects<Servlet> so = this.bundleContext.getServiceObjects(handler.getServletInfo().getServiceReference());
-				ungetServiceObject(so, handler.getServlet(), handler.getServletInfo().isResource());
-				handler.setServlet(null);
 			}
 			this.servletHandlerToUses.put(handler, new Integer(newUsesValue));	
 		}
@@ -399,8 +331,12 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
     public synchronized Servlet removeServlet(ServletInfo servletInfo, final boolean destroy) throws RegistrationFailureException
     {
     	ServletHandler handler = getServletHandler(servletInfo);
+    	if (handler == null)
+    	{
+    	    return null;
+    	}
     	
-    	Pattern[] patterns = (handler == null) ? new Pattern[0] : handler.getPatterns();
+    	Pattern[] patterns = handler.getPatterns();
     	SortedMap<Pattern, ServletHandler> toAdd = new TreeMap<Pattern, ServletHandler>(PatternUtil.PatternComparator.INSTANCE);
     	SortedMap<Pattern, ServletHandler> toRemove = new TreeMap<Pattern, ServletHandler>(PatternUtil.PatternComparator.INSTANCE);
 
@@ -421,7 +357,7 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
     				activeHandler = handlers.first();
     				
     				try {
-    					useServletHandler(activeHandler);
+    					activeHandler.init();
 						increaseUseCount(activeHandler);
 						toAdd.put(p, activeHandler);
 					} catch (ServletException e) {
@@ -435,19 +371,11 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
     		}
     	}
     	
-    	Servlet servlet = null;
-    	if(handler != null && handler.getServlet() != null)
+    	Servlet servlet = handler.getServlet();
+
+    	if (destroy)
     	{
-    		servlet = handler.getServlet();
-    		if(destroy)
-    		{
-    			servlet.destroy();
-    		}
-    		if(handler.isWhiteboardService())
-    		{
-    			ServiceObjects<Servlet> so = this.bundleContext.getServiceObjects(handler.getServletInfo().getServiceReference());
-    			ungetServiceObject(so, servlet, servletInfo.isResource());
-    		}
+    	    handler.destroy();
     	}
     	
     	this.servletHandlerToUses.remove(handler);

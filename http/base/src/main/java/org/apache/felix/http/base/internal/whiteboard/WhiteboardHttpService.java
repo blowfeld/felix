@@ -27,6 +27,7 @@ import org.apache.felix.http.base.internal.handler.FilterHandler;
 import org.apache.felix.http.base.internal.handler.HandlerRegistry;
 import org.apache.felix.http.base.internal.handler.PerContextHandlerRegistry;
 import org.apache.felix.http.base.internal.handler.ServletHandler;
+import org.apache.felix.http.base.internal.handler.WhiteboardServletHandler;
 import org.apache.felix.http.base.internal.runtime.FilterInfo;
 import org.apache.felix.http.base.internal.runtime.ResourceInfo;
 import org.apache.felix.http.base.internal.runtime.ServletContextHelperInfo;
@@ -67,11 +68,10 @@ public final class WhiteboardHttpService
         {
             try
             {
-                ServletHandler handler = new ServletHandler(contextHandler.getContextInfo(),
+                ServletHandler handler = new WhiteboardServletHandler(contextHandler.getContextInfo(),
                         contextHandler.getServletContext(servletInfo.getServiceReference().getBundle()),
                         servletInfo,
-                        null,
-                        true);
+                        bundleContext);
 
                 registry.addServlet(handler);
             }
@@ -173,11 +173,10 @@ public final class WhiteboardHttpService
     {
     	final ServletInfo servletInfo = new ServletInfo(resourceInfo);
     	
-    	final ServletHandler handler = new ServletHandler(contextHandler.getContextInfo(),
+    	final ServletHandler handler = new WhiteboardServletHandler(contextHandler.getContextInfo(),
     			contextHandler.getServletContext(servletInfo.getServiceReference().getBundle()),
     			servletInfo,
-    			null,
-    			true);
+    			bundleContext);
  
     	try {
     		final PerContextHandlerRegistry registry = this.handlerRegistry.getRegistry(contextHandler.getContextInfo());	

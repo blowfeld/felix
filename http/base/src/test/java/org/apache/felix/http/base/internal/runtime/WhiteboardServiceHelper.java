@@ -33,7 +33,7 @@ import javax.servlet.Servlet;
 
 import org.apache.felix.http.base.internal.context.ExtServletContext;
 import org.apache.felix.http.base.internal.handler.FilterHandler;
-import org.apache.felix.http.base.internal.handler.ServletHandler;
+import org.apache.felix.http.base.internal.handler.SimpleServletHandler;
 import org.apache.felix.http.base.internal.runtime.dto.ErrorPageRuntime;
 import org.apache.felix.http.base.internal.runtime.dto.FilterRuntime;
 import org.apache.felix.http.base.internal.runtime.dto.ServletRuntime;
@@ -115,7 +115,7 @@ public final class WhiteboardServiceHelper
         ServletInfo servletInfo = createServletInfo(identifier, serviceId);
         Servlet servlet = mock(Servlet.class);
         when(servlet.getServletInfo()).thenReturn("info_" + identifier);
-        return new ServletHandler(null, context, servletInfo, servlet);
+        return new SimpleServletHandler(context, servletInfo, servlet);
     }
 
     private static ServletInfo createServletInfo(String identifier, Long serviceId)
