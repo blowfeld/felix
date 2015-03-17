@@ -48,7 +48,7 @@ import org.apache.felix.http.base.internal.runtime.dto.ErrorPageRuntime;
 import org.apache.felix.http.base.internal.runtime.dto.FailureRuntime;
 import org.apache.felix.http.base.internal.runtime.dto.FilterRuntime;
 import org.apache.felix.http.base.internal.runtime.dto.ServletRuntime;
-import org.apache.felix.http.base.internal.util.PatternUtil;
+import org.apache.felix.http.base.internal.util.PatternUtil.PatternComparator;
 import org.apache.felix.http.base.internal.whiteboard.RegistrationFailureException;
 
 public final class PerContextHandlerRegistry implements Comparable<PerContextHandlerRegistry>
@@ -59,7 +59,7 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
     private volatile HandlerMapping<FilterHandler> filterMapping = new HandlerMapping<FilterHandler>();
     private final ErrorsMapping errorsMapping = new ErrorsMapping();
 
-    private final SortedMap<Pattern, SortedSet<ServletHandler>> patternToServletHandler = new TreeMap<Pattern, SortedSet<ServletHandler>>(PatternUtil.PatternComparator.INSTANCE);
+    private final SortedMap<Pattern, SortedSet<ServletHandler>> patternToServletHandler = new TreeMap<Pattern, SortedSet<ServletHandler>>(PatternComparator.INSTANCE);
     private final Map<ServletHandler, Integer> servletHandlerToUses = new HashMap<ServletHandler, Integer>();
     private final SortedSet<ServletHandler> allServletHandlers = new TreeSet<ServletHandler>();
 
@@ -127,63 +127,70 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
      */
     public synchronized void addServlet(final ServletHandler handler) throws ServletException
     {
-    	Pattern[] patterns = handler.getPatterns();
-    	String[] errorPages = handler.getServletInfo().getErrorPage();
-    	
-    	if(patterns.length > 0 && errorPages != null)
-    	{
-    		throw new ServletException("Servlet instance " + handler.getName() + " has both patterns and errorPage set");
-    	}
-    	
-    	SortedMap<Pattern, ServletHandler> toAdd = new TreeMap<Pattern, ServletHandler>(PatternUtil.PatternComparator.INSTANCE);
-    	SortedMap<Pattern, ServletHandler> toRemove = new TreeMap<Pattern, ServletHandler>(PatternUtil.PatternComparator.INSTANCE);
-    	
-    	this.servletHandlerToUses.put(handler, new Integer(0));
-    	
-    	for (Pattern p : patterns) 
-    	{
-    		ServletHandler prevHandler = null;
+        this.allServletHandlers.add(handler);
 
-    		if( !this.patternToServletHandler.containsKey(p))
-    		{
-    			this.patternToServletHandler.put(p, new TreeSet<ServletHandler>());
-    		}
-    		else
-    		{
-    			prevHandler = this.patternToServletHandler.get(p).first();
-    		}
-    		
-    		this.patternToServletHandler.get(p).add(handler);
-    		
-            if ( handler.equals(this.patternToServletHandler.get(p).first()))
-            {
-            	handler.init();
-            	increaseUseCount(handler);
-
-            	if (prevHandler != null)
-            	{
-            		decreaseUseCount(prevHandler);
-            		toRemove.put(p, prevHandler);
-            	}
-            	toAdd.put(p, handler);
-            }
-    	}
-    	
-    	this.servletMapping = this.servletMapping.remove(toRemove);
-    	this.servletMapping = this.servletMapping.add(toAdd);
-    	this.allServletHandlers.add(handler);
-    	
-    	if(errorPages != null)
-    	{
-    		for(String errorPage : errorPages)
-    		{
-    		    handler.init();
-    			this.errorsMapping.addErrorServlet(errorPage, handler);
-    		}
-    	}
+        Pattern[] patterns = handler.getPatterns();
+        if (patterns != null && patterns.length > 0)
+        {
+            addServlet(handler, patterns);
+        }
+        else
+        {
+            addErrorPage(handler);
+        }
     }
 
-	private void increaseUseCount(ServletHandler handler) 
+    private void addServlet(ServletHandler handler, Pattern[] patterns) throws ServletException
+    {
+        SortedMap<Pattern, ServletHandler> toAdd = new TreeMap<Pattern, ServletHandler>(PatternComparator.INSTANCE);
+        SortedMap<Pattern, ServletHandler> toRemove = new TreeMap<Pattern, ServletHandler>(PatternComparator.INSTANCE);
+        this.servletHandlerToUses.put(handler, new Integer(0));
+
+        for (Pattern p : patterns)
+        {
+            ServletHandler prevHandler = null;
+
+            if (!this.patternToServletHandler.containsKey(p))
+            {
+                this.patternToServletHandler.put(p,
+                        new TreeSet<ServletHandler>());
+            } else
+            {
+                prevHandler = this.patternToServletHandler.get(p).first();
+            }
+
+            this.patternToServletHandler.get(p).add(handler);
+
+            if (handler.equals(this.patternToServletHandler.get(p).first()))
+            {
+                handler.init();
+                increaseUseCount(handler);
+
+                if (prevHandler != null)
+                {
+                    decreaseUseCount(prevHandler);
+                    toRemove.put(p, prevHandler);
+                }
+                toAdd.put(p, handler);
+            }
+        }
+
+        this.servletMapping = this.servletMapping.remove(toRemove);
+        this.servletMapping = this.servletMapping.add(toAdd);
+
+    }
+
+    private void addErrorPage(ServletHandler handler) throws ServletException
+    {
+        String[] errorPages = handler.getServletInfo().getErrorPage();
+        for (String errorPage : errorPages)
+        {
+            handler.init();
+            this.errorsMapping.addErrorServlet(errorPage, handler);
+        }
+    }
+
+    private void increaseUseCount(ServletHandler handler)
 	{
 		Integer uses = this.servletHandlerToUses.get(handler);
 		if(uses != null)
@@ -337,8 +344,8 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
     	}
     	
     	Pattern[] patterns = handler.getPatterns();
-    	SortedMap<Pattern, ServletHandler> toAdd = new TreeMap<Pattern, ServletHandler>(PatternUtil.PatternComparator.INSTANCE);
-    	SortedMap<Pattern, ServletHandler> toRemove = new TreeMap<Pattern, ServletHandler>(PatternUtil.PatternComparator.INSTANCE);
+    	SortedMap<Pattern, ServletHandler> toAdd = new TreeMap<Pattern, ServletHandler>(PatternComparator.INSTANCE);
+    	SortedMap<Pattern, ServletHandler> toRemove = new TreeMap<Pattern, ServletHandler>(PatternComparator.INSTANCE);
 
     	for(Pattern p : patterns)
     	{    		
