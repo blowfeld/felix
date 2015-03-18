@@ -209,7 +209,7 @@ public final class HandlerRegistry
         	final String pathInContext = r.isMatching(requestURI);
         	if ( pathInContext != null )
         	{
-                final ServletHandler handler = r.getServletHander(pathInContext);
+                final ServletHandler handler = r.getServletHandler(pathInContext);
                 if ( handler != null )
                 {
                     return handler;

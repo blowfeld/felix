@@ -84,12 +84,29 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
         this.path = info.getPath();
         if ( this.path.equals("/") )
         {
-        	prefix = null;
+            this.prefix = null;
         }
         else
         {
-        	prefix = this.path + "/";
+            this.prefix = this.path + "/";
         }
+    }
+
+    @Override
+    public int compareTo(final PerContextHandlerRegistry other)
+    {
+        final int result = Integer.compare(other.path.length(), this.path.length());
+        if ( result == 0 ) {
+            if (this.ranking == other.ranking)
+            {
+                // Service id's can be negative. Negative id's follow the reverse natural ordering of integers.
+                int reverseOrder = ( this.serviceId >= 0 && other.serviceId >= 0 ) ? 1 : -1;
+                return reverseOrder * Long.compare(this.serviceId, other.serviceId);
+            }
+
+            return Integer.compare(other.ranking, this.ranking);
+        }
+        return result;
     }
 
     public synchronized void addFilter(FilterHandler handler) throws RegistrationFailureException
@@ -111,23 +128,6 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
 
         this.filterMapping = this.filterMapping.add(handler);
         this.filterMap.put(handler.getFilter(), handler);
-    }
-
-    @Override
-    public int compareTo(final PerContextHandlerRegistry other)
-    {
-        final int result = Integer.compare(other.path.length(), this.path.length());
-        if ( result == 0 ) {
-            if (this.ranking == other.ranking)
-            {
-                // Service id's can be negative. Negative id's follow the reverse natural ordering of integers.
-                int reverseOrder = ( this.serviceId >= 0 && other.serviceId >= 0 ) ? 1 : -1;
-                return reverseOrder * Long.compare(this.serviceId, other.serviceId);
-            }
-
-            return Integer.compare(other.ranking, this.ranking);
-        }
-        return result;
     }
 
     /**
@@ -156,7 +156,7 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
 
     private void addServlet(ServletHandler handler, Pattern[] patterns) throws RegistrationFailureException
     {
-        Update<Pattern, ServletHandler> update = registeredServletHandlers.add(handler.getPatterns(), handler);
+        Update<Pattern, ServletHandler> update = this.registeredServletHandlers.add(handler.getPatterns(), handler);
         initHandlers(update.getInit());
         this.servletMapping = this.servletMapping.update(update.getActivated(), update.getDeactivated());
         destroyHandlers(update.getDestroy());
@@ -164,71 +164,17 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
 
     private void addErrorPage(ServletHandler handler, String[] errorPages) throws RegistrationFailureException
     {
-        Update<String, ServletHandler> update = registeredErrorPages.add(errorPages, handler);
+        Update<String, ServletHandler> update = this.registeredErrorPages.add(errorPages, handler);
         initHandlers(update.getInit());
         this.errorsMapping = this.errorsMapping.update(update.getActivated(), update.getDeactivated());
         destroyHandlers(update.getDestroy());
     }
 
-	public ErrorsMapping getErrorsMapping()
-    {
-        return this.errorsMapping;
-    }
-
-    public FilterHandler[] getFilterHandlers(ServletHandler servletHandler, DispatcherType dispatcherType, String requestURI)
-    {
-        // See Servlet 3.0 specification, section 6.2.4...
-        List<FilterHandler> result = new ArrayList<FilterHandler>();
-        result.addAll(this.filterMapping.getAllMatches(requestURI));
-
-        // TODO this is not the most efficient/fastest way of doing this...
-        Iterator<FilterHandler> iter = result.iterator();
-        while (iter.hasNext())
-        {
-            if (!referencesDispatcherType(iter.next(), dispatcherType))
-            {
-                iter.remove();
-            }
-        }
-
-        String servletName = (servletHandler != null) ? servletHandler.getName() : null;
-        // TODO this is not the most efficient/fastest way of doing this...
-        for (FilterHandler filterHandler : this.filterMapping.values())
-        {
-            if (referencesServletByName(filterHandler, servletName))
-            {
-                result.add(filterHandler);
-            }
-        }
-
-        // TODO - we should already check for the context when building up the result set
-        final Iterator<FilterHandler> i = result.iterator();
-        while ( i.hasNext() )
-        {
-            final FilterHandler handler = i.next();
-            if ( handler.getContextServiceId() != servletHandler.getContextServiceId() )
-            {
-                i.remove();
-            }
-        }
-        return result.toArray(new FilterHandler[result.size()]);
-    }
-
-    public ServletHandler getServletHandlerByName(String name)
-    {
-        return this.servletMapping.getByName(name);
-    }
-
-    public ServletHandler getServletHander(String requestURI)
-    {
-        return this.servletMapping.getBestMatch(requestURI);
-    }
-
     public synchronized void removeAll()
     {
-        Collection<ServletHandler> servletHandlers = servletMapping.values();
-        Collection<ServletHandler> errorPageHandlers = errorsMapping.values();
-        Collection<FilterHandler> filterHandlers = filterMapping.values();
+        Collection<ServletHandler> servletHandlers = this.servletMapping.values();
+        Collection<ServletHandler> errorPageHandlers = this.errorsMapping.values();
+        Collection<FilterHandler> filterHandlers = this.filterMapping.values();
 
         this.servletMapping = new HandlerMapping<ServletHandler>();
         this.filterMapping = new HandlerMapping<FilterHandler>();
@@ -315,10 +261,23 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
         return servlet;
     }
 
+    public synchronized void removeServlet(Servlet servlet, final boolean destroy) throws RegistrationFailureException
+    {
+        Iterator<ServletHandler> it = this.allServletHandlers.iterator();
+        while (it.hasNext())
+        {
+            ServletHandler handler = it.next();
+            if (handler.getServlet() == servlet)
+            {
+                removeServlet(handler.getServletInfo(), destroy);
+            }
+        }
+    }
+
     private void removeServlet(ServletHandler handler, boolean destroy) throws RegistrationFailureException
     {
         Pattern[] patterns = handler.getPatterns();
-        Update<Pattern, ServletHandler> update = registeredServletHandlers.remove(patterns, handler);
+        Update<Pattern, ServletHandler> update = this.registeredServletHandlers.remove(patterns, handler);
         initHandlers(update.getInit());
         this.servletMapping = this.servletMapping.update(update.getActivated(), update.getDeactivated());
         if (destroy)
@@ -330,20 +289,12 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
     private void removeErrorPage(ServletHandler handler, boolean destroy) throws RegistrationFailureException
     {
         String[] errorPages = handler.getServletInfo().getErrorPage();
-        Update<String, ServletHandler> update = registeredErrorPages.remove(errorPages, handler);
+        Update<String, ServletHandler> update = this.registeredErrorPages.remove(errorPages, handler);
         initHandlers(update.getInit());
         this.errorsMapping = this.errorsMapping.update(update.getActivated(), update.getDeactivated());
         if (destroy)
         {
             destroyHandlers(update.getDestroy());
-        }
-    }
-
-    private void destroyHandlers(Collection<? extends AbstractHandler<?>> servletHandlers)
-    {
-        for (AbstractHandler<?> handler : servletHandlers)
-        {
-            handler.destroy();
         }
     }
 
@@ -363,33 +314,52 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
         }
     }
 
-    private ServletHandler getServletHandler(final ServletInfo servletInfo)
+    private void destroyHandlers(Collection<? extends AbstractHandler<?>> servletHandlers)
     {
-    	Iterator<ServletHandler> it = this.allServletHandlers.iterator();
-    	while(it.hasNext())
-    	{
-    		ServletHandler handler = it.next();
-    		if(handler.getServletInfo().compareTo(servletInfo) == 0)
-    		{
-    			return handler;
-    		}
-    	}
-    	return null;
+        for (AbstractHandler<?> handler : servletHandlers)
+        {
+            handler.destroy();
+        }
     }
-    
-    public synchronized void removeServlet(Servlet servlet, final boolean destroy) throws RegistrationFailureException
+
+    public FilterHandler[] getFilterHandlers(ServletHandler servletHandler, DispatcherType dispatcherType, String requestURI)
     {
-    	Iterator<ServletHandler> it = this.allServletHandlers.iterator();
-    	while(it.hasNext())
-    	{
-    		ServletHandler handler = it.next();
-    		if(handler.getServlet() == servlet) 
-    		{
-    			removeServlet(handler.getServletInfo(), destroy);
-    		}
-    	}
+        // See Servlet 3.0 specification, section 6.2.4...
+        List<FilterHandler> result = new ArrayList<FilterHandler>();
+        result.addAll(this.filterMapping.getAllMatches(requestURI));
+
+        // TODO this is not the most efficient/fastest way of doing this...
+        Iterator<FilterHandler> iter = result.iterator();
+        while (iter.hasNext())
+        {
+            if (!referencesDispatcherType(iter.next(), dispatcherType))
+            {
+                iter.remove();
+            }
+        }
+
+        String servletName = (servletHandler != null) ? servletHandler.getName() : null;
+        // TODO this is not the most efficient/fastest way of doing this...
+        for (FilterHandler filterHandler : this.filterMapping.values())
+        {
+            if (referencesServletByName(filterHandler, servletName))
+            {
+                result.add(filterHandler);
+            }
+        }
+
+        // TODO - we should already check for the context when building up the result set
+        final Iterator<FilterHandler> i = result.iterator();
+        while ( i.hasNext() )
+        {
+            final FilterHandler handler = i.next();
+            if ( handler.getContextServiceId() != servletHandler.getContextServiceId() )
+            {
+                i.remove();
+            }
+        }
+        return result.toArray(new FilterHandler[result.size()]);
     }
-    
 
     private boolean referencesDispatcherType(FilterHandler handler, DispatcherType dispatcherType)
     {
@@ -410,19 +380,48 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
         return false;
     }
 
+    public ServletHandler getServletHandler(String requestURI)
+    {
+        return this.servletMapping.getBestMatch(requestURI);
+    }
+
+    public ServletHandler getServletHandlerByName(String name)
+    {
+        return this.servletMapping.getByName(name);
+    }
+
+    private ServletHandler getServletHandler(final ServletInfo servletInfo)
+    {
+        Iterator<ServletHandler> it = this.allServletHandlers.iterator();
+        while (it.hasNext())
+        {
+            ServletHandler handler = it.next();
+            if (handler.getServletInfo().compareTo(servletInfo) == 0)
+            {
+                return handler;
+            }
+        }
+        return null;
+    }
+
+    public ErrorsMapping getErrorsMapping()
+    {
+        return this.errorsMapping;
+    }
+
     public String isMatching(final String requestURI)
     {
-        if ( requestURI.equals(this.path) )
+        if (requestURI.equals(this.path))
         {
-        	return "";
+            return "";
         }
-        if ( this.prefix == null )
+        if (this.prefix == null)
         {
-        	return requestURI;
+            return requestURI;
         }
-        if ( requestURI.startsWith(this.prefix) )
+        if (requestURI.startsWith(this.prefix))
         {
-        	return requestURI.substring(this.prefix.length() - 1);
+            return requestURI.substring(this.prefix.length() - 1);
         }
         return null;
     }
@@ -434,14 +433,14 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
 
     public synchronized ContextRuntime getRuntime(FailureRuntime.Builder failureRuntimeBuilder) {
         Collection<FilterRuntime> filterRuntimes = new TreeSet<FilterRuntime>(FilterRuntime.COMPARATOR);
-        for (FilterRuntime filterRuntime : filterMap.values())
+        for (FilterRuntime filterRuntime : this.filterMap.values())
         {
             filterRuntimes.add(filterRuntime);
         }
 
         Collection<ServletRuntime> servletRuntimes = new TreeSet<ServletRuntime>(ServletRuntime.COMPARATOR);
         Collection<ServletRuntime> resourceRuntimes = new TreeSet<ServletRuntime>(ServletRuntime.COMPARATOR);
-        for (ServletHandler activeHandler : registeredServletHandlers.getActiveValues())
+        for (ServletHandler activeHandler : this.registeredServletHandlers.getActiveValues())
         {
             if (activeHandler.getServletInfo().isResource())
             {
@@ -454,19 +453,19 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
         }
 
         Collection<ErrorPageRuntime> errorPages = new TreeSet<ErrorPageRuntime>(ServletRuntime.COMPARATOR);
-        for (ServletHandler servletHandler : registeredErrorPages.getActiveValues())
+        for (ServletHandler servletHandler : this.registeredErrorPages.getActiveValues())
         {
             errorPages.add(ErrorPageRuntime.fromServletRuntime(servletHandler));
         }
 
-        addShadowedHandlers(failureRuntimeBuilder, registeredServletHandlers.getShadowedValues());
-        addShadowedHandlers(failureRuntimeBuilder, registeredErrorPages.getShadowedValues());
+        addShadowedHandlers(failureRuntimeBuilder, this.registeredServletHandlers.getShadowedValues());
+        addShadowedHandlers(failureRuntimeBuilder, this.registeredErrorPages.getShadowedValues());
 
         return new ContextRuntime(servletRuntimes,
                 filterRuntimes,
                 resourceRuntimes,
                 errorPages,
-                serviceId);
+                this.serviceId);
     }
 
     private void addShadowedHandlers(FailureRuntime.Builder failureRuntimeBuilder, Collection<ServletHandler> handlers)
