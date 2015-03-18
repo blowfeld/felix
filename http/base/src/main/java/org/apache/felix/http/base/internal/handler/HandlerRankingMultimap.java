@@ -32,25 +32,25 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 
 
-final class WhiteboardServiceQueue<K, V extends AbstractHandler<V>>
+final class HandlerRankingMultimap<K, V extends AbstractHandler<V>>
 {
     private final Map<V, Integer> useCounts = new TreeMap<V, Integer>();
 
-    private final Map<K, PriorityQueue<V>> keyMap;
+    private final Map<K, PriorityQueue<V>> handlerMultimap;
     private final Comparator<K> keyComparator;
 
     private int size = 0;
 
-    WhiteboardServiceQueue()
+    HandlerRankingMultimap()
     {
-        this.keyMap = new HashMap<K, PriorityQueue<V>>();
+        this.handlerMultimap = new HashMap<K, PriorityQueue<V>>();
         this.keyComparator = null;
     }
 
-    WhiteboardServiceQueue(Comparator<K> keyComparator)
+    HandlerRankingMultimap(Comparator<K> keyComparator)
     {
         this.keyComparator = keyComparator;
-        this.keyMap = new TreeMap<K, PriorityQueue<V>>(keyComparator);
+        this.handlerMultimap = new TreeMap<K, PriorityQueue<V>>(keyComparator);
     }
 
     boolean isActive(V handler)
@@ -121,7 +121,7 @@ final class WhiteboardServiceQueue<K, V extends AbstractHandler<V>>
 
             if (queue.isEmpty())
             {
-                keyMap.remove(key);
+                handlerMultimap.remove(key);
             }
         }
 
@@ -132,11 +132,11 @@ final class WhiteboardServiceQueue<K, V extends AbstractHandler<V>>
 
     private PriorityQueue<V> getQueue(K key)
     {
-        PriorityQueue<V> queue = keyMap.get(key);
+        PriorityQueue<V> queue = handlerMultimap.get(key);
         if (queue == null)
         {
             queue = new PriorityQueue<V>();
-            keyMap.put(key, queue);
+            handlerMultimap.put(key, queue);
         }
         return queue;
     }
@@ -185,14 +185,14 @@ final class WhiteboardServiceQueue<K, V extends AbstractHandler<V>>
 
     void clear()
     {
-        keyMap.clear();
+        handlerMultimap.clear();
         useCounts.clear();
     }
 
     Collection<V> getActiveValues()
     {
         TreeSet<V> activeValues = new TreeSet<V>();
-        for (PriorityQueue<V> queue : keyMap.values())
+        for (PriorityQueue<V> queue : handlerMultimap.values())
         {
             activeValues.add(queue.peek());
         }
@@ -202,7 +202,7 @@ final class WhiteboardServiceQueue<K, V extends AbstractHandler<V>>
     Collection<V> getShadowedValues()
     {
         TreeSet<V> shadowedValues = new TreeSet<V>();
-        for (PriorityQueue<V> queue : keyMap.values())
+        for (PriorityQueue<V> queue : handlerMultimap.values())
         {
             V head = queue.element();
             for (V value : queue)

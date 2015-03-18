@@ -36,7 +36,7 @@ import javax.servlet.Filter;
 import javax.servlet.Servlet;
 import javax.servlet.ServletException;
 
-import org.apache.felix.http.base.internal.handler.WhiteboardServiceQueue.Update;
+import org.apache.felix.http.base.internal.handler.HandlerRankingMultimap.Update;
 import org.apache.felix.http.base.internal.runtime.FilterInfo;
 import org.apache.felix.http.base.internal.runtime.ServletContextHelperInfo;
 import org.apache.felix.http.base.internal.runtime.ServletInfo;
@@ -56,7 +56,7 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
     private volatile HandlerMapping<FilterHandler> filterMapping = new HandlerMapping<FilterHandler>();
     private final ErrorsMapping errorsMapping = new ErrorsMapping();
 
-    private final WhiteboardServiceQueue<Pattern, ServletHandler> servletQueue = new WhiteboardServiceQueue<Pattern, ServletHandler>(PatternComparator.INSTANCE);
+    private final HandlerRankingMultimap<Pattern, ServletHandler> registeredServletHandlers = new HandlerRankingMultimap<Pattern, ServletHandler>(PatternComparator.INSTANCE);
     private final SortedSet<ServletHandler> allServletHandlers = new TreeSet<ServletHandler>();
 
     private final long serviceId;
@@ -67,7 +67,8 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
 
     private final String prefix;
 
-    public PerContextHandlerRegistry() {
+    public PerContextHandlerRegistry()
+    {
         this.serviceId = 0;
         this.ranking = Integer.MAX_VALUE;
         this.path = "/";
@@ -138,7 +139,7 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
 
     private void addServlet(ServletHandler handler, Pattern[] patterns) throws ServletException
     {
-        Update<Pattern, ServletHandler> update = servletQueue.add(handler.getPatterns(), handler);
+        Update<Pattern, ServletHandler> update = registeredServletHandlers.add(handler.getPatterns(), handler);
         updateServletMapping(update, true);
     }
 
@@ -227,7 +228,7 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
         this.errorsMapping.clear();
         this.allServletHandlers.clear();
         this.filterMap.clear();
-        this.servletQueue.clear();
+        this.registeredServletHandlers.clear();
     }
 
     public synchronized void removeFilter(Filter filter, final boolean destroy)
@@ -286,7 +287,7 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
         Pattern[] patterns = handler.getPatterns();
         if (patterns != null && patterns.length > 0)
         {
-            Update<Pattern, ServletHandler> update = servletQueue.remove(patterns, handler);
+            Update<Pattern, ServletHandler> update = registeredServletHandlers.remove(patterns, handler);
             updateServletMapping(update, destroy);
         }
 
@@ -410,7 +411,7 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
         Collection<ServletRuntime> servletRuntimes = new TreeSet<ServletRuntime>(ServletRuntime.COMPARATOR);
         Collection<ServletRuntime> resourceRuntimes = new TreeSet<ServletRuntime>(ServletRuntime.COMPARATOR);
 
-        for (ServletHandler activeHandler : servletQueue.getActiveValues())
+        for (ServletHandler activeHandler : registeredServletHandlers.getActiveValues())
         {
             if (activeHandler.getServletInfo().isResource())
             {
@@ -422,7 +423,7 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
             }
         }
 
-        for (ServletHandler shadowedHandler : servletQueue.getShadowedValues())
+        for (ServletHandler shadowedHandler : registeredServletHandlers.getShadowedValues())
         {
             failureRuntimeBuilder.add(shadowedHandler.getServletInfo(), FAILURE_REASON_SHADOWED_BY_OTHER_SERVICE);
         }
