@@ -19,6 +19,7 @@ package org.apache.felix.http.base.internal.handler;
 import static org.osgi.service.http.runtime.dto.DTOConstants.FAILURE_REASON_EXCEPTION_ON_INIT;
 import static org.osgi.service.http.runtime.dto.DTOConstants.FAILURE_REASON_SERVICE_ALREAY_USED;
 import static org.osgi.service.http.runtime.dto.DTOConstants.FAILURE_REASON_SHADOWED_BY_OTHER_SERVICE;
+import static org.osgi.service.http.runtime.dto.DTOConstants.FAILURE_REASON_VALIDATION_FAILED;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -54,9 +55,10 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
 
     private volatile HandlerMapping<ServletHandler> servletMapping = new HandlerMapping<ServletHandler>();
     private volatile HandlerMapping<FilterHandler> filterMapping = new HandlerMapping<FilterHandler>();
-    private final ErrorsMapping errorsMapping = new ErrorsMapping();
+    private volatile ErrorsMapping errorsMapping = new ErrorsMapping();
 
     private final HandlerRankingMultimap<Pattern, ServletHandler> registeredServletHandlers = new HandlerRankingMultimap<Pattern, ServletHandler>(PatternComparator.INSTANCE);
+    private final HandlerRankingMultimap<String, ServletHandler> registeredErrorPages = new HandlerRankingMultimap<String, ServletHandler>();
     private final SortedSet<ServletHandler> allServletHandlers = new TreeSet<ServletHandler>();
 
     private final long serviceId;
@@ -90,14 +92,23 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
         }
     }
 
-    public synchronized void addFilter(FilterHandler handler) throws ServletException
+    public synchronized void addFilter(FilterHandler handler) throws RegistrationFailureException
     {
-    	if(this.filterMapping.contains(handler))
-    	{
-            throw new RegistrationFailureException(handler.getFilterInfo(), FAILURE_REASON_SERVICE_ALREAY_USED, "Filter instance " + handler.getName() + " already registered");
-    	}
+        if (this.filterMapping.contains(handler))
+        {
+            throw new RegistrationFailureException(handler.getFilterInfo(), FAILURE_REASON_SERVICE_ALREAY_USED,
+                "Filter instance " + handler.getName() + " already registered");
+        }
 
-        handler.init();
+        try
+        {
+            handler.init();
+        }
+        catch (ServletException e)
+        {
+            throw new RegistrationFailureException(handler.getFilterInfo(), FAILURE_REASON_EXCEPTION_ON_INIT);
+        }
+
         this.filterMapping = this.filterMapping.add(handler);
         this.filterMap.put(handler.getFilter(), handler);
     }
@@ -122,35 +133,41 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
     /**
      * Add a new servlet.
      */
-    public synchronized void addServlet(final ServletHandler handler) throws ServletException
+    public synchronized void addServlet(final ServletHandler handler) throws RegistrationFailureException
     {
-        this.allServletHandlers.add(handler);
-
         Pattern[] patterns = handler.getPatterns();
+        String[] errorPages = handler.getServletInfo().getErrorPage();
         if (patterns != null && patterns.length > 0)
         {
             addServlet(handler, patterns);
         }
+        else if (errorPages != null && errorPages.length > 0)
+        {
+            addErrorPage(handler, errorPages);
+        }
         else
         {
-            addErrorPage(handler);
+            throw new RegistrationFailureException(handler.getServletInfo(), FAILURE_REASON_VALIDATION_FAILED,
+                "Neither patterns nor errorPages specified for " + handler.getName());
         }
+
+        this.allServletHandlers.add(handler);
     }
 
-    private void addServlet(ServletHandler handler, Pattern[] patterns) throws ServletException
+    private void addServlet(ServletHandler handler, Pattern[] patterns) throws RegistrationFailureException
     {
         Update<Pattern, ServletHandler> update = registeredServletHandlers.add(handler.getPatterns(), handler);
-        updateServletMapping(update, true);
+        initHandlers(update.getInit());
+        this.servletMapping = this.servletMapping.update(update.getActivated(), update.getDeactivated());
+        destroyHandlers(update.getDestroy());
     }
 
-    private void addErrorPage(ServletHandler handler) throws ServletException
+    private void addErrorPage(ServletHandler handler, String[] errorPages) throws RegistrationFailureException
     {
-        String[] errorPages = handler.getServletInfo().getErrorPage();
-        for (String errorPage : errorPages)
-        {
-            handler.init();
-            this.errorsMapping.addErrorServlet(errorPage, handler);
-        }
+        Update<String, ServletHandler> update = registeredErrorPages.add(errorPages, handler);
+        initHandlers(update.getInit());
+        this.errorsMapping = this.errorsMapping.update(update.getActivated(), update.getDeactivated());
+        destroyHandlers(update.getDestroy());
     }
 
 	public ErrorsMapping getErrorsMapping()
@@ -210,25 +227,21 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
     public synchronized void removeAll()
     {
         Collection<ServletHandler> servletHandlers = servletMapping.values();
+        Collection<ServletHandler> errorPageHandlers = errorsMapping.values();
         Collection<FilterHandler> filterHandlers = filterMapping.values();
 
         this.servletMapping = new HandlerMapping<ServletHandler>();
         this.filterMapping = new HandlerMapping<FilterHandler>();
+        this.errorsMapping = new ErrorsMapping();
 
-        for (ServletHandler handler : servletHandlers)
-        {
-            handler.destroy();
-        }
+        destroyHandlers(filterHandlers);
+        destroyHandlers(servletHandlers);
+        destroyHandlers(errorPageHandlers);
 
-        for (FilterHandler handler : filterHandlers)
-        {
-            handler.destroy();
-        }
-
-        this.errorsMapping.clear();
         this.allServletHandlers.clear();
         this.filterMap.clear();
         this.registeredServletHandlers.clear();
+        this.registeredErrorPages.clear();
     }
 
     public synchronized void removeFilter(Filter filter, final boolean destroy)
@@ -266,7 +279,7 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
     {
         for(final FilterHandler handler : this.filterMap.values())
         {
-            if ( handler.getFilterInfo().compareTo(filterInfo) == 0)
+            if (handler.getFilterInfo().compareTo(filterInfo) == 0)
             {
                 return handler;
             }
@@ -287,8 +300,11 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
         Pattern[] patterns = handler.getPatterns();
         if (patterns != null && patterns.length > 0)
         {
-            Update<Pattern, ServletHandler> update = registeredServletHandlers.remove(patterns, handler);
-            updateServletMapping(update, destroy);
+            removeServlet(handler, destroy);
+        }
+        else
+        {
+            removeErrorPage(handler, destroy);
         }
 
         if (destroy)
@@ -299,9 +315,41 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
         return servlet;
     }
 
-    private void updateServletMapping(Update<Pattern, ServletHandler> update, boolean destroy) throws RegistrationFailureException
+    private void removeServlet(ServletHandler handler, boolean destroy) throws RegistrationFailureException
     {
-        for (ServletHandler servletHandler : update.getInit())
+        Pattern[] patterns = handler.getPatterns();
+        Update<Pattern, ServletHandler> update = registeredServletHandlers.remove(patterns, handler);
+        initHandlers(update.getInit());
+        this.servletMapping = this.servletMapping.update(update.getActivated(), update.getDeactivated());
+        if (destroy)
+        {
+            destroyHandlers(update.getDestroy());
+        }
+    }
+
+    private void removeErrorPage(ServletHandler handler, boolean destroy) throws RegistrationFailureException
+    {
+        String[] errorPages = handler.getServletInfo().getErrorPage();
+        Update<String, ServletHandler> update = registeredErrorPages.remove(errorPages, handler);
+        initHandlers(update.getInit());
+        this.errorsMapping = this.errorsMapping.update(update.getActivated(), update.getDeactivated());
+        if (destroy)
+        {
+            destroyHandlers(update.getDestroy());
+        }
+    }
+
+    private void destroyHandlers(Collection<? extends AbstractHandler<?>> servletHandlers)
+    {
+        for (AbstractHandler<?> handler : servletHandlers)
+        {
+            handler.destroy();
+        }
+    }
+
+    private void initHandlers(Collection<ServletHandler> handlers) throws RegistrationFailureException
+    {
+        for (ServletHandler servletHandler : handlers)
         {
             try
             {
@@ -311,16 +359,6 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
             {
                 // TODO we should collect this cases and not throw an exception immediately
                 throw new RegistrationFailureException(servletHandler.getServletInfo(), FAILURE_REASON_EXCEPTION_ON_INIT);
-            }
-        }
-
-        this.servletMapping = this.servletMapping.update(update.getActivated(), update.getDeactivated());
-
-        if (destroy)
-        {
-            for (ServletHandler servletHandler : update.getDestroy())
-            {
-                servletHandler.destroy();
             }
         }
     }
@@ -395,13 +433,6 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
     }
 
     public synchronized ContextRuntime getRuntime(FailureRuntime.Builder failureRuntimeBuilder) {
-        Collection<ErrorPageRuntime> errorPages = new TreeSet<ErrorPageRuntime>(ServletRuntime.COMPARATOR);
-        Collection<ServletHandler> errorHandlers = errorsMapping.getMappedHandlers();
-        for (ServletHandler servletHandler : errorHandlers)
-        {
-            errorPages.add(errorsMapping.getErrorPage(servletHandler));
-        }
-
         Collection<FilterRuntime> filterRuntimes = new TreeSet<FilterRuntime>(FilterRuntime.COMPARATOR);
         for (FilterRuntime filterRuntime : filterMap.values())
         {
@@ -410,7 +441,6 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
 
         Collection<ServletRuntime> servletRuntimes = new TreeSet<ServletRuntime>(ServletRuntime.COMPARATOR);
         Collection<ServletRuntime> resourceRuntimes = new TreeSet<ServletRuntime>(ServletRuntime.COMPARATOR);
-
         for (ServletHandler activeHandler : registeredServletHandlers.getActiveValues())
         {
             if (activeHandler.getServletInfo().isResource())
@@ -423,15 +453,27 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
             }
         }
 
-        for (ServletHandler shadowedHandler : registeredServletHandlers.getShadowedValues())
+        Collection<ErrorPageRuntime> errorPages = new TreeSet<ErrorPageRuntime>(ServletRuntime.COMPARATOR);
+        for (ServletHandler servletHandler : registeredErrorPages.getActiveValues())
         {
-            failureRuntimeBuilder.add(shadowedHandler.getServletInfo(), FAILURE_REASON_SHADOWED_BY_OTHER_SERVICE);
+            errorPages.add(ErrorPageRuntime.fromServletRuntime(servletHandler));
         }
+
+        addShadowedHandlers(failureRuntimeBuilder, registeredServletHandlers.getShadowedValues());
+        addShadowedHandlers(failureRuntimeBuilder, registeredErrorPages.getShadowedValues());
 
         return new ContextRuntime(servletRuntimes,
                 filterRuntimes,
                 resourceRuntimes,
                 errorPages,
                 serviceId);
+    }
+
+    private void addShadowedHandlers(FailureRuntime.Builder failureRuntimeBuilder, Collection<ServletHandler> handlers)
+    {
+        for (ServletHandler handler : handlers)
+        {
+            failureRuntimeBuilder.add(handler.getServletInfo(), FAILURE_REASON_SHADOWED_BY_OTHER_SERVICE);
+        }
     }
 }

@@ -233,7 +233,7 @@ public final class FailureRuntime
             else if (info instanceof ServletInfo && ((ServletInfo) info).getErrorPage() != null)
             {
                 FailureServletRuntime servletRuntime = new FailureServletRuntime((ServletInfo) info);
-                ErrorPageRuntime errorPageRuntime = ErrorPageRuntime.fromRuntime(servletRuntime);
+                ErrorPageRuntime errorPageRuntime = ErrorPageRuntime.fromServletRuntime(servletRuntime);
                 errorPageRuntimes.add(new Failure<ErrorPageRuntime>(errorPageRuntime, failureCode));
             }
             else if (info instanceof ServletInfo)
