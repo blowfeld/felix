@@ -78,6 +78,7 @@ import org.osgi.framework.ServiceRegistration;
 import org.osgi.service.http.HttpService;
 import org.osgi.service.http.context.ServletContextHelper;
 import org.osgi.service.http.runtime.HttpServiceRuntime;
+import org.osgi.service.http.runtime.dto.FailedErrorPageDTO;
 import org.osgi.service.http.runtime.dto.FailedServletDTO;
 import org.osgi.service.http.runtime.dto.RuntimeDTO;
 import org.osgi.service.http.runtime.dto.ServletContextDTO;
@@ -782,7 +783,7 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
     {
         registerServlet("servlet 1", "/pathcollision");
 
-        awaitServices(Servlet.class.getName(), 2);
+        awaitServices(Servlet.class.getName(), 2); // Felix web console also registers a servlet
 
         HttpServiceRuntime serviceRuntime = (HttpServiceRuntime) getService(HttpServiceRuntime.class.getName());
         assertNotNull("HttpServiceRuntime unavailable", serviceRuntime);
@@ -803,7 +804,7 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
 
         ServiceRegistration<?> higherRankingServlet = m_context.registerService(Servlet.class.getName(), new TestServlet(), properties);
 
-        awaitServices(Servlet.class.getName(), 3);
+        awaitServices(Servlet.class.getName(), 3); // Felix web console also registers a servlet
 
         RuntimeDTO runtimeWithShadowedServlet = serviceRuntime.getRuntimeDTO();
 
@@ -819,7 +820,7 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
         assertEquals(FAILURE_REASON_SHADOWED_BY_OTHER_SERVICE, failedServletDTO.failureReason);
 
         higherRankingServlet.unregister();
-        awaitServices(Servlet.class.getName(), 2);
+        awaitServices(Servlet.class.getName(), 2); // Felix web console also registers a servlet
 
         runtimeDTO = serviceRuntime.getRuntimeDTO();
 
@@ -834,10 +835,66 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
 
     // As specified in OSGi Compendium Release 6, Chapter 140.4.1
     @Test
-    @Ignore
     public void multipleErrorPagesForSameExceptionsChoosenByServiceRankingRules()
     {
-        // TODO
+        registerErrorPage("error page 1", asList(NullPointerException.class.getName(), "500"));
+
+        awaitServices(Servlet.class.getName(), 2); // Felix web console also registers a servlet
+
+        HttpServiceRuntime serviceRuntime = (HttpServiceRuntime) getService(HttpServiceRuntime.class.getName());
+        assertNotNull("HttpServiceRuntime unavailable", serviceRuntime);
+
+        RuntimeDTO runtimeDTO = serviceRuntime.getRuntimeDTO();
+
+        assertEquals(1, runtimeDTO.servletContextDTOs.length);
+        assertEquals("default", runtimeDTO.servletContextDTOs[0].name);
+        ServletContextDTO defaultContext = runtimeDTO.servletContextDTOs[0];
+
+        assertEquals(0, runtimeDTO.failedErrorPageDTOs.length);
+        assertEquals(1, defaultContext.errorPageDTOs.length);
+
+        Dictionary<String, ?> properties = createDictionary(
+                HTTP_WHITEBOARD_SERVLET_ERROR_PAGE, asList("500", IllegalArgumentException.class.getName()),
+                HTTP_WHITEBOARD_SERVLET_NAME, "error page 2",
+                SERVICE_RANKING, Integer.MAX_VALUE);
+
+        ServiceRegistration<?> higherRankingServlet = m_context.registerService(Servlet.class.getName(), new TestServlet(), properties);
+
+        awaitServices(Servlet.class.getName(), 3); // Felix web console also registers a servlet
+
+        RuntimeDTO runtimeWithShadowedErrorPage = serviceRuntime.getRuntimeDTO();
+
+        assertEquals(1, runtimeWithShadowedErrorPage.servletContextDTOs.length);
+        assertEquals("default", runtimeWithShadowedErrorPage.servletContextDTOs[0].name);
+        defaultContext = runtimeWithShadowedErrorPage.servletContextDTOs[0];
+
+        assertEquals(2, defaultContext.errorPageDTOs.length);
+        assertEquals("error page 2", defaultContext.errorPageDTOs[0].name);
+        assertArrayEquals(new long[] { 500 }, defaultContext.errorPageDTOs[0].errorCodes);
+        assertArrayEquals(new String[] { IllegalArgumentException.class.getName() }, defaultContext.errorPageDTOs[0].exceptions);
+        assertEquals("error page 1", defaultContext.errorPageDTOs[1].name);
+        assertArrayEquals(new long[] { 500 }, defaultContext.errorPageDTOs[1].errorCodes);
+        assertArrayEquals(new String[] { NullPointerException.class.getName() }, defaultContext.errorPageDTOs[1].exceptions);
+
+        assertEquals(1, runtimeWithShadowedErrorPage.failedErrorPageDTOs.length);
+        FailedErrorPageDTO failedErrorPageDTO = runtimeWithShadowedErrorPage.failedErrorPageDTOs[0];
+        assertEquals("error page 1", failedErrorPageDTO.name);
+        assertArrayEquals(new long[] { 500 }, failedErrorPageDTO.errorCodes);
+        assertArrayEquals(new String[] { NullPointerException.class.getName() }, failedErrorPageDTO.exceptions);
+        assertEquals(FAILURE_REASON_SHADOWED_BY_OTHER_SERVICE, failedErrorPageDTO.failureReason);
+
+        higherRankingServlet.unregister();
+        awaitServices(Servlet.class.getName(), 2); // Felix web console also registers a servlet
+
+        runtimeDTO = serviceRuntime.getRuntimeDTO();
+
+        assertEquals(1, runtimeDTO.servletContextDTOs.length);
+        assertEquals("default", runtimeDTO.servletContextDTOs[0].name);
+        defaultContext = runtimeDTO.servletContextDTOs[0];
+
+        assertEquals(0, runtimeDTO.failedErrorPageDTOs.length);
+        assertEquals(1, defaultContext.errorPageDTOs.length);
+        assertEquals("error page 1", defaultContext.errorPageDTOs[0].name);
     }
 
     // As specified in OSGi Compendium Release 6, Chapter 140.4
