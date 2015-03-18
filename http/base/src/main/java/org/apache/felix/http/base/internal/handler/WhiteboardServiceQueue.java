@@ -18,6 +18,8 @@
  */
 package org.apache.felix.http.base.internal.handler;
 
+import static java.util.Arrays.asList;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -33,18 +35,22 @@ import java.util.TreeSet;
 final class WhiteboardServiceQueue<K, V extends AbstractHandler<V>>
 {
     private final Map<V, Integer> useCounts = new TreeMap<V, Integer>();
+
     private final Map<K, PriorityQueue<V>> keyMap;
+    private final Comparator<K> keyComparator;
 
     private int size = 0;
 
     WhiteboardServiceQueue()
     {
-        keyMap = new HashMap<K, PriorityQueue<V>>();
+        this.keyMap = new HashMap<K, PriorityQueue<V>>();
+        this.keyComparator = null;
     }
 
     WhiteboardServiceQueue(Comparator<K> keyComparator)
     {
-        keyMap = new TreeMap<K, PriorityQueue<V>>(keyComparator);
+        this.keyComparator = keyComparator;
+        this.keyMap = new TreeMap<K, PriorityQueue<V>>(keyComparator);
     }
 
     boolean isActive(V handler)
@@ -52,10 +58,15 @@ final class WhiteboardServiceQueue<K, V extends AbstractHandler<V>>
         return useCounts.containsKey(handler);
     }
 
+    Update<K, V> add(K[] keys, V handler)
+    {
+        return add(asList(keys), handler);
+    }
+
     Update<K, V> add(Collection<K> keys, V handler)
     {
-        Map<K, V> activate = new TreeMap<K, V>();
-        Map<K, V> deactivate = new TreeMap<K, V>();
+        Map<K, V> activate = createMap();
+        Map<K, V> deactivate = createMap();
         Set<V> destroy = new TreeSet<V>();
         for (K key : keys)
         {
@@ -80,10 +91,15 @@ final class WhiteboardServiceQueue<K, V extends AbstractHandler<V>>
         return Update.forAdd(activate, deactivate, destroy);
     }
 
+    Update<K, V> remove(K[] keys, V handler)
+    {
+        return remove(asList(keys), handler);
+    }
+
     Update<K, V> remove(Collection<K> keys, V handler)
     {
-        Map<K, V> activate = new TreeMap<K, V>();
-        Map<K, V> deactivate = new TreeMap<K, V>();
+        Map<K, V> activate = createMap();
+        Map<K, V> deactivate = createMap();
         Set<V> init = new TreeSet<V>();
         for (K key : keys)
         {
@@ -173,14 +189,41 @@ final class WhiteboardServiceQueue<K, V extends AbstractHandler<V>>
         useCounts.clear();
     }
 
-    Collection<V> values()
+    Collection<V> getActiveValues()
     {
-        return null;
+        TreeSet<V> activeValues = new TreeSet<V>();
+        for (PriorityQueue<V> queue : keyMap.values())
+        {
+            activeValues.add(queue.peek());
+        }
+        return activeValues;
+    }
+
+    Collection<V> getShadowedValues()
+    {
+        TreeSet<V> shadowedValues = new TreeSet<V>();
+        for (PriorityQueue<V> queue : keyMap.values())
+        {
+            V head = queue.element();
+            for (V value : queue)
+            {
+                if (value.compareTo(head) != 0)
+                {
+                    shadowedValues.add(value);
+                }
+            }
+        }
+        return shadowedValues;
     }
 
     int size()
     {
         return size;
+    }
+
+    private Map<K,V> createMap()
+    {
+        return keyComparator == null ? new HashMap<K, V>() : new TreeMap<K, V>(keyComparator);
     }
 
     static final class Update<K, V extends AbstractHandler<?>>

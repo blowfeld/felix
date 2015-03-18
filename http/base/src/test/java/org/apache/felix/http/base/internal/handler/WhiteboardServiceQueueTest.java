@@ -27,6 +27,7 @@ import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.util.Comparator;
 import java.util.List;
 
 import javax.servlet.ServletException;
@@ -35,43 +36,44 @@ import org.apache.felix.http.base.internal.handler.WhiteboardServiceQueue.Update
 import org.junit.Before;
 import org.junit.Test;
 
+@SuppressWarnings("unchecked")
 public class WhiteboardServiceQueueTest
 {
-    private WhiteboardServiceQueue<String, TestHandler> serviceQueue;
+    private WhiteboardServiceQueue<String, TestHandler<String>> serviceQueue;
 
     @Before
     public void setup()
     {
-        serviceQueue = new WhiteboardServiceQueue<String, TestHandler>();
+        serviceQueue = new WhiteboardServiceQueue<String, TestHandler<String>>();
     }
 
     @Test
     public void addedInfoIsUsed() throws ServletException
     {
-        TestHandler info = TestHandler.create(asList("a"), 0);
-        Update<String, TestHandler> update = serviceQueue.add(info.getKeys(), info);
+        TestHandler<String> handler = TestHandler.create(asList("a"), 0);
+        Update<String, TestHandler<String>> update = serviceQueue.add(handler.getKeys(), handler);
 
         assertEquals(1, serviceQueue.size());
-        assertTrue(serviceQueue.isActive(info));
+        assertTrue(serviceQueue.isActive(handler));
 
         assertEquals(1, update.getActivated().size());
-        assertThat(update.getActivated(), hasEntry("a", info));
+        assertThat(update.getActivated(), hasEntry("a", handler));
         assertTrue(update.getDeactivated().isEmpty());
 
         assertEquals(1, update.getInit().size());
-        assertThat(update.getInit(), contains(info));
+        assertThat(update.getInit(), contains(handler));
         assertTrue(update.getDestroy().isEmpty());
     }
 
     @Test
     public void highestPriorityServiceIsUsed() throws ServletException
     {
-        TestHandler higher = TestHandler.create(asList("a"), 1);
-        TestHandler lower = TestHandler.create(asList("a"), 0);
+        TestHandler<String> higher = TestHandler.create(asList("a"), 1);
+        TestHandler<String> lower = TestHandler.create(asList("a"), 0);
 
         serviceQueue.add(lower.getKeys(), lower);
 
-        Update<String, TestHandler> updateAddingHigher = serviceQueue.add(higher.getKeys(), higher);
+        Update<String, TestHandler<String>> updateAddingHigher = serviceQueue.add(higher.getKeys(), higher);
 
         assertTrue(serviceQueue.isActive(higher));
         assertFalse(serviceQueue.isActive(lower));
@@ -90,13 +92,13 @@ public class WhiteboardServiceQueueTest
     @Test
     public void removeHighestPriorityService() throws ServletException
     {
-        TestHandler higher = TestHandler.create(asList("a"), 1);
-        TestHandler lower = TestHandler.create(asList("a"), 0);
+        TestHandler<String> higher = TestHandler.create(asList("a"), 1);
+        TestHandler<String> lower = TestHandler.create(asList("a"), 0);
 
         serviceQueue.add(lower.getKeys(), lower);
         serviceQueue.add(higher.getKeys(), higher);
 
-        Update<String, TestHandler> update = serviceQueue.remove(higher.getKeys(), higher);
+        Update<String, TestHandler<String>> update = serviceQueue.remove(higher.getKeys(), higher);
 
         assertFalse(serviceQueue.isActive(higher));
         assertTrue(serviceQueue.isActive(lower));
@@ -115,13 +117,13 @@ public class WhiteboardServiceQueueTest
     @Test
     public void removeLowerPriorityService() throws ServletException
     {
-        TestHandler higher = TestHandler.create(asList("a"), 1);
-        TestHandler lower = TestHandler.create(asList("a"), 0);
+        TestHandler<String> higher = TestHandler.create(asList("a"), 1);
+        TestHandler<String> lower = TestHandler.create(asList("a"), 0);
 
         serviceQueue.add(lower.getKeys(), higher);
         serviceQueue.add(higher.getKeys(), lower);
 
-        Update<String, TestHandler> update = serviceQueue.remove(lower.getKeys(), lower);
+        Update<String, TestHandler<String>> update = serviceQueue.remove(lower.getKeys(), lower);
 
         assertTrue(serviceQueue.isActive(higher));
         assertFalse(serviceQueue.isActive(lower));
@@ -136,30 +138,30 @@ public class WhiteboardServiceQueueTest
     @Test
     public void addServiceWithMultipleKeys() throws ServletException
     {
-        TestHandler info = TestHandler.create(asList("a", "b"), 0);
+        TestHandler<String> handler = TestHandler.create(asList("a", "b"), 0);
 
-        Update<String, TestHandler> update = serviceQueue.add(info.getKeys(), info);
+        Update<String, TestHandler<String>> update = serviceQueue.add(handler.getKeys(), handler);
 
-        assertTrue(serviceQueue.isActive(info));
+        assertTrue(serviceQueue.isActive(handler));
 
         assertEquals(2, update.getActivated().size());
-        assertThat(update.getActivated(), hasEntry("a", info));
-        assertThat(update.getActivated(), hasEntry("b", info));
+        assertThat(update.getActivated(), hasEntry("a", handler));
+        assertThat(update.getActivated(), hasEntry("b", handler));
         assertTrue(update.getDeactivated().isEmpty());
 
         assertEquals(1, update.getInit().size());
-        assertThat(update.getInit(), contains(info));
+        assertThat(update.getInit(), contains(handler));
     }
 
     @Test
     public void addServiceWithMultipleKeysShadowsAllKeys() throws ServletException
     {
-        TestHandler higher = TestHandler.create(asList("a", "b", "c"), 1);
-        TestHandler lower = TestHandler.create(asList("a", "b"), 0);
+        TestHandler<String> higher = TestHandler.create(asList("a", "b", "c"), 1);
+        TestHandler<String> lower = TestHandler.create(asList("a", "b"), 0);
 
         serviceQueue.add(lower.getKeys(), lower);
 
-        Update<String, TestHandler> updateWithHigher = serviceQueue.add(higher.getKeys(), higher);
+        Update<String, TestHandler<String>> updateWithHigher = serviceQueue.add(higher.getKeys(), higher);
 
         assertTrue(serviceQueue.isActive(higher));
         assertFalse(serviceQueue.isActive(lower));
@@ -181,12 +183,12 @@ public class WhiteboardServiceQueueTest
     @Test
     public void addServiceWithMultipleKeysShadowsPartially() throws ServletException
     {
-        TestHandler higher = TestHandler.create(asList("a", "c"), 1);
-        TestHandler lower = TestHandler.create(asList("a", "b"), 0);
+        TestHandler<String> higher = TestHandler.create(asList("a", "c"), 1);
+        TestHandler<String> lower = TestHandler.create(asList("a", "b"), 0);
 
         serviceQueue.add(lower.getKeys(), lower);
 
-        Update<String, TestHandler> updateWithHigher = serviceQueue.add(higher.getKeys(), higher);
+        Update<String, TestHandler<String>> updateWithHigher = serviceQueue.add(higher.getKeys(), higher);
 
         assertTrue(serviceQueue.isActive(higher));
         assertTrue(serviceQueue.isActive(lower));
@@ -205,12 +207,12 @@ public class WhiteboardServiceQueueTest
     @Test
     public void addServiceWithMultipleKeysIsCompletelyShadowed() throws ServletException
     {
-        TestHandler higher = TestHandler.create(asList("a", "b", "c"), 1);
-        TestHandler lower = TestHandler.create(asList("a", "b"), 0);
+        TestHandler<String> higher = TestHandler.create(asList("a", "b", "c"), 1);
+        TestHandler<String> lower = TestHandler.create(asList("a", "b"), 0);
 
         serviceQueue.add(higher.getKeys(), higher);
 
-        Update<String, TestHandler> updateWithLower = serviceQueue.add(lower.getKeys(), lower);
+        Update<String, TestHandler<String>> updateWithLower = serviceQueue.add(lower.getKeys(), lower);
 
         assertTrue(serviceQueue.isActive(higher));
         assertFalse(serviceQueue.isActive(lower));
@@ -225,9 +227,9 @@ public class WhiteboardServiceQueueTest
     @Test
     public void sizeReturnsAllEntries() throws ServletException
     {
-        TestHandler higher = TestHandler.create(asList("a", "b", "c"), 1);
-        TestHandler lower = TestHandler.create(asList("a", "b"), 0);
-        TestHandler third = TestHandler.create(asList("d"), 3);
+        TestHandler<String> higher = TestHandler.create(asList("a", "b", "c"), 1);
+        TestHandler<String> lower = TestHandler.create(asList("a", "b"), 0);
+        TestHandler<String> third = TestHandler.create(asList("d"), 3);
 
         assertEquals(0 , serviceQueue.size());
 
@@ -256,18 +258,99 @@ public class WhiteboardServiceQueueTest
         assertEquals(0, serviceQueue.size());
     }
 
-    private static abstract class TestHandler extends AbstractHandler<TestHandler>
+    public void getActiveValuesContainsAllHeads()
+    {
+        TestHandler<String> one = TestHandler.create(asList("a", "b", "c"), 1);
+        TestHandler<String> two = TestHandler.create(asList("a", "b"), 0);
+        TestHandler<String> three = TestHandler.create(asList("c, e"), 3);
+        TestHandler<String> four = TestHandler.create(asList("d"), 3);
+
+        serviceQueue.add(one.getKeys(), one);
+        serviceQueue.add(two.getKeys(), two);
+        serviceQueue.add(three.getKeys(), three);
+        serviceQueue.add(four.getKeys(), four);
+
+        assertEquals(3, serviceQueue.getActiveValues());
+        assertTrue(serviceQueue.getActiveValues().contains(one));
+        assertTrue(serviceQueue.getActiveValues().contains(three));
+        assertTrue(serviceQueue.getActiveValues().contains(four));
+    }
+
+    public void getShadowedValuesContainsAllTails()
+    {
+        TestHandler<String> one = TestHandler.create(asList("a", "b", "c"), 1);
+        TestHandler<String> two = TestHandler.create(asList("a", "b"), 0);
+        TestHandler<String> three = TestHandler.create(asList("a"), -1);
+        TestHandler<String> four = TestHandler.create(asList("c, e"), 3);
+        TestHandler<String> five = TestHandler.create(asList("d"), 3);
+
+        serviceQueue.add(one.getKeys(), one);
+        serviceQueue.add(two.getKeys(), two);
+        serviceQueue.add(three.getKeys(), three);
+        serviceQueue.add(four.getKeys(), four);
+        serviceQueue.add(five.getKeys(), five);
+
+        assertEquals(3, serviceQueue.getActiveValues());
+        assertTrue(serviceQueue.getActiveValues().contains(one));
+        assertTrue(serviceQueue.getActiveValues().contains(two));
+        assertTrue(serviceQueue.getActiveValues().contains(three));
+    }
+
+    public void keyComparatorIsUsed()
+    {
+        final Object keyOne = new Object();
+        final Object keyTwo = new Object();
+
+        Comparator<Object> keyComparator = new Comparator<Object>()
+        {
+            @Override
+            public int compare(Object o1, Object o2)
+            {
+                if (o1 == o2)
+                {
+                    return 0;
+                }
+                if (o1 == keyOne && o2 == keyTwo)
+                {
+                    return 1;
+                }
+                if (o1 == keyTwo && o2 == keyOne)
+                {
+                    return -1;
+                }
+                throw new IllegalArgumentException();
+            }
+        };
+
+        WhiteboardServiceQueue<Object, TestHandler<Object>> sortedQueue =
+                new WhiteboardServiceQueue<Object, TestHandler<Object>>(keyComparator);
+
+        TestHandler<Object> handlerOne = TestHandler.create(asList(keyOne), 1);
+        TestHandler<Object> handlerTwo = TestHandler.create(asList(keyOne, keyTwo), 0);
+
+        sortedQueue.add(handlerOne.getKeys(), handlerOne);
+        sortedQueue.add(handlerTwo.getKeys(), handlerTwo);
+
+        assertEquals(2, sortedQueue.size());
+        assertEquals(2, sortedQueue.getActiveValues().size());
+        assertTrue(sortedQueue.getActiveValues().contains(keyOne));
+        assertTrue(sortedQueue.getActiveValues().contains(keyTwo));
+        assertEquals(1, sortedQueue.getShadowedValues().size());
+        assertTrue(sortedQueue.getShadowedValues().contains(keyTwo));
+    }
+
+    private static abstract class TestHandler<T> extends AbstractHandler<TestHandler<T>>
     {
         static int idCount = 0;
 
-        TestHandler(List<String> keys, int ranking)
+        TestHandler(List<T> keys, int ranking)
         {
             super(null, null, null);
         }
 
-        static TestHandler create(List<String> keys, int ranking)
+        static <T> TestHandler<T> create(List<T> keys, int ranking)
         {
-            TestHandler testHandler = mock(TestHandler.class);
+            TestHandler<T> testHandler = mock(TestHandler.class);
             when(testHandler.getId()).thenReturn(++idCount);
             when(testHandler.getRanking()).thenReturn(ranking);
             when(testHandler.getKeys()).thenReturn(keys);
@@ -276,7 +359,7 @@ public class WhiteboardServiceQueueTest
         }
 
         @Override
-        public int compareTo(TestHandler o)
+        public int compareTo(TestHandler<T> o)
         {
             int rankCompare = Integer.compare(o.getRanking(), getRanking());
             return rankCompare != 0 ? rankCompare : Integer.compare(getId(), o.getId());
@@ -286,6 +369,6 @@ public class WhiteboardServiceQueueTest
 
         abstract int getId();
 
-        abstract List<String> getKeys();
+        abstract List<T> getKeys();
     }
 }

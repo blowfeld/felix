@@ -27,19 +27,16 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.SortedMap;
 import java.util.SortedSet;
-import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.regex.Pattern;
 
-import javax.annotation.Nonnull;
 import javax.servlet.DispatcherType;
 import javax.servlet.Filter;
 import javax.servlet.Servlet;
 import javax.servlet.ServletException;
 
+import org.apache.felix.http.base.internal.handler.WhiteboardServiceQueue.Update;
 import org.apache.felix.http.base.internal.runtime.FilterInfo;
 import org.apache.felix.http.base.internal.runtime.ServletContextHelperInfo;
 import org.apache.felix.http.base.internal.runtime.ServletInfo;
@@ -59,8 +56,7 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
     private volatile HandlerMapping<FilterHandler> filterMapping = new HandlerMapping<FilterHandler>();
     private final ErrorsMapping errorsMapping = new ErrorsMapping();
 
-    private final SortedMap<Pattern, SortedSet<ServletHandler>> patternToServletHandler = new TreeMap<Pattern, SortedSet<ServletHandler>>(PatternComparator.INSTANCE);
-    private final Map<ServletHandler, Integer> servletHandlerToUses = new HashMap<ServletHandler, Integer>();
+    private final WhiteboardServiceQueue<Pattern, ServletHandler> servletQueue = new WhiteboardServiceQueue<Pattern, ServletHandler>(PatternComparator.INSTANCE);
     private final SortedSet<ServletHandler> allServletHandlers = new TreeSet<ServletHandler>();
 
     private final long serviceId;
@@ -142,42 +138,8 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
 
     private void addServlet(ServletHandler handler, Pattern[] patterns) throws ServletException
     {
-        SortedMap<Pattern, ServletHandler> toAdd = new TreeMap<Pattern, ServletHandler>(PatternComparator.INSTANCE);
-        SortedMap<Pattern, ServletHandler> toRemove = new TreeMap<Pattern, ServletHandler>(PatternComparator.INSTANCE);
-        this.servletHandlerToUses.put(handler, new Integer(0));
-
-        for (Pattern p : patterns)
-        {
-            ServletHandler prevHandler = null;
-
-            if (!this.patternToServletHandler.containsKey(p))
-            {
-                this.patternToServletHandler.put(p,
-                        new TreeSet<ServletHandler>());
-            } else
-            {
-                prevHandler = this.patternToServletHandler.get(p).first();
-            }
-
-            this.patternToServletHandler.get(p).add(handler);
-
-            if (handler.equals(this.patternToServletHandler.get(p).first()))
-            {
-                handler.init();
-                increaseUseCount(handler);
-
-                if (prevHandler != null)
-                {
-                    decreaseUseCount(prevHandler);
-                    toRemove.put(p, prevHandler);
-                }
-                toAdd.put(p, handler);
-            }
-        }
-
-        this.servletMapping = this.servletMapping.remove(toRemove);
-        this.servletMapping = this.servletMapping.add(toAdd);
-
+        Update<Pattern, ServletHandler> update = servletQueue.add(handler.getPatterns(), handler);
+        updateServletMapping(update, true);
     }
 
     private void addErrorPage(ServletHandler handler) throws ServletException
@@ -189,30 +151,6 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
             this.errorsMapping.addErrorServlet(errorPage, handler);
         }
     }
-
-    private void increaseUseCount(ServletHandler handler)
-	{
-		Integer uses = this.servletHandlerToUses.get(handler);
-		if(uses != null)
-		{
-			int newUsesValue = uses.intValue() + 1;
-			this.servletHandlerToUses.put(handler, new Integer(newUsesValue));
-		}
-	}
-	
-	private void decreaseUseCount(@Nonnull ServletHandler handler)
-	{
-		Integer uses = this.servletHandlerToUses.get(handler);
-		if(uses != null)
-		{
-			int newUsesValue = uses.intValue() - 1;
-			if(newUsesValue == 0 && handler instanceof WhiteboardServletHandler)
-			{		
-				handler.destroy();
-			}
-			this.servletHandlerToUses.put(handler, new Integer(newUsesValue));	
-		}
-	}
 
 	public ErrorsMapping getErrorsMapping()
     {
@@ -288,8 +226,8 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
 
         this.errorsMapping.clear();
         this.allServletHandlers.clear();
-        //this.servletMap.clear();
         this.filterMap.clear();
+        this.servletQueue.clear();
     }
 
     public synchronized void removeFilter(Filter filter, final boolean destroy)
@@ -334,63 +272,56 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
         }
         return null;
     }
-    
+
     public synchronized Servlet removeServlet(ServletInfo servletInfo, final boolean destroy) throws RegistrationFailureException
     {
-    	ServletHandler handler = getServletHandler(servletInfo);
-    	if (handler == null)
-    	{
-    	    return null;
-    	}
-    	
-    	Pattern[] patterns = handler.getPatterns();
-    	SortedMap<Pattern, ServletHandler> toAdd = new TreeMap<Pattern, ServletHandler>(PatternComparator.INSTANCE);
-    	SortedMap<Pattern, ServletHandler> toRemove = new TreeMap<Pattern, ServletHandler>(PatternComparator.INSTANCE);
+        ServletHandler handler = getServletHandler(servletInfo);
+        if (handler == null)
+        {
+            return null;
+        }
 
-    	for(Pattern p : patterns)
-    	{    		
-    		SortedSet<ServletHandler> handlers = this.patternToServletHandler.get(p);
-    		if(handlers != null && (!handlers.isEmpty()))
-    		{
-    			if(handlers.first().equals(handler))
-    			{
-    				toRemove.put(p, handler);
-    			}
-    			handlers.remove(handler);
-    			
-    			ServletHandler activeHandler = null;
-    			if( !handlers.isEmpty() )
-    			{
-    				activeHandler = handlers.first();
-    				
-    				try {
-    					activeHandler.init();
-						increaseUseCount(activeHandler);
-						toAdd.put(p, activeHandler);
-					} catch (ServletException e) {
-					    throw new RegistrationFailureException(activeHandler.getServletInfo(), FAILURE_REASON_EXCEPTION_ON_INIT, e);
-					}
-    			}
-    			else 
-    			{
-    				this.patternToServletHandler.remove(p);
-				}
-    		}
-    	}
-    	
-    	Servlet servlet = handler.getServlet();
+        Servlet servlet = handler.getServlet();
 
-    	if (destroy)
-    	{
-    	    handler.destroy();
-    	}
-    	
-    	this.servletHandlerToUses.remove(handler);
-    	
-		this.servletMapping = this.servletMapping.remove(toRemove);
-		this.servletMapping = this.servletMapping.add(toAdd);
+        Pattern[] patterns = handler.getPatterns();
+        if (patterns != null && patterns.length > 0)
+        {
+            Update<Pattern, ServletHandler> update = servletQueue.remove(patterns, handler);
+            updateServletMapping(update, destroy);
+        }
 
-		return servlet;
+        if (destroy)
+        {
+            handler.destroy();
+        }
+
+        return servlet;
+    }
+
+    private void updateServletMapping(Update<Pattern, ServletHandler> update, boolean destroy) throws RegistrationFailureException
+    {
+        for (ServletHandler servletHandler : update.getInit())
+        {
+            try
+            {
+                servletHandler.init();
+            }
+            catch (ServletException e)
+            {
+                // TODO we should collect this cases and not throw an exception immediately
+                throw new RegistrationFailureException(servletHandler.getServletInfo(), FAILURE_REASON_EXCEPTION_ON_INIT);
+            }
+        }
+
+        this.servletMapping = this.servletMapping.update(update.getActivated(), update.getDeactivated());
+
+        if (destroy)
+        {
+            for (ServletHandler servletHandler : update.getDestroy())
+            {
+                servletHandler.destroy();
+            }
+        }
     }
 
     private ServletHandler getServletHandler(final ServletInfo servletInfo)
@@ -479,10 +410,8 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
         Collection<ServletRuntime> servletRuntimes = new TreeSet<ServletRuntime>(ServletRuntime.COMPARATOR);
         Collection<ServletRuntime> resourceRuntimes = new TreeSet<ServletRuntime>(ServletRuntime.COMPARATOR);
 
-        for (Set<ServletHandler> patternHandlers : patternToServletHandler.values())
+        for (ServletHandler activeHandler : servletQueue.getActiveValues())
         {
-            Iterator<ServletHandler> itr = patternHandlers.iterator();
-            ServletHandler activeHandler = itr.next();
             if (activeHandler.getServletInfo().isResource())
             {
                 resourceRuntimes.add(activeHandler);
@@ -491,10 +420,11 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
             {
                 servletRuntimes.add(activeHandler);
             }
-            while (itr.hasNext())
-            {
-                failureRuntimeBuilder.add(itr.next().getServletInfo(), FAILURE_REASON_SHADOWED_BY_OTHER_SERVICE);
-            }
+        }
+
+        for (ServletHandler shadowedHandler : servletQueue.getShadowedValues())
+        {
+            failureRuntimeBuilder.add(shadowedHandler.getServletInfo(), FAILURE_REASON_SHADOWED_BY_OTHER_SERVICE);
         }
 
         return new ContextRuntime(servletRuntimes,
