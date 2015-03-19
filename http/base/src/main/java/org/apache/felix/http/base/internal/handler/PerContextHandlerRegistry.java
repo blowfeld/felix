@@ -123,7 +123,7 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
         }
         catch (ServletException e)
         {
-            throw new RegistrationFailureException(handler.getFilterInfo(), FAILURE_REASON_EXCEPTION_ON_INIT);
+            throw new RegistrationFailureException(handler.getFilterInfo(), FAILURE_REASON_EXCEPTION_ON_INIT, e);
         }
 
         this.filterMapping = this.filterMapping.add(handler);
@@ -135,6 +135,12 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
      */
     public synchronized void addServlet(final ServletHandler handler) throws RegistrationFailureException
     {
+        if (this.allServletHandlers.contains(handler))
+        {
+            throw new RegistrationFailureException(handler.getServletInfo(), FAILURE_REASON_SERVICE_ALREAY_USED,
+                "Filter instance " + handler.getName() + " already registered");
+        }
+
         Pattern[] patterns = handler.getPatterns();
         String[] errorPages = handler.getServletInfo().getErrorPage();
         if (patterns != null && patterns.length > 0)
@@ -309,7 +315,7 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
             catch (ServletException e)
             {
                 // TODO we should collect this cases and not throw an exception immediately
-                throw new RegistrationFailureException(servletHandler.getServletInfo(), FAILURE_REASON_EXCEPTION_ON_INIT);
+                throw new RegistrationFailureException(servletHandler.getServletInfo(), FAILURE_REASON_EXCEPTION_ON_INIT, e);
             }
         }
     }
