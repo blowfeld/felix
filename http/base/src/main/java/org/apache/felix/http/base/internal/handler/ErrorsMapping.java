@@ -44,15 +44,16 @@ public final class ErrorsMapping
 
     ErrorsMapping update(Map<String, ServletHandler> add, Map<String, ServletHandler> remove) throws RegistrationFailureException
     {
-        Map<Integer, ServletHandler> newErrorCodesMap = new HashMap<Integer, ServletHandler>(errorCodesMap);
-        Map<String, ServletHandler> newExceptionsMap = new HashMap<String, ServletHandler>(exceptionsMap);;
+        Map<Integer, ServletHandler> newErrorCodesMap = new HashMap<Integer, ServletHandler>(this.errorCodesMap);
+        Map<String, ServletHandler> newExceptionsMap = new HashMap<String, ServletHandler>(this.exceptionsMap);;
 
         for (Map.Entry<String, ServletHandler> errorPage : remove.entrySet())
         {
             String errorString = errorPage.getKey();
             if (ErrorPageUtil.isErrorCode(errorString))
             {
-                newErrorCodesMap.remove(errorString);
+                Integer errorCode = Integer.valueOf(errorString);
+                newErrorCodesMap.remove(errorCode);
             }
             else
             {
@@ -66,11 +67,11 @@ public final class ErrorsMapping
             if (ErrorPageUtil.isErrorCode(errorString))
             {
                 Integer errorCode = Integer.valueOf(errorString);
-                addErrorServlet(errorCode, errorPage.getValue(), this.errorCodesMap);
+                addErrorServlet(errorCode, errorPage.getValue(), newErrorCodesMap);
             }
             else
             {
-                addErrorServlet(errorString, errorPage.getValue(), this.exceptionsMap);
+                addErrorServlet(errorString, errorPage.getValue(), newExceptionsMap);
             }
         }
 
