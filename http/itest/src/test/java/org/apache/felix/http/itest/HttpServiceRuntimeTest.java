@@ -20,6 +20,7 @@ package org.apache.felix.http.itest;
 
 import static java.util.Arrays.asList;
 import static junit.framework.Assert.assertEquals;
+import static junit.framework.Assert.fail;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNotSame;
@@ -65,6 +66,8 @@ import javax.servlet.ServletRequestAttributeListener;
 import javax.servlet.ServletRequestListener;
 import javax.servlet.http.HttpSessionAttributeListener;
 import javax.servlet.http.HttpSessionListener;
+
+import junit.framework.Assert;
 
 import org.junit.Before;
 import org.junit.Ignore;
@@ -1061,7 +1064,10 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
 
     private void awaitServiceRegistration(CountDownLatch initLatch) throws InterruptedException
     {
-        initLatch.await(5, TimeUnit.SECONDS);
+        if (!initLatch.await(5, TimeUnit.SECONDS))
+        {
+            fail("Service was not initialized in time!");
+        };
         awaitServiceRegistration();
     }
 
