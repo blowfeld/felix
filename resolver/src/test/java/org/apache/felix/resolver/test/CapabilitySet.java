@@ -16,12 +16,10 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.felix.framework.capabilityset;
+package org.apache.felix.resolver.test;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
-import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -33,68 +31,58 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeMap;
 
-import org.apache.felix.framework.util.SecureAction;
-import org.apache.felix.framework.util.StringComparator;
-import org.apache.felix.framework.util.VersionRange;
-import org.apache.felix.framework.wiring.BundleCapabilityImpl;
-import org.osgi.framework.Version;
-import org.osgi.framework.wiring.BundleCapability;
+import org.apache.felix.resolver.util.CopyOnWriteSet;
+import org.apache.felix.resolver.util.OpenHashMap;
+import org.osgi.framework.Constants;
 import org.osgi.resource.Capability;
 
 public class CapabilitySet
 {
-    private final Map<String, Map<Object, Set<BundleCapability>>> m_indices;
+    private final Map<String, Map<Object, Set<Capability>>> m_indices;
     private final Set<Capability> m_capSet = new HashSet<Capability>();
-    private final static SecureAction m_secureAction = new SecureAction();
 
-    public void dump()
+public void dump()
+{
+    for (Entry<String, Map<Object, Set<Capability>>> entry : m_indices.entrySet())
     {
-        for (Entry<String, Map<Object, Set<BundleCapability>>> entry : m_indices.entrySet())
+        boolean header1 = false;
+        for (Entry<Object, Set<Capability>> entry2 : entry.getValue().entrySet())
         {
-            boolean header1 = false;
-            for (Entry<Object, Set<BundleCapability>> entry2 : entry.getValue().entrySet())
+            boolean header2 = false;
+            for (Capability cap : entry2.getValue())
             {
-                boolean header2 = false;
-                for (BundleCapability cap : entry2.getValue())
+                if (!header1)
                 {
-                    if (cap.getRevision().getBundle().getBundleId() != 0)
-                    {
-                        if (!header1)
-                        {
-                            System.out.println(entry.getKey() + ":");
-                            header1 = true;
-                        }
-                        if (!header2)
-                        {
-                            System.out.println("   " + entry2.getKey());
-                            header2 = true;
-                        }
-                        System.out.println("      " + cap);
-                    }
+                    System.out.println(entry.getKey() + ":");
+                    header1 = true;
                 }
+                if (!header2)
+                {
+                    System.out.println("   " + entry2.getKey());
+                    header2 = true;
+                }
+                System.out.println("      " + cap);
             }
         }
     }
+}
 
-    public CapabilitySet(List<String> indexProps, boolean caseSensitive)
+    public CapabilitySet(List<String> indexProps)
     {
-        m_indices = (caseSensitive)
-            ? new TreeMap<String, Map<Object, Set<BundleCapability>>>()
-            : new TreeMap<String, Map<Object, Set<BundleCapability>>>(
-                new StringComparator(false));
+        m_indices = new TreeMap<String, Map<Object, Set<Capability>>>();
         for (int i = 0; (indexProps != null) && (i < indexProps.size()); i++)
         {
             m_indices.put(
-                indexProps.get(i), new HashMap<Object, Set<BundleCapability>>());
+                indexProps.get(i), new OpenHashMap<Object, Set<Capability>>());
         }
     }
 
-    public void addCapability(BundleCapability cap)
+    public void addCapability(Capability cap)
     {
         m_capSet.add(cap);
 
         // Index capability.
-        for (Entry<String, Map<Object, Set<BundleCapability>>> entry : m_indices.entrySet())
+        for (Entry<String, Map<Object, Set<Capability>>> entry : m_indices.entrySet())
         {
             Object value = cap.getAttributes().get(entry.getKey());
             if (value != null)
@@ -104,7 +92,7 @@ public class CapabilitySet
                     value = convertArrayToList(value);
                 }
 
-                Map<Object, Set<BundleCapability>> index = entry.getValue();
+                Map<Object, Set<Capability>> index = entry.getValue();
 
                 if (value instanceof Collection)
                 {
@@ -123,22 +111,22 @@ public class CapabilitySet
     }
 
     private void indexCapability(
-        Map<Object, Set<BundleCapability>> index, BundleCapability cap, Object capValue)
+        Map<Object, Set<Capability>> index, Capability cap, Object capValue)
     {
-        Set<BundleCapability> caps = index.get(capValue);
+        Set<Capability> caps = index.get(capValue);
         if (caps == null)
         {
-            caps = new HashSet<BundleCapability>();
+            caps = new CopyOnWriteSet<Capability>();
             index.put(capValue, caps);
         }
         caps.add(cap);
     }
 
-    public void removeCapability(BundleCapability cap)
+    public void removeCapability(Capability cap)
     {
         if (m_capSet.remove(cap))
         {
-            for (Entry<String, Map<Object, Set<BundleCapability>>> entry : m_indices.entrySet())
+            for (Entry<String, Map<Object, Set<Capability>>> entry : m_indices.entrySet())
             {
                 Object value = cap.getAttributes().get(entry.getKey());
                 if (value != null)
@@ -148,7 +136,7 @@ public class CapabilitySet
                         value = convertArrayToList(value);
                     }
 
-                    Map<Object, Set<BundleCapability>> index = entry.getValue();
+                    Map<Object, Set<Capability>> index = entry.getValue();
 
                     if (value instanceof Collection)
                     {
@@ -168,9 +156,9 @@ public class CapabilitySet
     }
 
     private void deindexCapability(
-        Map<Object, Set<BundleCapability>> index, BundleCapability cap, Object value)
+        Map<Object, Set<Capability>> index, Capability cap, Object value)
     {
-        Set<BundleCapability> caps = index.get(value);
+        Set<Capability> caps = index.get(value);
         if (caps != null)
         {
             caps.remove(cap);
@@ -191,7 +179,7 @@ public class CapabilitySet
 
     private Set<Capability> match(Set<Capability> caps, SimpleFilter sf)
     {
-        Set<Capability> matches = new HashSet<Capability>();
+        Set<Capability> matches = new HashSet<Capability>(128);
 
         if (sf.getOperation() == SimpleFilter.MATCH_ALL)
         {
@@ -233,17 +221,14 @@ public class CapabilitySet
         }
         else
         {
-            Map<Object, Set<BundleCapability>> index = m_indices.get(sf.getName());
+            Map<Object, Set<Capability>> index = m_indices.get(sf.getName());
             if ((sf.getOperation() == SimpleFilter.EQ) && (index != null))
             {
-                Set<BundleCapability> existingCaps = index.get(sf.getValue());
+                Set<Capability> existingCaps = index.get(sf.getValue());
                 if (existingCaps != null)
                 {
                     matches.addAll(existingCaps);
-                    if (caps != m_capSet)
-                    {
-                        matches.retainAll(caps);
-                    }
+                    matches.retainAll(caps);
                 }
             }
             else
@@ -341,19 +326,37 @@ public class CapabilitySet
 
     private static boolean matchMandatory(Capability cap, SimpleFilter sf)
     {
-        Map<String, Object> attrs = cap.getAttributes();
-        for (Entry<String, Object> entry : attrs.entrySet())
-        {
-            if (((BundleCapabilityImpl) cap).isAttributeMandatory(entry.getKey())
-                && !matchMandatoryAttrbute(entry.getKey(), sf))
+        /*
+        if (cap instanceof CapabilityImpl) {
+            for (Entry<String, Object> entry : cap.getAttributes().entrySet())
             {
-                return false;
+                if (((CapabilityImpl) cap).isAttributeMandatory(entry.getKey())
+                    && !matchMandatoryAttribute(entry.getKey(), sf))
+                {
+                    return false;
+                }
             }
+        } else {
+        */
+            String value = cap.getDirectives().get(Constants.MANDATORY_DIRECTIVE);
+            if (value != null) {
+                List<String> names = ClauseParser.parseDelimitedString(value, ",");
+                for (Entry<String, Object> entry : cap.getAttributes().entrySet())
+                {
+                    if (names.contains(entry.getKey())
+                            && !matchMandatoryAttribute(entry.getKey(), sf))
+                    {
+                        return false;
+                    }
+                }
+            }
+        /*
         }
+        */
         return true;
     }
 
-    private static boolean matchMandatoryAttrbute(String attrName, SimpleFilter sf)
+    private static boolean matchMandatoryAttribute(String attrName, SimpleFilter sf)
     {
         if ((sf.getName() != null) && sf.getName().equals(attrName))
         {
@@ -376,7 +379,6 @@ public class CapabilitySet
     }
 
     private static final Class<?>[] STRING_CLASS = new Class[] { String.class };
-    private static final String VALUE_OF_METHOD_NAME = "valueOf";
 
     private static boolean compare(Object lhs, Object rhsUnknown, int op)
     {
@@ -392,26 +394,6 @@ public class CapabilitySet
             return true;
         }
 
-        //Need a special case here when lhs is a Version and rhs is a VersionRange
-        //Version is comparable so we need to check this first
-        if(lhs instanceof Version && op == SimpleFilter.EQ)
-        {
-            Object rhs = null;
-            try
-            {
-                rhs = coerceType(lhs, (String) rhsUnknown);
-            }
-            catch (Exception ex)
-            {
-                //Do nothing will check later if rhs is null
-            }
-            
-            if(rhs != null && rhs instanceof VersionRange)
-            {
-                return ((VersionRange)rhs).isInRange((Version)lhs);
-            }
-        }
-        
         // If the type is comparable, then we can just return the
         // result immediately.
         if (lhs instanceof Comparable)
@@ -469,7 +451,7 @@ public class CapabilitySet
                         return false;
                     }
                 case SimpleFilter.APPROX :
-                    return compareApproximate(lhs, rhs);
+                    return compareApproximate(((Comparable) lhs), rhs);
                 case SimpleFilter.SUBSTRING :
                     return SimpleFilter.compareSubstring((List<String>) rhs, (String) lhs);
                 default:
@@ -592,10 +574,6 @@ public class CapabilitySet
             {
                 rhs = new Character(rhsString.charAt(0));
             }
-            else if(lhs instanceof Version && rhsString.indexOf(',') >= 0)
-            {
-                rhs = VersionRange.parse(rhsString);
-            }
             else
             {
                 // Spec says we should trim number types.
@@ -603,30 +581,9 @@ public class CapabilitySet
                 {
                     rhsString = rhsString.trim();
                 }
-
-                try
-                {
-                    // Try to find a suitable static valueOf method
-                    Method valueOfMethod = m_secureAction.getDeclaredMethod(
-                        lhs.getClass(), VALUE_OF_METHOD_NAME, STRING_CLASS);
-                    if (valueOfMethod.getReturnType().isAssignableFrom(lhs.getClass())
-                        && ((valueOfMethod.getModifiers() & Modifier.STATIC) > 0))
-                    {
-                        m_secureAction.setAccesssible(valueOfMethod);
-                        rhs = valueOfMethod.invoke(null, new Object[] { rhsString });
-                    }
-                }
-                catch (Exception ex)
-                {
-                    // Static valueOf fails, try the next conversion mechanism
-                }
-
-                if (rhs == null)
-                {
-                    Constructor ctor = m_secureAction.getConstructor(lhs.getClass(), STRING_CLASS);
-                    m_secureAction.setAccesssible(ctor);
-                    rhs = ctor.newInstance(new Object[] { rhsString });
-                }
+                Constructor ctor = lhs.getClass().getConstructor(STRING_CLASS);
+                ctor.setAccessible(true);
+                rhs = ctor.newInstance(new Object[] { rhsString });
             }
         }
         catch (Exception ex)
