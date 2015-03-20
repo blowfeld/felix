@@ -16,35 +16,30 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.felix.framework.resolver;
+package org.apache.felix.resolver.util;
 
-import org.osgi.framework.wiring.BundleRequirement;
-import org.osgi.framework.wiring.BundleRevision;
-import org.osgi.service.resolver.ResolutionException;
+public class OpenHashMapList<K, V> extends OpenHashMap<K, CopyOnWriteList<V>> {
 
-public class ResolveException extends ResolutionException
-{
-    private final BundleRevision m_revision;
-    private final BundleRequirement m_req;
-
-    /**
-     * Constructs an instance of <code>ResolveException</code> with the specified detail message.
-     * @param msg the detail message.
-     */
-    public ResolveException(String msg, BundleRevision revision, BundleRequirement req)
-    {
-        super(msg);
-        m_revision = revision;
-        m_req = req;
+    public OpenHashMapList() {
+        super();
     }
 
-    public BundleRevision getRevision()
-    {
-        return m_revision;
+    public OpenHashMapList(int initialCapacity) {
+        super(initialCapacity);
     }
 
-    public BundleRequirement getRequirement()
-    {
-        return m_req;
+    public OpenHashMapList(int initialCapacity, double minLoadFactor, double maxLoadFactor) {
+        super(initialCapacity, minLoadFactor, maxLoadFactor);
+    }
+
+    public OpenHashMapList<K, V> deepClone() {
+        OpenHashMapList<K, V> copy = (OpenHashMapList<K, V>) super.clone();
+        Object[] values = copy.values;
+        for (int i = 0, l = values.length; i < l; i++) {
+            if (values[i] != null) {
+                values[i] = new CopyOnWriteList<V>((CopyOnWriteList<V>) values[i]);
+            }
+        }
+        return copy;
     }
 }

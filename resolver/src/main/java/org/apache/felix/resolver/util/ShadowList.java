@@ -16,19 +16,25 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.felix.framework.resolver;
+package org.apache.felix.resolver.util;
 
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.SortedSet;
-import org.osgi.framework.wiring.BundleCapability;
-import org.osgi.framework.wiring.BundleRequirement;
-import org.osgi.framework.wiring.BundleRevision;
 
-public interface Resolver
+import org.apache.felix.resolver.util.CopyOnWriteList;
+
+public class ShadowList<T> extends CopyOnWriteList<T>
 {
-    Map<BundleRevision, List<ResolverWire>> resolve(ResolveContext rc);
-    Map<BundleRevision, List<ResolverWire>> resolve(
-        ResolveContext rc, BundleRevision revision, String pkgName);
+    private final List<T> m_original;
+
+    public ShadowList(List<T> original)
+    {
+        super(original);
+        m_original = original;
+    }
+
+    public List<T> getOriginal()
+    {
+        return m_original;
+    }
+
 }
