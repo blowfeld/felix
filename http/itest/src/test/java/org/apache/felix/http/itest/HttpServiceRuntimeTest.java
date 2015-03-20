@@ -67,8 +67,6 @@ import javax.servlet.ServletRequestListener;
 import javax.servlet.http.HttpSessionAttributeListener;
 import javax.servlet.http.HttpSessionListener;
 
-import junit.framework.Assert;
-
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -708,9 +706,8 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
     @Test
     public void selectionOfNonExistingContextHelperAppearsAsFailure() throws InterruptedException
     {
-        CountDownLatch initLatch = new CountDownLatch(1);
-        registerServlet("servlet 1", "/", "(" + HTTP_WHITEBOARD_CONTEXT_NAME + "=contextA)", initLatch);
-        awaitServiceRegistration(initLatch);
+        registerServlet("servlet 1", "/", "(" + HTTP_WHITEBOARD_CONTEXT_NAME + "=contextA)", null);
+        awaitServiceRegistration();
 
         HttpServiceRuntime serviceRuntime = (HttpServiceRuntime) getService(HttpServiceRuntime.class.getName());
         assertNotNull("HttpServiceRuntime unavailable", serviceRuntime);
@@ -741,9 +738,8 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
                 HTTP_WHITEBOARD_SERVLET_NAME, "servlet",
                 HTTP_WHITEBOARD_TARGET, "(org.osgi.service.http.port=8282)");
 
-        CountDownLatch initLatch = new CountDownLatch(1);
-        m_context.registerService(Servlet.class.getName(), new TestServlet(initLatch, null), properties);
-        awaitServiceRegistration(initLatch);
+        m_context.registerService(Servlet.class.getName(), new TestServlet(), properties);
+        awaitServiceRegistration();
 
         HttpServiceRuntime serviceRuntime = (HttpServiceRuntime) getService(HttpServiceRuntime.class.getName());
         assertNotNull("HttpServiceRuntime unavailable", serviceRuntime);
@@ -787,9 +783,8 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
                 HTTP_WHITEBOARD_SERVLET_NAME, "servlet",
                 HTTP_WHITEBOARD_SERVLET_ERROR_PAGE, asList("400"));
 
-        CountDownLatch initLatch = new CountDownLatch(1);
         m_context.registerService(Servlet.class.getName(), new TestServlet(), properties);
-        awaitServiceRegistration(initLatch);
+        awaitServiceRegistration();
 
         HttpServiceRuntime serviceRuntime = (HttpServiceRuntime) getService(HttpServiceRuntime.class.getName());
         assertNotNull("HttpServiceRuntime unavailable", serviceRuntime);
@@ -989,9 +984,8 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
         // Neither pattern nor error page specified
         Dictionary<String, ?> properties = createDictionary(HTTP_WHITEBOARD_SERVLET_NAME, "servlet");
 
-        CountDownLatch initLatch = new CountDownLatch(1);
-        m_context.registerService(Servlet.class.getName(), new TestServlet(initLatch, null), properties);
-        awaitServiceRegistration(initLatch);
+        m_context.registerService(Servlet.class.getName(), new TestServlet(), properties);
+        awaitServiceRegistration();
 
         HttpServiceRuntime serviceRuntime = (HttpServiceRuntime) getService(HttpServiceRuntime.class.getName());
         assertNotNull("HttpServiceRuntime unavailable", serviceRuntime);
@@ -1013,7 +1007,7 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
                 HTTP_WHITEBOARD_SERVLET_INIT_PARAM_PREFIX + "test", "testValue");
 
         CountDownLatch initLatch = new CountDownLatch(1);
-        m_context.registerService(Servlet.class.getName(), new TestServlet(), properties);
+        m_context.registerService(Servlet.class.getName(), new TestServlet(initLatch, null), properties);
         awaitServiceRegistration(initLatch);
 
         HttpServiceRuntime serviceRuntime = (HttpServiceRuntime) getService(HttpServiceRuntime.class.getName());
