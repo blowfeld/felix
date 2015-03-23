@@ -849,11 +849,9 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
 
     // As specified in OSGi Compendium Release 6, Chapter 140.4.1
     @Test
-    public void multipleErrorPagesForSameExceptionsChoosenByServiceRankingRules()
+    public void multipleErrorPagesForSameExceptionsChoosenByServiceRankingRules() throws InterruptedException
     {
         registerErrorPage("error page 1", asList(NullPointerException.class.getName(), "500"));
-
-        awaitServices(Servlet.class.getName(), 2); // Felix web console also registers a servlet
 
         HttpServiceRuntime serviceRuntime = (HttpServiceRuntime) getService(HttpServiceRuntime.class.getName());
         assertNotNull("HttpServiceRuntime unavailable", serviceRuntime);
@@ -872,9 +870,11 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
                 HTTP_WHITEBOARD_SERVLET_NAME, "error page 2",
                 SERVICE_RANKING, Integer.MAX_VALUE);
 
-        ServiceRegistration<?> higherRankingServlet = m_context.registerService(Servlet.class.getName(), new TestServlet(), properties);
-
-        awaitServices(Servlet.class.getName(), 3); // Felix web console also registers a servlet
+        CountDownLatch initLatch = new CountDownLatch(1);
+        CountDownLatch destroyLatch = new CountDownLatch(1);
+        TestServlet testServlet = new TestServlet(initLatch, destroyLatch);
+        ServiceRegistration<?> higherRankingServlet = m_context.registerService(Servlet.class.getName(), testServlet, properties);
+        awaitServiceRegistration(initLatch);
 
         RuntimeDTO runtimeWithShadowedErrorPage = serviceRuntime.getRuntimeDTO();
 
@@ -898,7 +898,7 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
         assertEquals(FAILURE_REASON_SHADOWED_BY_OTHER_SERVICE, failedErrorPageDTO.failureReason);
 
         higherRankingServlet.unregister();
-        awaitServices(Servlet.class.getName(), 2); // Felix web console also registers a servlet
+        awaitServiceRegistration(destroyLatch);
 
         runtimeDTO = serviceRuntime.getRuntimeDTO();
 
