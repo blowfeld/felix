@@ -109,7 +109,7 @@ public final class FailureRuntime
 
     private FailedServletDTO getServletDTO(ServletRuntime failedServlet, int failureCode)
     {
-        ServletDTOBuilder<FailedServletDTO> dtoBuilder = new ServletDTOBuilder<FailedServletDTO>(DTOSuppliers.FAILED_SERVLET);
+        ServletDTOBuilder<FailedServletDTO> dtoBuilder = new ServletDTOBuilder<FailedServletDTO>(DTOFactories.FAILED_SERVLET);
         FailedServletDTO servletDTO = dtoBuilder.buildDTO(failedServlet, 0);
         servletDTO.failureReason = failureCode;
         return servletDTO;
@@ -127,7 +127,7 @@ public final class FailureRuntime
 
     private FailedFilterDTO getFilterDTO(FilterRuntime failedFilter, int failureCode)
     {
-        FilterDTOBuilder<FailedFilterDTO> dtoBuilder = new FilterDTOBuilder<FailedFilterDTO>(DTOSuppliers.FAILED_FILTER);
+        FilterDTOBuilder<FailedFilterDTO> dtoBuilder = new FilterDTOBuilder<FailedFilterDTO>(DTOFactories.FAILED_FILTER);
         FailedFilterDTO filterDTO = dtoBuilder.buildDTO(failedFilter, 0);
         filterDTO.failureReason = failureCode;
         return filterDTO;
@@ -145,7 +145,7 @@ public final class FailureRuntime
 
     private FailedResourceDTO getResourceDTO(ServletRuntime failedResource, int failureCode)
     {
-        ResourceDTOBuilder<FailedResourceDTO> dtoBuilder = new ResourceDTOBuilder<FailedResourceDTO>(DTOSuppliers.FAILED_RESOURCE);
+        ResourceDTOBuilder<FailedResourceDTO> dtoBuilder = new ResourceDTOBuilder<FailedResourceDTO>(DTOFactories.FAILED_RESOURCE);
         FailedResourceDTO resourceDTO = dtoBuilder.buildDTO(failedResource, 0);
         resourceDTO.failureReason = failureCode;
         return resourceDTO;
@@ -163,7 +163,7 @@ public final class FailureRuntime
 
     private FailedErrorPageDTO getErrorPageDTO(ErrorPageRuntime failedErrorPage, int failureCode)
     {
-        ErrorPageDTOBuilder<FailedErrorPageDTO> dtoBuilder = new ErrorPageDTOBuilder<FailedErrorPageDTO>(DTOSuppliers.FAILED_ERROR_PAGE);
+        ErrorPageDTOBuilder<FailedErrorPageDTO> dtoBuilder = new ErrorPageDTOBuilder<FailedErrorPageDTO>(DTOFactories.FAILED_ERROR_PAGE);
         FailedErrorPageDTO errorPageDTO = dtoBuilder.buildDTO(failedErrorPage, 0);
         errorPageDTO.failureReason = failureCode;
         return errorPageDTO;
@@ -181,7 +181,7 @@ public final class FailureRuntime
 
     private FailedListenerDTO getListenerDTO(ServiceReference<?> failedListener, int failureCode)
     {
-        ListenerDTOBuilder<FailedListenerDTO> dtoBuilder = new ListenerDTOBuilder<FailedListenerDTO>(DTOSuppliers.FAILED_LISTENER);
+        ListenerDTOBuilder<FailedListenerDTO> dtoBuilder = new ListenerDTOBuilder<FailedListenerDTO>(DTOFactories.FAILED_LISTENER);
         FailedListenerDTO errorPageDTO = dtoBuilder.buildDTO(failedListener, 0);
         errorPageDTO.failureReason = failureCode;
         return errorPageDTO;

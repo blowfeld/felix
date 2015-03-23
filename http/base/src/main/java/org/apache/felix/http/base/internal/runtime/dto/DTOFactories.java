@@ -18,8 +18,6 @@
  */
 package org.apache.felix.http.base.internal.runtime.dto;
 
-import java.util.function.Supplier;
-
 import org.osgi.service.http.runtime.dto.ErrorPageDTO;
 import org.osgi.service.http.runtime.dto.FailedErrorPageDTO;
 import org.osgi.service.http.runtime.dto.FailedFilterDTO;
@@ -31,9 +29,9 @@ import org.osgi.service.http.runtime.dto.ListenerDTO;
 import org.osgi.service.http.runtime.dto.ResourceDTO;
 import org.osgi.service.http.runtime.dto.ServletDTO;
 
-final class DTOSuppliers
+final class DTOFactories
 {
-    static final Supplier<ServletDTO> SERVLET = new Supplier<ServletDTO>()
+    static final DTOFactory<ServletDTO> SERVLET = new DTOFactory<ServletDTO>()
     {
         @Override
         public ServletDTO get()
@@ -42,7 +40,7 @@ final class DTOSuppliers
         }
     };
 
-    static final Supplier<FailedServletDTO> FAILED_SERVLET = new Supplier<FailedServletDTO>()
+    static final DTOFactory<FailedServletDTO> FAILED_SERVLET = new DTOFactory<FailedServletDTO>()
     {
         @Override
         public FailedServletDTO get()
@@ -51,7 +49,7 @@ final class DTOSuppliers
         }
     };
 
-    static final Supplier<FilterDTO> FILTER = new Supplier<FilterDTO>()
+    static final DTOFactory<FilterDTO> FILTER = new DTOFactory<FilterDTO>()
     {
         @Override
         public FilterDTO get()
@@ -60,7 +58,7 @@ final class DTOSuppliers
         }
     };
 
-    static final Supplier<FailedFilterDTO> FAILED_FILTER = new Supplier<FailedFilterDTO>()
+    static final DTOFactory<FailedFilterDTO> FAILED_FILTER = new DTOFactory<FailedFilterDTO>()
     {
         @Override
         public FailedFilterDTO get()
@@ -69,7 +67,7 @@ final class DTOSuppliers
         }
     };
 
-    static final Supplier<ResourceDTO> RESOURCE = new Supplier<ResourceDTO>()
+    static final DTOFactory<ResourceDTO> RESOURCE = new DTOFactory<ResourceDTO>()
     {
         @Override
         public ResourceDTO get()
@@ -78,7 +76,7 @@ final class DTOSuppliers
         }
     };
 
-    static final Supplier<FailedResourceDTO> FAILED_RESOURCE = new Supplier<FailedResourceDTO>()
+    static final DTOFactory<FailedResourceDTO> FAILED_RESOURCE = new DTOFactory<FailedResourceDTO>()
     {
         @Override
         public FailedResourceDTO get()
@@ -87,7 +85,7 @@ final class DTOSuppliers
         }
     };
 
-    static final Supplier<ListenerDTO> LISTENER = new Supplier<ListenerDTO>()
+    static final DTOFactory<ListenerDTO> LISTENER = new DTOFactory<ListenerDTO>()
     {
         @Override
         public ListenerDTO get()
@@ -96,7 +94,7 @@ final class DTOSuppliers
         }
     };
 
-    static final Supplier<FailedListenerDTO> FAILED_LISTENER = new Supplier<FailedListenerDTO>()
+    static final DTOFactory<FailedListenerDTO> FAILED_LISTENER = new DTOFactory<FailedListenerDTO>()
     {
         @Override
         public FailedListenerDTO get()
@@ -105,7 +103,7 @@ final class DTOSuppliers
         }
     };
 
-    static final Supplier<ErrorPageDTO> ERROR_PAGE = new Supplier<ErrorPageDTO>()
+    static final DTOFactory<ErrorPageDTO> ERROR_PAGE = new DTOFactory<ErrorPageDTO>()
     {
         @Override
         public ErrorPageDTO get()
@@ -114,7 +112,7 @@ final class DTOSuppliers
         }
     };
 
-    static final Supplier<FailedErrorPageDTO> FAILED_ERROR_PAGE = new Supplier<FailedErrorPageDTO>()
+    static final DTOFactory<FailedErrorPageDTO> FAILED_ERROR_PAGE = new DTOFactory<FailedErrorPageDTO>()
     {
         @Override
         public FailedErrorPageDTO get()

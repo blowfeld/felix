@@ -18,8 +18,6 @@
  */
 package org.apache.felix.http.base.internal.runtime.dto;
 
-import java.util.function.Supplier;
-
 import javax.servlet.DispatcherType;
 
 import org.apache.felix.http.base.internal.runtime.FilterInfo;
@@ -29,10 +27,10 @@ final class FilterDTOBuilder<T extends FilterDTO> extends BaseDTOBuilder<FilterR
 {
     static FilterDTOBuilder<FilterDTO> create()
     {
-        return new FilterDTOBuilder<FilterDTO>(DTOSuppliers.FILTER);
+        return new FilterDTOBuilder<FilterDTO>(DTOFactories.FILTER);
     }
 
-    FilterDTOBuilder(Supplier<T> dtoFactory)
+    FilterDTOBuilder(DTOFactory<T> dtoFactory)
     {
         super(dtoFactory);
     }

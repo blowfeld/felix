@@ -18,8 +18,6 @@
  */
 package org.apache.felix.http.base.internal.runtime.dto;
 
-import java.util.function.Supplier;
-
 import javax.servlet.Servlet;
 
 import org.apache.felix.http.base.internal.runtime.ServletInfo;
@@ -27,7 +25,7 @@ import org.osgi.service.http.runtime.dto.BaseServletDTO;
 
 abstract class BaseServletDTOBuilder<T extends ServletRuntime, U extends BaseServletDTO> extends BaseDTOBuilder<T, U>
 {
-    BaseServletDTOBuilder(Supplier<U> servletDTOFactory)
+    BaseServletDTOBuilder(DTOFactory<U> servletDTOFactory)
     {
         super(servletDTOFactory);
     }
