@@ -23,16 +23,15 @@ import static java.util.Arrays.copyOf;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.function.Supplier;
 
 import org.osgi.dto.DTO;
 
 
 abstract class BaseDTOBuilder<T, U extends DTO>
 {
-    private Supplier<U> dtoFactory;
+    private DTOFactory<U> dtoFactory;
 
-    BaseDTOBuilder(Supplier<U> dtoFactory)
+    BaseDTOBuilder(DTOFactory<U> dtoFactory)
     {
         this.dtoFactory = dtoFactory;
     }
@@ -49,7 +48,7 @@ abstract class BaseDTOBuilder<T, U extends DTO>
 
     abstract U buildDTO(T whiteboardService, long servletContextId);
 
-    Supplier<U> getDTOFactory()
+    DTOFactory<U> getDTOFactory()
     {
         return dtoFactory;
     }

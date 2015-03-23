@@ -186,7 +186,7 @@ public final class ServletContextHelperManager
                 {
                     services.add(entry.getKey());
                 }
-                serviceFailures.remove(entry.getKey(), FAILURE_REASON_NO_SERVLET_CONTEXT_MATCHING);
+                removeFailure(entry.getKey(), FAILURE_REASON_NO_SERVLET_CONTEXT_MATCHING);
             }
         }
         // context listeners first
@@ -271,7 +271,7 @@ public final class ServletContextHelperManager
                             this.deactivate(oldHead);
                             this.serviceFailures.put(oldHead.getContextInfo(), FAILURE_REASON_SHADOWED_BY_OTHER_SERVICE);
                         }
-                        this.serviceFailures.remove(handler.getContextInfo(), FAILURE_REASON_SHADOWED_BY_OTHER_SERVICE);
+                        removeFailure(handler.getContextInfo(), FAILURE_REASON_SHADOWED_BY_OTHER_SERVICE);
                         this.activate(handler);
                     }
                     else
@@ -331,7 +331,7 @@ public final class ServletContextHelperManager
                         {
                             ContextHandler newHead = handlerList.get(0);
                             this.activate(newHead);
-                            this.serviceFailures.remove(newHead.getContextInfo(), FAILURE_REASON_SHADOWED_BY_OTHER_SERVICE);
+                            removeFailure(newHead.getContextInfo(), FAILURE_REASON_SHADOWED_BY_OTHER_SERVICE);
                         }
                         listenerRegistry.removeContext(info);
                     }
@@ -521,6 +521,15 @@ public final class ServletContextHelperManager
             SystemLogger.error("Exception while removing servlet", e);
         }
         serviceFailures.remove(info);
+    }
+
+    private void removeFailure(AbstractInfo<?> info, int failureCode)
+    {
+        Integer registeredFailureCode = this.serviceFailures.get(info);
+        if (registeredFailureCode != null && registeredFailureCode == failureCode)
+        {
+            this.serviceFailures.remove(info);
+        }
     }
 
     /**

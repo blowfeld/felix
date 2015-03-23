@@ -18,8 +18,6 @@
  */
 package org.apache.felix.http.base.internal.runtime.dto;
 
-import java.util.function.Supplier;
-
 import org.osgi.framework.Constants;
 import org.osgi.framework.ServiceReference;
 import org.osgi.service.http.runtime.dto.ListenerDTO;
@@ -28,10 +26,10 @@ final class ListenerDTOBuilder<T extends ListenerDTO> extends BaseDTOBuilder<Ser
 {
     static ListenerDTOBuilder<ListenerDTO> create()
     {
-        return new ListenerDTOBuilder<ListenerDTO>(DTOSuppliers.LISTENER);
+        return new ListenerDTOBuilder<ListenerDTO>(DTOFactories.LISTENER);
     }
 
-    ListenerDTOBuilder(Supplier<T> dtoFactory)
+    ListenerDTOBuilder(DTOFactory<T> dtoFactory)
     {
         super(dtoFactory);
     }

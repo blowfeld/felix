@@ -20,7 +20,6 @@ package org.apache.felix.http.base.internal.runtime.dto;
 
 import java.util.Collection;
 import java.util.Iterator;
-import java.util.function.Supplier;
 
 import org.osgi.service.http.runtime.dto.ErrorPageDTO;
 
@@ -28,10 +27,10 @@ final class ErrorPageDTOBuilder<T extends ErrorPageDTO> extends BaseServletDTOBu
 {
     static ErrorPageDTOBuilder<ErrorPageDTO> create()
     {
-        return new ErrorPageDTOBuilder<ErrorPageDTO>(DTOSuppliers.ERROR_PAGE);
+        return new ErrorPageDTOBuilder<ErrorPageDTO>(DTOFactories.ERROR_PAGE);
     }
 
-    ErrorPageDTOBuilder(Supplier<T> dtoFactory)
+    ErrorPageDTOBuilder(DTOFactory<T> dtoFactory)
     {
         super(dtoFactory);
     }
