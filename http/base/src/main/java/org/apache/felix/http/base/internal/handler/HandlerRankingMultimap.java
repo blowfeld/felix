@@ -32,45 +32,45 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 
 
-final class HandlerRankingMultimap<K, V extends AbstractHandler<V>>
+final class HandlerRankingMultimap<K>
 {
-    private final Map<V, Integer> useCounts = new TreeMap<V, Integer>();
+    private final Map<ServletHandler, Integer> useCounts = new TreeMap<ServletHandler, Integer>();
 
-    private final Map<K, PriorityQueue<V>> handlerMultimap;
+    private final Map<K, PriorityQueue<ServletHandler>> handlerMultimap;
     private final Comparator<K> keyComparator;
 
     private int size = 0;
 
     HandlerRankingMultimap()
     {
-        this.handlerMultimap = new HashMap<K, PriorityQueue<V>>();
+        this.handlerMultimap = new HashMap<K, PriorityQueue<ServletHandler>>();
         this.keyComparator = null;
     }
 
     HandlerRankingMultimap(Comparator<K> keyComparator)
     {
         this.keyComparator = keyComparator;
-        this.handlerMultimap = new TreeMap<K, PriorityQueue<V>>(keyComparator);
+        this.handlerMultimap = new TreeMap<K, PriorityQueue<ServletHandler>>(keyComparator);
     }
 
-    boolean isActive(V handler)
+    boolean isActive(ServletHandler handler)
     {
         return useCounts.containsKey(handler);
     }
 
-    Update<K, V> add(K[] keys, V handler)
+    Update<K> add(K[] keys, ServletHandler handler)
     {
         return add(asList(keys), handler);
     }
 
-    Update<K, V> add(Collection<K> keys, V handler)
+    Update<K> add(Collection<K> keys, ServletHandler handler)
     {
-        Map<K, V> activate = createMap();
-        Map<K, V> deactivate = createMap();
-        Set<V> destroy = new TreeSet<V>();
+        Map<K, ServletHandler> activate = createMap();
+        Map<K, ServletHandler> deactivate = createMap();
+        Set<ServletHandler> destroy = new TreeSet<ServletHandler>();
         for (K key : keys)
         {
-            PriorityQueue<V> queue = getQueue(key);
+            PriorityQueue<ServletHandler> queue = getQueue(key);
 
             if (queue.isEmpty() || queue.peek().compareTo(handler) > 0)
             {
@@ -78,7 +78,7 @@ final class HandlerRankingMultimap<K, V extends AbstractHandler<V>>
 
                 if (!queue.isEmpty())
                 {
-                    V currentHead = queue.peek();
+                    ServletHandler currentHead = queue.peek();
                     deactivateEntry(key, currentHead, deactivate, destroy);
                 }
             }
@@ -91,19 +91,19 @@ final class HandlerRankingMultimap<K, V extends AbstractHandler<V>>
         return Update.forAdd(activate, deactivate, destroy);
     }
 
-    Update<K, V> remove(K[] keys, V handler)
+    Update<K> remove(K[] keys, ServletHandler handler)
     {
         return remove(asList(keys), handler);
     }
 
-    Update<K, V> remove(Collection<K> keys, V handler)
+    Update<K> remove(Collection<K> keys, ServletHandler handler)
     {
-        Map<K, V> activate = createMap();
-        Map<K, V> deactivate = createMap();
-        Set<V> init = new TreeSet<V>();
+        Map<K, ServletHandler> activate = createMap();
+        Map<K, ServletHandler> deactivate = createMap();
+        Set<ServletHandler> init = new TreeSet<ServletHandler>();
         for (K key : keys)
         {
-            PriorityQueue<V> queue = getQueue(key);
+            PriorityQueue<ServletHandler> queue = getQueue(key);
 
             boolean isDeactivate = !queue.isEmpty() && queue.peek().compareTo(handler) == 0;
             queue.remove(handler);
@@ -114,7 +114,7 @@ final class HandlerRankingMultimap<K, V extends AbstractHandler<V>>
 
                 if (!queue.isEmpty())
                 {
-                    V newHead = queue.peek();
+                    ServletHandler newHead = queue.peek();
                     activateEntry(key, newHead, activate, init);
                 }
             }
@@ -130,18 +130,18 @@ final class HandlerRankingMultimap<K, V extends AbstractHandler<V>>
         return Update.forRemove(activate, deactivate, init);
     }
 
-    private PriorityQueue<V> getQueue(K key)
+    private PriorityQueue<ServletHandler> getQueue(K key)
     {
-        PriorityQueue<V> queue = handlerMultimap.get(key);
+        PriorityQueue<ServletHandler> queue = handlerMultimap.get(key);
         if (queue == null)
         {
-            queue = new PriorityQueue<V>();
+            queue = new PriorityQueue<ServletHandler>();
             handlerMultimap.put(key, queue);
         }
         return queue;
     }
 
-    private void activateEntry(K key, V handler, Map<K, V> activate, Set<V> init)
+    private void activateEntry(K key, ServletHandler handler, Map<K, ServletHandler> activate, Set<ServletHandler> init)
     {
         activate.put(key, handler);
         if (incrementUseCount(handler) == 1 && init != null)
@@ -150,7 +150,7 @@ final class HandlerRankingMultimap<K, V extends AbstractHandler<V>>
         };
     }
 
-    private void deactivateEntry(K key, V handler, Map<K, V> deactivate, Set<V> destroy)
+    private void deactivateEntry(K key, ServletHandler handler, Map<K, ServletHandler> deactivate, Set<ServletHandler> destroy)
     {
         deactivate.put(key, handler);
         if (decrementUseCount(handler) == 0 && destroy != null)
@@ -159,7 +159,7 @@ final class HandlerRankingMultimap<K, V extends AbstractHandler<V>>
         }
     }
 
-    private int incrementUseCount(V handler)
+    private int incrementUseCount(ServletHandler handler)
     {
         Integer currentCount = useCounts.get(handler);
         Integer newCount = currentCount == null ? 1 : currentCount + 1;
@@ -169,7 +169,7 @@ final class HandlerRankingMultimap<K, V extends AbstractHandler<V>>
         return newCount;
     }
 
-    private int decrementUseCount(V handler)
+    private int decrementUseCount(ServletHandler handler)
     {
         int currentCount = useCounts.get(handler);
         if (currentCount == 1)
@@ -189,23 +189,23 @@ final class HandlerRankingMultimap<K, V extends AbstractHandler<V>>
         useCounts.clear();
     }
 
-    Collection<V> getActiveValues()
+    Collection<ServletHandler> getActiveValues()
     {
-        TreeSet<V> activeValues = new TreeSet<V>();
-        for (PriorityQueue<V> queue : handlerMultimap.values())
+        TreeSet<ServletHandler> activeValues = new TreeSet<ServletHandler>();
+        for (PriorityQueue<ServletHandler> queue : handlerMultimap.values())
         {
             activeValues.add(queue.peek());
         }
         return activeValues;
     }
 
-    Collection<V> getShadowedValues()
+    Collection<ServletHandler> getShadowedValues()
     {
-        TreeSet<V> shadowedValues = new TreeSet<V>();
-        for (PriorityQueue<V> queue : handlerMultimap.values())
+        TreeSet<ServletHandler> shadowedValues = new TreeSet<ServletHandler>();
+        for (PriorityQueue<ServletHandler> queue : handlerMultimap.values())
         {
-            V head = queue.element();
-            for (V value : queue)
+            ServletHandler head = queue.element();
+            for (ServletHandler value : queue)
             {
                 if (value.compareTo(head) != 0)
                 {
@@ -221,19 +221,22 @@ final class HandlerRankingMultimap<K, V extends AbstractHandler<V>>
         return size;
     }
 
-    private Map<K,V> createMap()
+    private Map<K,ServletHandler> createMap()
     {
-        return keyComparator == null ? new HashMap<K, V>() : new TreeMap<K, V>(keyComparator);
+        return keyComparator == null ? new HashMap<K, ServletHandler>() : new TreeMap<K, ServletHandler>(keyComparator);
     }
 
-    static final class Update<K, V extends AbstractHandler<?>>
+    static final class Update<K>
     {
-        private final Map<K, V> activate;
-        private final Map<K, V> deactivate;
-        private final Collection<V> init;
-        private final Collection<V> destroy;
+        private final Map<K, ServletHandler> activate;
+        private final Map<K, ServletHandler> deactivate;
+        private final Collection<ServletHandler> init;
+        private final Collection<ServletHandler> destroy;
 
-        Update(Map<K, V> activate, Map<K, V> deactivate, Collection<V> init, Collection<V> destroy)
+        Update(Map<K, ServletHandler> activate,
+                Map<K, ServletHandler> deactivate,
+                Collection<ServletHandler> init,
+                Collection<ServletHandler> destroy)
         {
             this.activate = activate;
             this.deactivate = deactivate;
@@ -241,52 +244,52 @@ final class HandlerRankingMultimap<K, V extends AbstractHandler<V>>
             this.destroy = destroy;
         }
 
-        private static <K, V extends AbstractHandler<?>> Update<K, V> forAdd(Map<K, V> activate,
-                Map<K, V> deactivate,
-                Collection<V> destroy)
+        private static <K> Update<K> forAdd(Map<K, ServletHandler> activate,
+                Map<K, ServletHandler> deactivate,
+                Collection<ServletHandler> destroy)
         {
             // activate contains at most one value, mapped to multiple keys
-            Collection<V> init = valueAsCollection(activate);
-            return new Update<K, V>(activate, deactivate, init, destroy);
+            Collection<ServletHandler> init = valueAsCollection(activate);
+            return new Update<K>(activate, deactivate, init, destroy);
         }
 
-        private static <K, V extends AbstractHandler<?>> Update<K, V> forRemove(Map<K, V> activate,
-                Map<K, V> deactivate,
-                Collection<V> init)
+        private static <K> Update<K> forRemove(Map<K, ServletHandler> activate,
+                Map<K, ServletHandler> deactivate,
+                Collection<ServletHandler> init)
         {
             // deactivate contains at most one value, mapped to multiple keys
-            Collection<V> destroy = valueAsCollection(deactivate);
-            return new Update<K, V>(activate, deactivate, init, destroy);
+            Collection<ServletHandler> destroy = valueAsCollection(deactivate);
+            return new Update<K>(activate, deactivate, init, destroy);
         }
 
-        private static <K, V extends AbstractHandler<?>> Collection<V> valueAsCollection(Map<K, V> valueMap)
+        private static <K> Collection<ServletHandler> valueAsCollection(Map<K, ServletHandler> valueMap)
         {
             if (valueMap.isEmpty())
             {
                 return Collections.emptyList();
             }
 
-            Collection<V> valueSet = new ArrayList<V>(1);
+            Collection<ServletHandler> valueSet = new ArrayList<ServletHandler>(1);
             valueSet.add(valueMap.values().iterator().next());
             return valueSet;
         }
 
-        Map<K, V> getActivated()
+        Map<K, ServletHandler> getActivated()
         {
             return activate;
         }
 
-        Map<K, V> getDeactivated()
+        Map<K, ServletHandler> getDeactivated()
         {
             return deactivate;
         }
 
-        Collection<V> getInit()
+        Collection<ServletHandler> getInit()
         {
             return init;
         }
 
-        Collection<V> getDestroy()
+        Collection<ServletHandler> getDestroy()
         {
             return destroy;
         }

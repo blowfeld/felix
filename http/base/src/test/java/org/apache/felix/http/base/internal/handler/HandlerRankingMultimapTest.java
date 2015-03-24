@@ -17,8 +17,6 @@
 package org.apache.felix.http.base.internal.handler;
 
 import static java.util.Arrays.asList;
-import static org.hamcrest.Matchers.contains;
-import static org.hamcrest.Matchers.hasEntry;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThat;
@@ -29,29 +27,32 @@ import static org.mockito.Mockito.when;
 
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 
 import javax.servlet.ServletException;
 
 import org.apache.felix.http.base.internal.handler.HandlerRankingMultimap.Update;
+import org.hamcrest.Matcher;
+import org.hamcrest.Matchers;
 import org.junit.Before;
 import org.junit.Test;
 
 @SuppressWarnings("unchecked")
 public class HandlerRankingMultimapTest
 {
-    private HandlerRankingMultimap<String, TestHandler<String>> handlerMultimap;
+    private HandlerRankingMultimap<String> handlerMultimap;
 
     @Before
     public void setup()
     {
-        handlerMultimap = new HandlerRankingMultimap<String, TestHandler<String>>();
+        handlerMultimap = new HandlerRankingMultimap<String>();
     }
 
     @Test
     public void addedInfoIsUsed() throws ServletException
     {
         TestHandler<String> handler = TestHandler.create(asList("a"), 0);
-        Update<String, TestHandler<String>> update = handlerMultimap.add(handler.getKeys(), handler);
+        Update<String> update = handlerMultimap.add(handler.getKeys(), handler);
 
         assertEquals(1, handlerMultimap.size());
         assertTrue(handlerMultimap.isActive(handler));
@@ -73,7 +74,7 @@ public class HandlerRankingMultimapTest
 
         handlerMultimap.add(lower.getKeys(), lower);
 
-        Update<String, TestHandler<String>> updateAddingHigher = handlerMultimap.add(higher.getKeys(), higher);
+        Update<String> updateAddingHigher = handlerMultimap.add(higher.getKeys(), higher);
 
         assertTrue(handlerMultimap.isActive(higher));
         assertFalse(handlerMultimap.isActive(lower));
@@ -98,7 +99,7 @@ public class HandlerRankingMultimapTest
         handlerMultimap.add(lower.getKeys(), lower);
         handlerMultimap.add(higher.getKeys(), higher);
 
-        Update<String, TestHandler<String>> update = handlerMultimap.remove(higher.getKeys(), higher);
+        Update<String> update = handlerMultimap.remove(higher.getKeys(), higher);
 
         assertFalse(handlerMultimap.isActive(higher));
         assertTrue(handlerMultimap.isActive(lower));
@@ -123,7 +124,7 @@ public class HandlerRankingMultimapTest
         handlerMultimap.add(lower.getKeys(), higher);
         handlerMultimap.add(higher.getKeys(), lower);
 
-        Update<String, TestHandler<String>> update = handlerMultimap.remove(lower.getKeys(), lower);
+        Update<String> update = handlerMultimap.remove(lower.getKeys(), lower);
 
         assertTrue(handlerMultimap.isActive(higher));
         assertFalse(handlerMultimap.isActive(lower));
@@ -140,7 +141,7 @@ public class HandlerRankingMultimapTest
     {
         TestHandler<String> handler = TestHandler.create(asList("a", "b"), 0);
 
-        Update<String, TestHandler<String>> update = handlerMultimap.add(handler.getKeys(), handler);
+        Update<String> update = handlerMultimap.add(handler.getKeys(), handler);
 
         assertTrue(handlerMultimap.isActive(handler));
 
@@ -161,7 +162,7 @@ public class HandlerRankingMultimapTest
 
         handlerMultimap.add(lower.getKeys(), lower);
 
-        Update<String, TestHandler<String>> updateWithHigher = handlerMultimap.add(higher.getKeys(), higher);
+        Update<String> updateWithHigher = handlerMultimap.add(higher.getKeys(), higher);
 
         assertTrue(handlerMultimap.isActive(higher));
         assertFalse(handlerMultimap.isActive(lower));
@@ -188,7 +189,7 @@ public class HandlerRankingMultimapTest
 
         handlerMultimap.add(lower.getKeys(), lower);
 
-        Update<String, TestHandler<String>> updateWithHigher = handlerMultimap.add(higher.getKeys(), higher);
+        Update<String> updateWithHigher = handlerMultimap.add(higher.getKeys(), higher);
 
         assertTrue(handlerMultimap.isActive(higher));
         assertTrue(handlerMultimap.isActive(lower));
@@ -212,7 +213,7 @@ public class HandlerRankingMultimapTest
 
         handlerMultimap.add(higher.getKeys(), higher);
 
-        Update<String, TestHandler<String>> updateWithLower = handlerMultimap.add(lower.getKeys(), lower);
+        Update<String> updateWithLower = handlerMultimap.add(lower.getKeys(), lower);
 
         assertTrue(handlerMultimap.isActive(higher));
         assertFalse(handlerMultimap.isActive(lower));
@@ -322,8 +323,7 @@ public class HandlerRankingMultimapTest
             }
         };
 
-        HandlerRankingMultimap<Object, TestHandler<Object>> multimap =
-                new HandlerRankingMultimap<Object, TestHandler<Object>>(keyComparator);
+        HandlerRankingMultimap<Object> multimap = new HandlerRankingMultimap<Object>(keyComparator);
 
         TestHandler<Object> handlerOne = TestHandler.create(asList(keyOne), 1);
         TestHandler<Object> handlerTwo = TestHandler.create(asList(keyOne, keyTwo), 0);
@@ -339,13 +339,23 @@ public class HandlerRankingMultimapTest
         assertTrue(multimap.getShadowedValues().contains(keyTwo));
     }
 
-    private static abstract class TestHandler<T> extends AbstractHandler<TestHandler<T>>
+    private static Matcher<Map<? extends String, ? extends ServletHandler>> hasEntry(String key, ServletHandler servletHandler)
+    {
+        return Matchers.hasEntry(key, servletHandler);
+    }
+
+    private static Matcher<Iterable<? extends ServletHandler>> contains(ServletHandler servletHandler)
+    {
+        return Matchers.contains(servletHandler);
+    }
+
+    private static abstract class TestHandler<T> extends ServletHandler
     {
         static int idCount = 0;
 
         TestHandler(List<T> keys, int ranking)
         {
-            super(null, null, null);
+            super(0L, null, null);
         }
 
         static <T> TestHandler<T> create(List<T> keys, int ranking)
@@ -359,10 +369,11 @@ public class HandlerRankingMultimapTest
         }
 
         @Override
-        public int compareTo(TestHandler<T> o)
+        public int compareTo(ServletHandler o)
         {
-            int rankCompare = Integer.compare(o.getRanking(), getRanking());
-            return rankCompare != 0 ? rankCompare : Integer.compare(getId(), o.getId());
+            TestHandler<T> other = (TestHandler<T>) o;
+            int rankCompare = Integer.compare(other.getRanking(), getRanking());
+            return rankCompare != 0 ? rankCompare : Integer.compare(getId(), other.getId());
         }
 
         abstract int getRanking();

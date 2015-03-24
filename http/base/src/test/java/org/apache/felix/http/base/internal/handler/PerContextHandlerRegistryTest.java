@@ -86,9 +86,10 @@ public class PerContextHandlerRegistryTest
     @Test public void testOrderingTransitivity()
     {
         testTransitivity("/", "/foo", "/barrr", 1L, 2L, 3L, 0, 0, 0);
-        testTransitivity("/", "/", "/", 0L, 1L, 2L, 1, 2, 3);
+        testTransitivity("/", "/", "/", 1L, 2L, 3L, 1, 2, 3);
+        testTransitivity("/", "/", "/", 2L, 1L, 0L, 1, 2, 3);
         testTransitivity("/", "/", "/", 2L, 1L, 0L, 0, 0, 0);
-        testTransitivity("/", "/", "/", -1L, 1L, 0L, 0, 0, 0);
+        testTransitivity("/", "/", "/", 1L, -1L, 0L, 0, 0, 0);
         testTransitivity("/", "/", "/", -2L, -1L, 0L, 0, 0, 0);
     }
 

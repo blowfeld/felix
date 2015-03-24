@@ -46,7 +46,6 @@ import org.apache.felix.http.base.internal.runtime.dto.ErrorPageRuntime;
 import org.apache.felix.http.base.internal.runtime.dto.FailureRuntime;
 import org.apache.felix.http.base.internal.runtime.dto.FilterRuntime;
 import org.apache.felix.http.base.internal.runtime.dto.ServletRuntime;
-import org.apache.felix.http.base.internal.whiteboard.ResourceServlet;
 import org.apache.felix.http.base.internal.util.PatternUtil.PatternComparator;
 import org.apache.felix.http.base.internal.whiteboard.RegistrationFailureException;
 
@@ -58,8 +57,8 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
     private volatile HandlerMapping<FilterHandler> filterMapping = new HandlerMapping<FilterHandler>();
     private volatile ErrorsMapping errorsMapping = new ErrorsMapping();
 
-    private final HandlerRankingMultimap<Pattern, ServletHandler> registeredServletHandlers = new HandlerRankingMultimap<Pattern, ServletHandler>(PatternComparator.INSTANCE);
-    private final HandlerRankingMultimap<String, ServletHandler> registeredErrorPages = new HandlerRankingMultimap<String, ServletHandler>();
+    private final HandlerRankingMultimap<Pattern> registeredServletHandlers = new HandlerRankingMultimap<Pattern>(PatternComparator.INSTANCE);
+    private final HandlerRankingMultimap<String> registeredErrorPages = new HandlerRankingMultimap<String>();
     private final SortedSet<ServletHandler> allServletHandlers = new TreeSet<ServletHandler>();
 
     private final long serviceId;
@@ -96,12 +95,18 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
     @Override
     public int compareTo(final PerContextHandlerRegistry other)
     {
+        // the context of the HttpService is the least element
+        if (this.serviceId == 0 ^ other.serviceId == 0)
+        {
+            return this.serviceId == 0 ? -1 : 1;
+        }
+
         final int result = Integer.compare(other.path.length(), this.path.length());
         if ( result == 0 ) {
             if (this.ranking == other.ranking)
             {
                 // Service id's can be negative. Negative id's follow the reverse natural ordering of integers.
-                int reverseOrder = ( this.serviceId >= 0 && other.serviceId >= 0 ) ? 1 : -1;
+                int reverseOrder = ( this.serviceId <= 0 && other.serviceId <= 0 ) ? -1 : 1;
                 return reverseOrder * Long.compare(this.serviceId, other.serviceId);
             }
 
@@ -163,7 +168,7 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
 
     private void addServlet(ServletHandler handler, Pattern[] patterns) throws RegistrationFailureException
     {
-        Update<Pattern, ServletHandler> update = this.registeredServletHandlers.add(handler.getPatterns(), handler);
+        Update<Pattern> update = this.registeredServletHandlers.add(handler.getPatterns(), handler);
         initHandlers(update.getInit());
         this.servletMapping = this.servletMapping.update(update.getActivated(), update.getDeactivated());
         destroyHandlers(update.getDestroy());
@@ -171,7 +176,7 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
 
     private void addErrorPage(ServletHandler handler, String[] errorPages) throws RegistrationFailureException
     {
-        Update<String, ServletHandler> update = this.registeredErrorPages.add(errorPages, handler);
+        Update<String> update = this.registeredErrorPages.add(errorPages, handler);
         initHandlers(update.getInit());
         this.errorsMapping = this.errorsMapping.update(update.getActivated(), update.getDeactivated());
         destroyHandlers(update.getDestroy());
@@ -284,7 +289,7 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
     private void removeServlet(ServletHandler handler, boolean destroy) throws RegistrationFailureException
     {
         Pattern[] patterns = handler.getPatterns();
-        Update<Pattern, ServletHandler> update = this.registeredServletHandlers.remove(patterns, handler);
+        Update<Pattern> update = this.registeredServletHandlers.remove(patterns, handler);
         initHandlers(update.getInit());
         this.servletMapping = this.servletMapping.update(update.getActivated(), update.getDeactivated());
         if (destroy)
@@ -296,7 +301,7 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
     private void removeErrorPage(ServletHandler handler, boolean destroy) throws RegistrationFailureException
     {
         String[] errorPages = handler.getServletInfo().getErrorPage();
-        Update<String, ServletHandler> update = this.registeredErrorPages.remove(errorPages, handler);
+        Update<String> update = this.registeredErrorPages.remove(errorPages, handler);
         initHandlers(update.getInit());
         this.errorsMapping = this.errorsMapping.update(update.getActivated(), update.getDeactivated());
         if (destroy)

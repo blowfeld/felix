@@ -65,7 +65,7 @@ public abstract class ServletHandler extends AbstractHandler<ServletHandler> imp
     }
 
     @Override
-    public final int compareTo(final ServletHandler other)
+    public int compareTo(final ServletHandler other)
     {
         return this.servletInfo.compareTo(other.servletInfo);
     }
