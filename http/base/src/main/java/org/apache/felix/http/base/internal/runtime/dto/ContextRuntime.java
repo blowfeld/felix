@@ -51,27 +51,27 @@ public final class ContextRuntime
                 serviceId);
     }
 
-    public Collection<ServletRuntime> getServletRuntimes()
+    Collection<ServletRuntime> getServletRuntimes()
     {
         return servletRuntimes;
     }
 
-    public Collection<FilterRuntime> getFilterRuntimes()
+    Collection<FilterRuntime> getFilterRuntimes()
     {
         return filterRuntimes;
     }
 
-    public Collection<ServletRuntime> getResourceRuntimes()
+    Collection<ServletRuntime> getResourceRuntimes()
     {
         return resourceRuntimes;
     }
 
-    public Collection<ErrorPageRuntime> getErrorPageRuntimes()
+    Collection<ErrorPageRuntime> getErrorPageRuntimes()
     {
         return errorPageRuntimes;
     }
 
-    public long getServiceId()
+    long getServiceId()
     {
         return serviceId;
     }

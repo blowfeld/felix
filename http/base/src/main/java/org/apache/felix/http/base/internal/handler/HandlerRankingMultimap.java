@@ -259,7 +259,7 @@ final class HandlerRankingMultimap<K, V extends AbstractHandler<V>>
             return new Update<K, V>(activate, deactivate, init, destroy);
         }
 
-        private static <V extends AbstractHandler<?>, K> Collection<V> valueAsCollection(Map<K, V> valueMap)
+        private static <K, V extends AbstractHandler<?>> Collection<V> valueAsCollection(Map<K, V> valueMap)
         {
             if (valueMap.isEmpty())
             {
