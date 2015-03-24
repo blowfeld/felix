@@ -227,7 +227,7 @@ public final class FailureRuntime
         {
             if (info instanceof ServletContextHelperInfo)
             {
-                ServletContextHelperRuntime servletRuntime = new FailureServletContextHelperRuntime((ServletContextHelperInfo) info);
+                ServletContextHelperRuntime servletRuntime = new InfoServletContextHelperRuntime((ServletContextHelperInfo) info);
                 contextRuntimes.add(new Failure<ServletContextHelperRuntime>(servletRuntime, failureCode));
             }
             else if (info instanceof ServletInfo && ((ServletInfo) info).getErrorPage() != null)

@@ -27,6 +27,8 @@ import javax.servlet.DispatcherType;
 import org.apache.felix.http.base.internal.runtime.ServletContextHelperInfo;
 import org.apache.felix.http.base.internal.runtime.dto.ContextRuntime;
 import org.apache.felix.http.base.internal.runtime.dto.FailureRuntime;
+import org.apache.felix.http.base.internal.runtime.dto.InfoServletContextHelperRuntime;
+import org.apache.felix.http.base.internal.runtime.dto.ServletContextHelperRuntime;
 
 /**
  * Registry for all services.
@@ -227,5 +229,11 @@ public final class HandlerRegistry
             handlerRuntimes.add(contextRegistry.getRuntime(failureRuntimeBuilder));
         }
         return handlerRuntimes;
+    }
+
+    public ServletContextHelperRuntime getHttpServiceContextRuntime()
+    {
+        ServletContextHelperInfo info = new ServletContextHelperInfo(Integer.MAX_VALUE, 0, "Http service context", "/", null);
+        return new InfoServletContextHelperRuntime(info);
     }
 }

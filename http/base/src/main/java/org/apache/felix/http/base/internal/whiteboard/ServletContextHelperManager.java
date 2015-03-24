@@ -601,6 +601,7 @@ public final class ServletContextHelperManager
                     contextRuntimes.add(contextHandlerList.get(0));
                 }
             }
+            contextRuntimes.add(registry.getHttpServiceContextRuntime());
             handlerRuntimes = registry.getRuntime(failureRuntime);
             listenerRuntimes = listenerRegistry.getContextRuntimes();
             failureRuntime.add(serviceFailures);
