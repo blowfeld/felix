@@ -25,7 +25,6 @@ import javax.servlet.ServletException;
 
 import org.apache.felix.http.base.internal.handler.FilterHandler;
 import org.apache.felix.http.base.internal.handler.HandlerRegistry;
-import org.apache.felix.http.base.internal.handler.PerContextHandlerRegistry;
 import org.apache.felix.http.base.internal.handler.ResourceServletHandler;
 import org.apache.felix.http.base.internal.handler.ServletHandler;
 import org.apache.felix.http.base.internal.handler.WhiteboardServletHandler;
@@ -64,29 +63,22 @@ public final class WhiteboardHttpService
             throws RegistrationFailureException
     {
         ServletContextHelperInfo contextInfo = contextHandler.getContextInfo();
-        final PerContextHandlerRegistry registry = this.handlerRegistry.getRegistry(contextInfo);
-        if (registry != null)
+        try
         {
-            try
-            {
-                ServletHandler handler = new WhiteboardServletHandler(contextHandler.getContextInfo(),
-                        contextHandler.getServletContext(servletInfo.getServiceReference().getBundle()),
-                        servletInfo,
-                        bundleContext);
+            ServletHandler handler = new WhiteboardServletHandler(contextHandler.getContextInfo(),
+                contextHandler.getServletContext(servletInfo.getServiceReference().getBundle()),
+                servletInfo,
+                bundleContext);
 
-                registry.addServlet(handler);
-            }
-            catch (final RegistrationFailureException e)
-            {
-                throw e;
-            }
-            catch (final ServletException e)
-            {
-                throw new RegistrationFailureException(servletInfo, FAILURE_REASON_EXCEPTION_ON_INIT, e);
-            }
-        } else
+            handlerRegistry.addServlet(contextInfo, handler);
+        }
+        catch (final RegistrationFailureException e)
         {
-            throw new RegistrationFailureException(servletInfo, FAILURE_REASON_SERVICE_NOT_GETTABLE);
+            throw e;
+        }
+        catch (final ServletException e)
+        {
+            throw new RegistrationFailureException(servletInfo, FAILURE_REASON_EXCEPTION_ON_INIT, e);
         }
     }
 
@@ -98,11 +90,7 @@ public final class WhiteboardHttpService
      */
     public void unregisterServlet(@Nonnull final ContextHandler contextHandler, @Nonnull final ServletInfo servletInfo) throws RegistrationFailureException
     {
-        final PerContextHandlerRegistry registry = this.handlerRegistry.getRegistry(contextHandler.getContextInfo());
-        if (registry != null )
-        {
-            registry.removeServlet(servletInfo, true);
-        }
+        handlerRegistry.removeServlet(contextHandler.getContextInfo(), servletInfo);
         contextHandler.ungetServletContext(servletInfo.getServiceReference().getBundle());
     }
 
@@ -123,11 +111,7 @@ public final class WhiteboardHttpService
                     filter,
                     filterInfo);
             try {
-                final PerContextHandlerRegistry registry = this.handlerRegistry.getRegistry(contextHandler.getContextInfo());
-                if (registry != null )
-                {
-                    registry.addFilter(handler);
-                }
+                handlerRegistry.addFilter(contextHandler.getContextInfo(), handler);
             }
             catch (final RegistrationFailureException e)
             {
@@ -151,14 +135,10 @@ public final class WhiteboardHttpService
      */
     public void unregisterFilter(@Nonnull final ContextHandler contextHandler, @Nonnull final FilterInfo filterInfo)
     {
-        final PerContextHandlerRegistry registry = this.handlerRegistry.getRegistry(contextHandler.getContextInfo());
-        if (registry != null )
+        final Filter instance = handlerRegistry.removeFilter(contextHandler.getContextInfo(), filterInfo);
+        if ( instance != null )
         {
-            final Filter instance = registry.removeFilter(filterInfo, true);
-            if ( instance != null )
-            {
-                this.bundleContext.getServiceObjects(filterInfo.getServiceReference()).ungetService(instance);
-            }
+            this.bundleContext.getServiceObjects(filterInfo.getServiceReference()).ungetService(instance);
         }
         contextHandler.ungetServletContext(filterInfo.getServiceReference().getBundle());
     }
@@ -172,21 +152,20 @@ public final class WhiteboardHttpService
     public void registerResource(@Nonnull final ContextHandler contextHandler,
             @Nonnull final ResourceInfo resourceInfo) throws RegistrationFailureException
     {
-    	final ServletInfo servletInfo = new ServletInfo(resourceInfo);
-    	
-    	final ServletHandler handler = new ResourceServletHandler(contextHandler.getContextInfo(),
-    			contextHandler.getServletContext(servletInfo.getServiceReference().getBundle()),
-    			servletInfo);
- 
-    	try {
-    		final PerContextHandlerRegistry registry = this.handlerRegistry.getRegistry(contextHandler.getContextInfo());	
-    		if(registry != null)
-    		{
-    				registry.addServlet(handler);
-    		}
-    	} catch (ServletException e) {
+        final ServletInfo servletInfo = new ServletInfo(resourceInfo);
+
+        final ServletHandler handler = new ResourceServletHandler(contextHandler.getContextInfo(),
+            contextHandler.getServletContext(servletInfo.getServiceReference().getBundle()),
+            servletInfo);
+
+        try
+        {
+            handlerRegistry.addServlet(contextHandler.getContextInfo(), handler);
+        }
+        catch (ServletException e)
+        {
             throw new RegistrationFailureException(resourceInfo, FAILURE_REASON_EXCEPTION_ON_INIT, e);
-    	}
+        }
     }
 
     /**
@@ -198,11 +177,7 @@ public final class WhiteboardHttpService
     public void unregisterResource(@Nonnull final ContextHandler contextHandler, @Nonnull final ResourceInfo resourceInfo) throws RegistrationFailureException
     {
         final ServletInfo servletInfo = new ServletInfo(resourceInfo);
-        final PerContextHandlerRegistry registry = this.handlerRegistry.getRegistry(contextHandler.getContextInfo());
-        if (registry != null )
-        {
-            registry.removeServlet(servletInfo, true);
-        }
+        handlerRegistry.removeServlet(contextHandler.getContextInfo(), servletInfo);
         contextHandler.ungetServletContext(servletInfo.getServiceReference().getBundle());
     }
 
