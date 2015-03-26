@@ -142,7 +142,25 @@ public final class HandlerRegistry
         return null;
     }
 
-    public ErrorsMapping getErrorsMapping(final String requestURI, final Long serviceId)
+    public ServletHandler getErrorsHandler(String requestURI, Long serviceId, int code, String exceptionType)
+    {
+        ErrorsMapping errorsMapping = getErrorsMapping(requestURI, serviceId);
+        if (errorsMapping == null)
+        {
+            return null;
+        }
+
+        // TODO check exception hierarchy
+        ServletHandler errorHandler = errorsMapping.get(exceptionType);
+        if (errorHandler != null)
+        {
+            return errorHandler;
+        }
+
+        return errorsMapping.get(code);
+    }
+
+    private ErrorsMapping getErrorsMapping(final String requestURI, final Long serviceId)
     {
         final List<PerContextHandlerRegistry> regs = this.registrations;
         for(final PerContextHandlerRegistry r : regs)
