@@ -290,7 +290,7 @@ public final class PriorityTrie<V, C extends Comparable<C>>
         while (isPrefix(current, path))
         {
             pathToParent.add(current);
-            current = current.getChildren().floor(new Node<V, C>(path));
+            current = current.getFloorChild(path);
         }
 
         Collections.reverse(pathToParent);

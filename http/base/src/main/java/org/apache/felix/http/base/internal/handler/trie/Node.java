@@ -1,6 +1,7 @@
 package org.apache.felix.http.base.internal.handler.trie;
 
 import static java.util.Collections.unmodifiableCollection;
+import static java.util.Collections.unmodifiableSortedSet;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -77,10 +78,9 @@ final class Node<V, C extends Comparable<C>> implements Comparable<Node<V, C>>
         return values.iterator().next().getColor();
     }
 
-    TreeSet<Node<V, C>> getChildren()
+    SortedSet<Node<V, C>> getChildren()
     {
-        //TODO unmodifiable
-        return children;
+        return unmodifiableSortedSet(children);
     }
 
     SortedSet<Node<V, C>> getChildren(String prefix)
@@ -92,8 +92,12 @@ final class Node<V, C extends Comparable<C>> implements Comparable<Node<V, C>>
 
         Node<V, C> startNode = new Node<V, C>(prefix);
         Node<V, C> endNode = new Node<V, C>(incrementPrefix(prefix));
-        //TODO unmodifiable
-        return children.subSet(startNode, endNode);
+        return unmodifiableSortedSet(children.subSet(startNode, endNode));
+    }
+
+    Node<V, C> getFloorChild(String path)
+    {
+        return children.floor(new Node<V, C>(path));
     }
 
     boolean isLeaf()
