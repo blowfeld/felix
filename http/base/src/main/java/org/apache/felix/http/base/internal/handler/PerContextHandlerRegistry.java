@@ -19,7 +19,6 @@ package org.apache.felix.http.base.internal.handler;
 import static org.osgi.service.http.runtime.dto.DTOConstants.FAILURE_REASON_EXCEPTION_ON_INIT;
 import static org.osgi.service.http.runtime.dto.DTOConstants.FAILURE_REASON_SERVICE_ALREAY_USED;
 import static org.osgi.service.http.runtime.dto.DTOConstants.FAILURE_REASON_SHADOWED_BY_OTHER_SERVICE;
-import static org.osgi.service.http.runtime.dto.DTOConstants.FAILURE_REASON_VALIDATION_FAILED;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -28,13 +27,10 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.SortedSet;
 import java.util.TreeSet;
-import java.util.regex.Pattern;
 
 import javax.servlet.DispatcherType;
 import javax.servlet.Filter;
-import javax.servlet.Servlet;
 import javax.servlet.ServletException;
 
 import org.apache.felix.http.base.internal.handler.HandlerRankingMultimap.Update;
@@ -46,20 +42,16 @@ import org.apache.felix.http.base.internal.runtime.dto.ErrorPageRuntime;
 import org.apache.felix.http.base.internal.runtime.dto.FailureRuntime;
 import org.apache.felix.http.base.internal.runtime.dto.FilterRuntime;
 import org.apache.felix.http.base.internal.runtime.dto.ServletRuntime;
-import org.apache.felix.http.base.internal.util.PatternUtil.PatternComparator;
 import org.apache.felix.http.base.internal.whiteboard.RegistrationFailureException;
 
 public final class PerContextHandlerRegistry implements Comparable<PerContextHandlerRegistry>
 {
     private final Map<Filter, FilterHandler> filterMap = new HashMap<Filter, FilterHandler>();
 
-    private volatile HandlerMapping<ServletHandler> servletMapping = new HandlerMapping<ServletHandler>();
     private volatile HandlerMapping<FilterHandler> filterMapping = new HandlerMapping<FilterHandler>();
     private volatile ErrorsMapping errorsMapping = new ErrorsMapping();
 
-    private final HandlerRankingMultimap<Pattern> registeredServletHandlers = new HandlerRankingMultimap<Pattern>(PatternComparator.INSTANCE);
     private final HandlerRankingMultimap<String> registeredErrorPages = new HandlerRankingMultimap<String>();
-    private final SortedSet<ServletHandler> allServletHandlers = new TreeSet<ServletHandler>();
 
     private final long serviceId;
 
@@ -136,45 +128,8 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
         this.filterMap.put(handler.getFilter(), handler);
     }
 
-    /**
-     * Add a new servlet.
-     */
-    public synchronized void addServlet(final ServletHandler handler) throws RegistrationFailureException
-    {
-        if (this.allServletHandlers.contains(handler))
-        {
-            throw new RegistrationFailureException(handler.getServletInfo(), FAILURE_REASON_SERVICE_ALREAY_USED,
-                "Filter instance " + handler.getName() + " already registered");
-        }
 
-        Pattern[] patterns = handler.getPatterns();
-        String[] errorPages = handler.getServletInfo().getErrorPage();
-        if (patterns != null && patterns.length > 0)
-        {
-            addServlet(handler, patterns);
-        }
-        else if (errorPages != null && errorPages.length > 0)
-        {
-            addErrorPage(handler, errorPages);
-        }
-        else
-        {
-            throw new RegistrationFailureException(handler.getServletInfo(), FAILURE_REASON_VALIDATION_FAILED,
-                "Neither patterns nor errorPages specified for " + handler.getName());
-        }
-
-        this.allServletHandlers.add(handler);
-    }
-
-    private void addServlet(ServletHandler handler, Pattern[] patterns) throws RegistrationFailureException
-    {
-        Update<Pattern> update = this.registeredServletHandlers.add(handler.getPatterns(), handler);
-        initHandlers(update.getInit());
-        this.servletMapping = this.servletMapping.update(update.getActivated(), update.getDeactivated());
-        destroyHandlers(update.getDestroy());
-    }
-
-    private void addErrorPage(ServletHandler handler, String[] errorPages) throws RegistrationFailureException
+    void addErrorPage(ServletHandler handler, String[] errorPages) throws RegistrationFailureException
     {
         Update<String> update = this.registeredErrorPages.add(errorPages, handler);
         initHandlers(update.getInit());
@@ -184,21 +139,16 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
 
     public synchronized void removeAll()
     {
-        Collection<ServletHandler> servletHandlers = this.servletMapping.values();
         Collection<ServletHandler> errorPageHandlers = this.errorsMapping.values();
         Collection<FilterHandler> filterHandlers = this.filterMapping.values();
 
-        this.servletMapping = new HandlerMapping<ServletHandler>();
         this.filterMapping = new HandlerMapping<FilterHandler>();
         this.errorsMapping = new ErrorsMapping();
 
         destroyHandlers(filterHandlers);
-        destroyHandlers(servletHandlers);
         destroyHandlers(errorPageHandlers);
 
-        this.allServletHandlers.clear();
         this.filterMap.clear();
-        this.registeredServletHandlers.clear();
         this.registeredErrorPages.clear();
     }
 
@@ -245,69 +195,42 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
         return null;
     }
 
-    public synchronized Servlet removeServlet(ServletInfo servletInfo, final boolean destroy) throws RegistrationFailureException
+    void removeErrorPage(ServletInfo info) throws RegistrationFailureException
     {
-        ServletHandler handler = getServletHandler(servletInfo);
+        ServletHandler handler = getServletHandler(info);
         if (handler == null)
         {
-            return null;
+            return;
         }
-
-        Servlet servlet = handler.getServlet();
-
-        Pattern[] patterns = handler.getPatterns();
-        if (patterns != null && patterns.length > 0)
-        {
-            removeServlet(handler, destroy);
-        }
-        else
-        {
-            removeErrorPage(handler, destroy);
-        }
-
-        if (destroy)
-        {
-            handler.destroy();
-        }
-
-        return servlet;
-    }
-
-    public synchronized void removeServlet(Servlet servlet, final boolean destroy) throws RegistrationFailureException
-    {
-        Iterator<ServletHandler> it = this.allServletHandlers.iterator();
-        while (it.hasNext())
-        {
-            ServletHandler handler = it.next();
-            if (handler.getServlet() == servlet)
-            {
-                removeServlet(handler.getServletInfo(), destroy);
-            }
-        }
-    }
-
-    private void removeServlet(ServletHandler handler, boolean destroy) throws RegistrationFailureException
-    {
-        Pattern[] patterns = handler.getPatterns();
-        Update<Pattern> update = this.registeredServletHandlers.remove(patterns, handler);
-        initHandlers(update.getInit());
-        this.servletMapping = this.servletMapping.update(update.getActivated(), update.getDeactivated());
-        if (destroy)
-        {
-            destroyHandlers(update.getDestroy());
-        }
-    }
-
-    private void removeErrorPage(ServletHandler handler, boolean destroy) throws RegistrationFailureException
-    {
         String[] errorPages = handler.getServletInfo().getErrorPage();
         Update<String> update = this.registeredErrorPages.remove(errorPages, handler);
         initHandlers(update.getInit());
         this.errorsMapping = this.errorsMapping.update(update.getActivated(), update.getDeactivated());
-        if (destroy)
+        destroyHandlers(update.getDestroy());
+    }
+
+    private ServletHandler getServletHandler(final ServletInfo servletInfo)
+    {
+        ServletHandler servletHandler = getServletHandler(servletInfo, this.registeredErrorPages.getActiveValues());
+        if (servletHandler == null)
         {
-            destroyHandlers(update.getDestroy());
+            return getServletHandler(servletInfo, this.registeredErrorPages.getShadowedValues());
         }
+        return servletHandler;
+    }
+
+    private ServletHandler getServletHandler(final ServletInfo servletInfo, Collection<ServletHandler> values)
+    {
+        Iterator<ServletHandler> it = values.iterator();
+        while (it.hasNext())
+        {
+            ServletHandler handler = it.next();
+            if (handler.getServletInfo().compareTo(servletInfo) == 0)
+            {
+                return handler;
+            }
+        }
+        return null;
     }
 
     private void initHandlers(Collection<ServletHandler> handlers) throws RegistrationFailureException
@@ -392,30 +315,6 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
         return false;
     }
 
-    public ServletHandler getServletHandler(String requestURI)
-    {
-        return this.servletMapping.getBestMatch(requestURI);
-    }
-
-    public ServletHandler getServletHandlerByName(String name)
-    {
-        return this.servletMapping.getByName(name);
-    }
-
-    private ServletHandler getServletHandler(final ServletInfo servletInfo)
-    {
-        Iterator<ServletHandler> it = this.allServletHandlers.iterator();
-        while (it.hasNext())
-        {
-            ServletHandler handler = it.next();
-            if (handler.getServletInfo().compareTo(servletInfo) == 0)
-            {
-                return handler;
-            }
-        }
-        return null;
-    }
-
     public ErrorsMapping getErrorsMapping()
     {
         return this.errorsMapping;
@@ -450,32 +349,15 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
             filterRuntimes.add(filterRuntime);
         }
 
-        Collection<ServletRuntime> servletRuntimes = new TreeSet<ServletRuntime>(ServletRuntime.COMPARATOR);
-        Collection<ServletRuntime> resourceRuntimes = new TreeSet<ServletRuntime>(ServletRuntime.COMPARATOR);
-        for (ServletHandler activeHandler : this.registeredServletHandlers.getActiveValues())
-        {
-            if (activeHandler.getServletInfo().isResource())
-            {
-                resourceRuntimes.add(activeHandler);
-            }
-            else
-            {
-                servletRuntimes.add(activeHandler);
-            }
-        }
-
         Collection<ErrorPageRuntime> errorPages = new TreeSet<ErrorPageRuntime>(ServletRuntime.COMPARATOR);
         for (ServletHandler servletHandler : this.registeredErrorPages.getActiveValues())
         {
             errorPages.add(ErrorPageRuntime.fromServletRuntime(servletHandler));
         }
 
-        addShadowedHandlers(failureRuntimeBuilder, this.registeredServletHandlers.getShadowedValues());
         addShadowedHandlers(failureRuntimeBuilder, this.registeredErrorPages.getShadowedValues());
 
-        return new ContextRuntime(servletRuntimes,
-                filterRuntimes,
-                resourceRuntimes,
+        return new ContextRuntime(filterRuntimes,
                 errorPages,
                 this.serviceId);
     }

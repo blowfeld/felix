@@ -52,8 +52,8 @@ import org.apache.felix.http.base.internal.runtime.ServletInfo;
 import org.apache.felix.http.base.internal.runtime.ServletRequestAttributeListenerInfo;
 import org.apache.felix.http.base.internal.runtime.ServletRequestListenerInfo;
 import org.apache.felix.http.base.internal.runtime.WhiteboardServiceInfo;
-import org.apache.felix.http.base.internal.runtime.dto.ContextRuntime;
 import org.apache.felix.http.base.internal.runtime.dto.FailureRuntime;
+import org.apache.felix.http.base.internal.runtime.dto.HandlerRegistryRuntime;
 import org.apache.felix.http.base.internal.runtime.dto.RegistryRuntime;
 import org.apache.felix.http.base.internal.runtime.dto.ServletContextHelperRuntime;
 import org.apache.felix.http.base.internal.util.MimeTypes;
@@ -589,7 +589,7 @@ public final class ServletContextHelperManager
     public RegistryRuntime getRuntime(HandlerRegistry registry)
     {
         Collection<ServletContextHelperRuntime> contextRuntimes = new TreeSet<ServletContextHelperRuntime>(ServletContextHelperRuntime.COMPARATOR);
-        List<ContextRuntime> handlerRuntimes;
+        HandlerRegistryRuntime handlerRuntimes;
         Map<Long, Collection<ServiceReference<?>>> listenerRuntimes;
         FailureRuntime.Builder failureRuntime = FailureRuntime.builder();
         synchronized ( this.contextMap )
@@ -606,6 +606,10 @@ public final class ServletContextHelperManager
             listenerRuntimes = listenerRegistry.getContextRuntimes();
             failureRuntime.add(serviceFailures);
         }
-        return new RegistryRuntime(contextRuntimes, handlerRuntimes, listenerRuntimes, failureRuntime.build());
+        return new RegistryRuntime(contextRuntimes,
+            handlerRuntimes.getContextRuntimes(),
+            handlerRuntimes.getServletRegistryRuntime(),
+            listenerRuntimes,
+            failureRuntime.build());
     }
 }

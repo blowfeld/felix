@@ -14,29 +14,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.felix.http.base.internal.handler.trie;
+package org.apache.felix.http.base.internal.runtime.dto;
 
+import java.util.List;
 
-
-final class CompareUtil
+public final class HandlerRegistryRuntime
 {
-    static <V extends Comparable<V>> int compareSafely(V value, V other)
+    private final List<ContextRuntime> contextRuntimes;
+    private final ServletRegistryRuntime servletRegistryRuntime;
+
+    public HandlerRegistryRuntime(List<ContextRuntime> contextRuntimes, ServletRegistryRuntime servletRegistryRuntime)
     {
-        if (value == null && other == null)
-        {
-            return 0;
-        }
-
-        if (value == null || other == null)
-        {
-            return value == null ? -1 : 1;
-        }
-
-        return value.compareTo(other);
+        this.contextRuntimes = contextRuntimes;
+        this.servletRegistryRuntime = servletRegistryRuntime;
     }
 
-    static <V  extends Comparable<V>> V min(V valueOne, V valueTwo)
+    public List<ContextRuntime> getContextRuntimes()
     {
-        return compareSafely(valueOne, valueTwo) <= 0 ? valueOne : valueTwo;
+        return contextRuntimes;
+    }
+
+    public ServletRegistryRuntime getServletRegistryRuntime()
+    {
+        return servletRegistryRuntime;
     }
 }

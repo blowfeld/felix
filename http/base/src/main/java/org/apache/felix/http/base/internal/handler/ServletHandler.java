@@ -120,6 +120,7 @@ public abstract class ServletHandler extends AbstractHandler<ServletHandler> imp
         return this.servletInfo;
     }
 
+    @Override
     public long getContextServiceId()
     {
         return this.contextServiceId;

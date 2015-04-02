@@ -30,7 +30,6 @@ import org.apache.felix.http.base.internal.handler.ServletHandler;
 import org.apache.felix.http.base.internal.handler.WhiteboardServletHandler;
 import org.apache.felix.http.base.internal.runtime.FilterInfo;
 import org.apache.felix.http.base.internal.runtime.ResourceInfo;
-import org.apache.felix.http.base.internal.runtime.ServletContextHelperInfo;
 import org.apache.felix.http.base.internal.runtime.ServletInfo;
 import org.osgi.framework.BundleContext;
 
@@ -89,7 +88,7 @@ public final class WhiteboardHttpService
      */
     public void unregisterServlet(@Nonnull final ContextHandler contextHandler, @Nonnull final ServletInfo servletInfo) throws RegistrationFailureException
     {
-        handlerRegistry.removeServlet(contextHandler.getContextInfo(), servletInfo);
+        handlerRegistry.removeServlet(contextHandler.getContextInfo().getServiceId(), servletInfo);
         contextHandler.ungetServletContext(servletInfo.getServiceReference().getBundle());
     }
 
@@ -176,7 +175,7 @@ public final class WhiteboardHttpService
     public void unregisterResource(@Nonnull final ContextHandler contextHandler, @Nonnull final ResourceInfo resourceInfo) throws RegistrationFailureException
     {
         final ServletInfo servletInfo = new ServletInfo(resourceInfo);
-        handlerRegistry.removeServlet(contextHandler.getContextInfo(), servletInfo);
+        handlerRegistry.removeServlet(contextHandler.getContextInfo().getServiceId(), servletInfo);
         contextHandler.ungetServletContext(servletInfo.getServiceReference().getBundle());
     }
 
