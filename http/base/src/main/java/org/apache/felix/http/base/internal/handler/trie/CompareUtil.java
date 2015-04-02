@@ -21,6 +21,6 @@ final class CompareUtil
 
     static <V  extends Comparable<V>> V min(V valueOne, V valueTwo)
     {
-        return compareSafely(valueOne, valueTwo) >= 0 ? valueOne : valueTwo;
+        return compareSafely(valueOne, valueTwo) <= 0 ? valueOne : valueTwo;
     }
 }

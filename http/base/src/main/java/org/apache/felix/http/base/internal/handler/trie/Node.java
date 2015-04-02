@@ -2,6 +2,7 @@ package org.apache.felix.http.base.internal.handler.trie;
 
 import static java.util.Collections.unmodifiableCollection;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.SortedSet;
@@ -21,6 +22,11 @@ final class Node<V, C extends Comparable<C>> implements Comparable<Node<V, C>>
         this.values = values;
     }
 
+    Node(TreeSet<Node<V, C>> children, String path, V value, C color)
+    {
+        this(children, path, asList(new ColoredValue<V, C>(value, color)));
+    }
+
     Node(String path)
     {
         this(new TreeSet<Node<V, C>>(), path, Collections.<ColoredValue<V, C>>emptyList());
@@ -36,9 +42,14 @@ final class Node<V, C extends Comparable<C>> implements Comparable<Node<V, C>>
 
     Node<V, C> removeValue(V value, C color)
     {
+        ColoredValue<V, C> coloredValue = new ColoredValue<V, C>(value, color);
+        if (!values.contains(coloredValue))
+        {
+            return this;
+        }
         Collection<ColoredValue<V, C>> newValues = createValues();
         newValues.addAll(values);
-        newValues.remove(new ColoredValue<V, C>(value, color));
+        newValues.remove(coloredValue);
         return new Node<V, C>(children, path, newValues);
     }
 
@@ -106,6 +117,13 @@ final class Node<V, C extends Comparable<C>> implements Comparable<Node<V, C>>
     private Collection<ColoredValue<V, C>> createValues()
     {
         return new TreeSet<ColoredValue<V,C>>();
+    }
+
+    private static <V, C extends Comparable<C>> Collection<ColoredValue<V, C>> asList(ColoredValue<V, C> coloredValue)
+    {
+        ArrayList<ColoredValue<V, C>> list = new ArrayList<ColoredValue<V,C>>(1);
+        list.add(coloredValue);
+        return list;
     }
 
     @Override

@@ -43,29 +43,52 @@ public final class PriorityTrie<V, C extends Comparable<C>>
 
         List<Node<V, C>> pathToParent = findParents(path);
         Node<V, C> parent = pathToParent.get(0);
-        if (color == null)
+        if (color == null && parent.equals(root))
+        {
+            throw new IllegalArgumentException("Root nodes must be colored");
+        }
+        else if (color == null)
         {
             color = nodeColoring.get(parent);
         }
 
-        Node<V, C> newParent;
-        Node<V, C> newNode;
         if (path.equals(parent.getPath()))
         {
-            newParent = parent.addValue(value, color);
-            newNode = newParent;
+            return updateNodeAddValue(pathToParent, value, color);
         }
-        else
+        return addNewNode(pathToParent, path, value, color);
+    }
+
+    private PriorityTrie<V, C> updateNodeAddValue(List<Node<V, C>> pathToNode, V value, C color)
+    {
+        Node<V, C> node = pathToNode.get(0);
+
+        Node<V, C> newNode = node.addValue(value, color);
+        Node<V, C> newRoot = updateParents(pathToNode, newNode);
+
+        Map<Node<V, C>, C> newColoring = nodeColoring;
+        C currentColor = nodeColoring.get(node);
+        if (currentColor == null || currentColor.compareTo(color) > 0)
         {
-            NodePair<V, C> newNodes = addNode(parent, path, value, color);
-            newParent = newNodes.parent;
-            newNode = newNodes.node;
+            newColoring = updateColoring(newNode, color);
         }
+
+        return new PriorityTrie<V, C>(newRoot, newColoring);
+    }
+
+    private PriorityTrie<V, C> addNewNode(List<Node<V, C>> pathToParent, String path, V value, C color)
+    {
+        Node<V, C> parent = pathToParent.get(0);
+
+        NodePair<V, C> newNodes = addNodeToParent(parent, path, value, color);
+        Node<V, C> newParent = newNodes.parent;
+        Node<V, C> newNode = newNodes.node;
+
         Node<V, C> newRoot = updateParents(pathToParent, newParent);
 
         Map<Node<V, C>, C> newColoring = nodeColoring;
         C parentColor = nodeColoring.get(parent);
-        if (parentColor == null || color.compareTo(parentColor) < 0)
+        if (parentColor == null || parentColor.compareTo(color) > 0)
         {
             newColoring = updateColoring(newNode, color);
         }
@@ -78,15 +101,13 @@ public final class PriorityTrie<V, C extends Comparable<C>>
         return new PriorityTrie<V, C>(newRoot, newColoring);
     }
 
-    private NodePair<V, C> addNode(Node<V, C> parent, String path, V value, C color)
+    private NodePair<V, C> addNodeToParent(Node<V, C> parent, String path, V value, C color)
     {
         TreeSet<Node<V, C>> presentChildren = new TreeSet<Node<V, C>>(parent.getChildren(path));
         TreeSet<Node<V, C>> siblings = new TreeSet<Node<V, C>>(parent.getChildren());
         siblings.removeAll(presentChildren);
 
-        List<ColoredValue<V, C>> values = new ArrayList<ColoredValue<V,C>>();
-        values.add(new ColoredValue<V, C>(value, color));
-        Node<V, C> newNode = new Node<V, C>(presentChildren, path, values);
+        Node<V, C> newNode = new Node<V, C>(presentChildren, path, value, color);
 
         siblings.add(newNode);
         Node<V, C> newParent = new Node<V, C>(siblings, parent.getPath(), parent.getValues());
@@ -110,41 +131,58 @@ public final class PriorityTrie<V, C extends Comparable<C>>
             color = nodeColoring.get(node);
         }
 
-        Node<V, C> newRoot;
         Node<V, C> newNode = node.removeValue(value, color);
+        if (newNode == node)
+        {
+            return this;
+        }
+
         if (newNode.isEmpty())
         {
-            Node<V, C> parent = pathToNode.get(1);
-            pathToNode.remove(0);
-            newNode = removeNode(parent, node);
+            return removeEmptyNode(pathToNode);
         }
-        newRoot = updateParents(pathToNode, newNode);
+        return updateNodeRemoveValue(pathToNode, newNode, color);
+    }
+
+    private PriorityTrie<V, C> updateNodeRemoveValue(List<Node<V, C>> pathToNode, Node<V, C> newNode, C color)
+    {
+        Node<V, C> node = pathToNode.get(0);
+        Node<V, C> parent = pathToNode.get(1);
+
+        Node<V, C> newRoot = updateParents(pathToNode, newNode);
 
         Map<Node<V, C>, C> newColoring = nodeColoring;
-
         C currentColor = nodeColoring.get(node);
-        if (currentColor == null || color.compareTo(currentColor) == 0)
+        C parentColor = nodeColoring.get(parent);
+        if (compareSafely(currentColor, color) == 0 && compareSafely(parentColor, color) != 0)
         {
-            C newColor = determineNewColor(newNode, pathToNode);
-            if (compareSafely(currentColor, newColor) != 0)
-            {
-                newColoring = updateColoring(newNode, currentColor, newColor);
-            }
+            C newColor = min(parentColor, newNode.getValueColor());
+            newColoring = updateChildColoring(newNode, currentColor, newColor);
+            newColoring.put(newNode, newColor);
         }
 
         return new PriorityTrie<V, C>(newRoot, newColoring);
     }
 
-    private C determineNewColor(Node<V, C> newNode, List<Node<V, C>> pathToNode)
+    private PriorityTrie<V, C> removeEmptyNode(List<Node<V, C>> pathToNode)
     {
-        C newValueColor = newNode.getValueColor();
-        // the path contains the old node
-        if (pathToNode.size() == 1)
+        Node<V, C> node = pathToNode.get(0);
+        Node<V, C> parent = pathToNode.get(1);
+
+        Node<V, C> newParent = removeNode(parent, node);
+        Node<V, C> newRoot = updateParents(pathToNode.subList(1, pathToNode.size()), newParent);
+
+        Map<Node<V, C>, C> newColoring = nodeColoring;
+
+        C currentColor = nodeColoring.get(node);
+        C parentColor = nodeColoring.get(parent);
+        if (compareSafely(currentColor, parentColor) != 0)
         {
-            return newValueColor;
+            newColoring = updateChildColoring(newParent, currentColor, parentColor);
         }
-        C parentColor = nodeColoring.get(pathToNode.get(1));
-        return min(newValueColor, parentColor);
+        newColoring.remove(node);
+
+        return new PriorityTrie<V, C>(newRoot, newColoring);
     }
 
     private Node<V, C> removeNode(Node<V, C> parent, Node<V, C> node)
@@ -172,7 +210,7 @@ public final class PriorityTrie<V, C extends Comparable<C>>
         return newChild;
     }
 
-    // TODO combine updateColoring methods
+    // TODO combine updateColoring methods ?
     private Map<Node<V, C>, C> updateColoring(Node<V, C> node, C newColor)
     {
         Map<Node<V, C>, C> coloring = new HashMap<Node<V, C>, C>(nodeColoring);
@@ -192,12 +230,23 @@ public final class PriorityTrie<V, C extends Comparable<C>>
         return coloring;
     }
 
-    private Map<Node<V, C>, C> updateColoring(Node<V, C> node, C oldColor, C newColor)
+    private Map<Node<V, C>, C> updateChildColoring(Node<V, C> node, C oldColor, C newColor)
     {
         Map<Node<V, C>, C> coloring = new HashMap<Node<V, C>, C>(nodeColoring);
+        Set<Node<V, C>> children = node.getChildren();
+        if (newColor == null)
+        {
+            for (Node<V, C> child : children)
+            {
+                C childColor = child.getValueColor();
+                coloring.put(child, childColor);
+                coloring.putAll(updateChildColoring(child, oldColor, childColor));
+            }
+            return coloring;
+        }
 
         Deque<Node<V, C>> queue = new ArrayDeque<Node<V, C>>();
-        queue.add(node);
+        queue.addAll(node.getChildren());
         while(!queue.isEmpty())
         {
             Node<V, C> current = queue.removeLast();
@@ -205,7 +254,7 @@ public final class PriorityTrie<V, C extends Comparable<C>>
 
             boolean colorIsChanged = currentColor == null ||
                 currentColor.compareTo(oldColor) == 0 ||
-                currentColor.compareTo(newColor) >= 0;
+                currentColor.compareTo(newColor) > 0;
 
             if (colorIsChanged)
             {
@@ -271,6 +320,18 @@ public final class PriorityTrie<V, C extends Comparable<C>>
         return value;
     }
 
+    private static class NodePair<V, C extends Comparable<C>>
+    {
+        final Node<V, C> node;
+        final Node<V, C> parent;
+
+        NodePair(Node<V, C> node, Node<V, C> parent)
+        {
+            this.node = node;
+            this.parent = parent;
+        }
+    }
+
     /*
      * Print a representation of the {@code PriorityTrie} displaying the path names for debugging.
      *
@@ -311,17 +372,5 @@ public final class PriorityTrie<V, C extends Comparable<C>>
             }
         }
         return result.toString();
-    }
-
-    private static class NodePair<V, C extends Comparable<C>>
-    {
-        final Node<V, C> node;
-        final Node<V, C> parent;
-
-        NodePair(Node<V, C> node, Node<V, C> parent)
-        {
-            this.node = node;
-            this.parent = parent;
-        }
     }
 }

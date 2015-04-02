@@ -2,6 +2,7 @@ package org.apache.felix.http.base.internal.handler.trie;
 
 import static org.hamcrest.Matchers.contains;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertThat;
 
@@ -27,7 +28,7 @@ public class PriorityTreeTest
     @Test
     public void addAndFindParents()
     {
-        PriorityTrie<String, Integer> trie = emptyTrie.add("/", "");
+        PriorityTrie<String, Integer> trie = emptyTrie.add("/", "", 1);
 
         assertThat(trie.findParents("/a"), contains(nodes("/", null)));
     }
@@ -35,7 +36,7 @@ public class PriorityTreeTest
     @Test
     public void addAndFindParentsExactMatch()
     {
-        PriorityTrie<String, Integer> trie = emptyTrie.add("/a", "");
+        PriorityTrie<String, Integer> trie = emptyTrie.add("/a", "", 1);
 
         assertThat(trie.findParents("/a"), contains(nodes("/a", null)));
     }
@@ -43,7 +44,7 @@ public class PriorityTreeTest
     @Test
     public void addAndFindParentsWithSiblings()
     {
-        PriorityTrie<String, Integer> trie = emptyTrie.add("/", "");
+        PriorityTrie<String, Integer> trie = emptyTrie.add("/", "", 1);
         trie = trie.add("/aa", "");
         trie = trie.add("/ab", "");
 
@@ -53,7 +54,7 @@ public class PriorityTreeTest
     @Test
     public void addAndFindParentsWithChildrensPresent()
     {
-        PriorityTrie<String, Integer> trie = emptyTrie.add("/", "");
+        PriorityTrie<String, Integer> trie = emptyTrie.add("/", "", 1);
         trie = trie.add("/a", "");
         trie = trie.add("/a0", "");
         trie = trie.add("/a/a", "");
@@ -64,8 +65,8 @@ public class PriorityTreeTest
     @Test
     public void addAndFindParentsWithMultipleBranchesAddedInRandomOrder()
     {
-        PriorityTrie<String, Integer> trie = emptyTrie.add("/a/a/a", "");
-        trie = trie.add("", "");
+        PriorityTrie<String, Integer> trie = emptyTrie.add("/a/a/a", "", 1);
+        trie = trie.add("", "", 1);
         trie = trie.add("/bb/a/a", "");
         trie = trie.add("/", "");
         trie = trie.add("/a", "");
@@ -89,7 +90,7 @@ public class PriorityTreeTest
     @Test
     public void removeLeaf()
     {
-        PriorityTrie<String, Integer> trie = emptyTrie.add("/", "");
+        PriorityTrie<String, Integer> trie = emptyTrie.add("/", "", 1);
         trie = trie.add("/a", "");
         trie = trie.add("/a/a", "");
         trie = trie.add("/a/b", "");
@@ -101,9 +102,9 @@ public class PriorityTreeTest
     }
 
     @Test
-    public void removeNodeWithChildren()
+    public void removeNodeWithChildrenAddsChildrenToParent()
     {
-        PriorityTrie<String, Integer> trie = emptyTrie.add("/", "");
+        PriorityTrie<String, Integer> trie = emptyTrie.add("/", "", 1);
         trie = trie.add("/a", "");
         trie = trie.add("/a/a", "");
         trie = trie.add("/a/b", "");
@@ -115,21 +116,43 @@ public class PriorityTreeTest
     }
 
     @Test
-    public void removeNoneExistingNode()
+    public void removeNoneExistingNodeReturnsSameInstance()
     {
-        PriorityTrie<String, Integer> trie = emptyTrie.add("/", "");
+        PriorityTrie<String, Integer> trie = emptyTrie.add("/", "", 1);
         trie = trie.add("/a", "");
 
         assertSame(trie.remove("/a/a", "", null), trie);
     }
 
     @Test
+    public void removeNoneExistingValueReturnsSameInstance()
+    {
+        PriorityTrie<String, Integer> trie = emptyTrie.add("/a", "", 1);
+        PriorityTrie<String, Integer> trieAfterRemoval = trie.remove("/a", "", 2);
+
+        assertSame(trie, trieAfterRemoval);
+    }
+
+    @Test
+    public void removceMinimumValueUpdatesToParentColor()
+    {
+        PriorityTrie<String, Integer> trie = emptyTrie.add("/a", "", 3);
+        trie = trie.add("/a/a", "", 2);
+        trie = trie.add("/a/a", "", 4);
+
+        trie = trie.remove("/a/a", "", 2);
+
+        assertEquals(Integer.valueOf(3), trie.getColor(node("/a")));
+        assertEquals(Integer.valueOf(3), trie.getColor(node("/a/a")));
+    }
+
+    @Test
     public void searchFindsCorrectParent()
     {
-        PriorityTrie<String, Integer> trie = emptyTrie.add("/", "");
+        PriorityTrie<String, Integer> trie = emptyTrie.add("/", "", 1);
         trie = trie.add("/a", "");
 
-        assertEquals(trie.search("/a/a"), new Node<String, Integer>("/a"));
+        assertEquals(trie.search("/a/a"), node("/a"));
     }
 
     @Test
@@ -139,7 +162,17 @@ public class PriorityTreeTest
         trie = trie.add("/a", "", 1);
         trie = trie.add("/a/a", "", 2);
 
-        assertEquals(trie.search("/a"), new Node<String, Integer>("/a"));
+        assertEquals(trie.search("/a"), node("/a"));
+    }
+
+    @Test
+    public void searchIgnoresShadowedValues()
+    {
+        PriorityTrie<String, Integer> trie = emptyTrie.add("/a", "", 1);
+        trie = trie.add("/a/a", "", 2);
+
+        assertEquals(Integer.valueOf(1), trie.getColor(node("/a/a")));
+        assertEquals(node("/a"), trie.search("/a/a"));
     }
 
     @Test
@@ -150,8 +183,8 @@ public class PriorityTreeTest
         trie = trie.add("/a/a/a", "", 1);
         trie = trie.add("/a/a", "", 2);
 
-        assertEquals(Integer.valueOf(1), trie.getColor(new Node<String, Integer>("/a/a")));
-        assertEquals(Integer.valueOf(1), trie.getColor(new Node<String, Integer>("/a/a/a")));
+        assertEquals(Integer.valueOf(1), trie.getColor(node("/a/a")));
+        assertEquals(Integer.valueOf(1), trie.getColor(node("/a/a/a")));
     }
 
     @Test
@@ -162,8 +195,8 @@ public class PriorityTreeTest
         trie = trie.add("/a/a/a", "", 1);
         trie = trie.add("/a/a", "", 1);
 
-        assertEquals(Integer.valueOf(1), trie.getColor(new Node<String, Integer>("/a/a")));
-        assertEquals(Integer.valueOf(1), trie.getColor(new Node<String, Integer>("/a/a/a")));
+        assertEquals(Integer.valueOf(1), trie.getColor(node("/a/a")));
+        assertEquals(Integer.valueOf(1), trie.getColor(node("/a/a/a")));
     }
 
     @Test
@@ -174,12 +207,12 @@ public class PriorityTreeTest
         trie = trie.add("/a/a/a", "", 2);
         trie = trie.add("/a/a", "", 1);
 
-        assertEquals(Integer.valueOf(1), trie.getColor(new Node<String, Integer>("/a/a")));
-        assertEquals(Integer.valueOf(1), trie.getColor(new Node<String, Integer>("/a/a/a")));
+        assertEquals(Integer.valueOf(1), trie.getColor(node("/a/a")));
+        assertEquals(Integer.valueOf(1), trie.getColor(node("/a/a/a")));
     }
 
     @Test
-    public void nodeColorIsUpdatedAtRemove()
+    public void nodeColorsAreUpdatedAtRemove()
     {
         PriorityTrie<String, Integer> trie = emptyTrie.add("/", "", 3);
         trie = trie.add("/a", "", 3);
@@ -187,17 +220,91 @@ public class PriorityTreeTest
         trie = trie.add("/a/a/a", "", 4);
         trie = trie.add("/a/a/b", "", 1);
 
-        assertEquals(Integer.valueOf(3), trie.getColor(new Node<String, Integer>("/a")));
-        assertEquals(Integer.valueOf(2), trie.getColor(new Node<String, Integer>("/a/a")));
-        assertEquals(Integer.valueOf(2), trie.getColor(new Node<String, Integer>("/a/a/a")));
-        assertEquals(Integer.valueOf(1), trie.getColor(new Node<String, Integer>("/a/a/b")));
+        assertEquals(Integer.valueOf(3), trie.getColor(node("/a")));
+        assertEquals(Integer.valueOf(2), trie.getColor(node("/a/a")));
+        assertEquals(Integer.valueOf(2), trie.getColor(node("/a/a/a")));
+        assertEquals(Integer.valueOf(1), trie.getColor(node("/a/a/b")));
 
         trie = trie.remove("/a/a", "", 2);
-        System.err.println(trie);
 
-        assertEquals(Integer.valueOf(3), trie.getColor(new Node<String, Integer>("/a")));
-        assertEquals(Integer.valueOf(3), trie.getColor(new Node<String, Integer>("/a/a/a")));
-        assertEquals(Integer.valueOf(1), trie.getColor(new Node<String, Integer>("/a/a/b")));
+        assertEquals(Integer.valueOf(3), trie.getColor(node("/a")));
+        assertEquals(Integer.valueOf(3), trie.getColor(node("/a/a/a")));
+        assertEquals(Integer.valueOf(1), trie.getColor(node("/a/a/b")));
+    }
+
+    @Test
+    public void nodeColorsAreUpdatedAtRemoveRoot()
+    {
+        PriorityTrie<String, Integer> trie = emptyTrie.add("/", "", 3);
+        trie = trie.add("/a", "", 3);
+        trie = trie.add("/a/a", "", 2);
+        trie = trie.add("/a/a/a", "", 4);
+        trie = trie.add("/a/a/b", "", 1);
+
+        trie = trie.remove("/", "", 3);
+
+        assertEquals(Integer.valueOf(3), trie.getColor(node("/a")));
+        assertEquals(Integer.valueOf(2), trie.getColor(node("/a/a")));
+        assertEquals(Integer.valueOf(2), trie.getColor(node("/a/a/a")));
+        assertEquals(Integer.valueOf(1), trie.getColor(node("/a/a/b")));
+    }
+
+    @Test
+    public void multipleValuesInOneNode()
+    {
+        PriorityTrie<String, Integer> trie = emptyTrie.add("/a", "", 2);
+        trie = trie.add("/a/a", "", 3);
+
+        assertEquals(Integer.valueOf(2), trie.getColor(node("/a")));
+        assertEquals(Integer.valueOf(2), trie.getColor(node("/a/a")));
+
+        trie = trie.add("/a/a", "", 1);
+
+        assertEquals(Integer.valueOf(2), trie.getColor(node("/a")));
+        assertEquals(Integer.valueOf(1), trie.getColor(node("/a/a")));
+    }
+
+    @Test
+    public void multipleValuesInOneNodeAddedInReverseOrder()
+    {
+        PriorityTrie<String, Integer> trie = emptyTrie.add("/a", "", 2);
+        trie = trie.add("/a/a", "", 2);
+
+        assertEquals(Integer.valueOf(2), trie.getColor(node("/a")));
+        assertEquals(Integer.valueOf(2), trie.getColor(node("/a/a")));
+
+        trie = trie.add("/a/a", "", 3);
+
+        assertEquals(Integer.valueOf(2), trie.getColor(node("/a")));
+        assertEquals(Integer.valueOf(2), trie.getColor(node("/a/a")));
+    }
+
+    @Test
+    public void addReturnsNewInstance()
+    {
+        PriorityTrie<String, Integer> trie = emptyTrie.add("/a", "", 1);
+        PriorityTrie<String, Integer> trieWithMultipleValues = trie.add("/a", "", 2);
+
+        assertNotSame(emptyTrie, trie);
+        assertNotSame(trie, trieWithMultipleValues);
+    }
+
+    @Test
+    public void removeReturnsNewInstance()
+    {
+        PriorityTrie<String, Integer> trie = emptyTrie.add("/a", "", 1);
+        trie = trie.add("/a", "", 2);
+
+        PriorityTrie<String, Integer> trieAfterFirstRemoval = trie.remove("/a", "", 2);
+        PriorityTrie<String, Integer> trieAfterSecondRemoval = trieAfterFirstRemoval.remove("/a", "", 1);
+
+        assertNotSame(trie, trieAfterFirstRemoval);
+        assertNotSame(trieAfterFirstRemoval, trieAfterSecondRemoval);
+    }
+
+    private Node<String, Integer> node(String path)
+    {
+        return new Node<String, Integer>(path);
     }
 
     private Node[] nodes(String... nodePaths)
