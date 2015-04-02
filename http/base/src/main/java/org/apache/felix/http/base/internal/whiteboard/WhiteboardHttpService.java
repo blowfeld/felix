@@ -62,7 +62,6 @@ public final class WhiteboardHttpService
             @Nonnull final ServletInfo servletInfo)
             throws RegistrationFailureException
     {
-        ServletContextHelperInfo contextInfo = contextHandler.getContextInfo();
         try
         {
             ServletHandler handler = new WhiteboardServletHandler(contextHandler.getContextInfo(),
@@ -70,7 +69,7 @@ public final class WhiteboardHttpService
                 servletInfo,
                 bundleContext);
 
-            handlerRegistry.addServlet(contextInfo, handler);
+            handlerRegistry.addServlet(handler);
         }
         catch (final RegistrationFailureException e)
         {
@@ -160,7 +159,7 @@ public final class WhiteboardHttpService
 
         try
         {
-            handlerRegistry.addServlet(contextHandler.getContextInfo(), handler);
+            handlerRegistry.addServlet(handler);
         }
         catch (ServletException e)
         {

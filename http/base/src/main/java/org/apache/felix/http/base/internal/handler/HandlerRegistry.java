@@ -133,11 +133,6 @@ public final class HandlerRegistry
         getRegistryChecked(null, null).addServlet(handler);
     }
 
-    public void addServlet(ServletContextHelperInfo contextInfo, ServletHandler handler) throws ServletException
-    {
-        getRegistryChecked(contextInfo, handler.getServletInfo()).addServlet(handler);
-    }
-
     public void removeServlet(Servlet servlet, boolean destroy)
     {
         try
