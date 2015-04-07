@@ -108,13 +108,12 @@ public final class WhiteboardManager
 
     private volatile ServletContext webContext;
 
-    private volatile ServiceReference<HttpServiceRuntime> httpServiceRuntime;
+    private volatile ServiceRegistration<HttpServiceRuntime> runtimeServiceReg;
 
     private volatile ServiceRegistration<ServletContextHelper> defaultContextRegistration;
 
     private final List<ServiceTracker<?, ?>> trackers = new ArrayList<ServiceTracker<?, ?>>();
 
-    private volatile ServiceRegistration<HttpServiceRuntime> runtimeServiceReg;
 
     /**
      * Create a new whiteboard http manager
@@ -141,8 +140,7 @@ public final class WhiteboardManager
                 serviceRuntime,
                 this.serviceRuntime.getAttributes());
 
-        this.webContext = webContext;
-        this.httpServiceRuntime = httpServiceRuntime;
+        this.webContext = context;
 
         final Dictionary<String, Object> props = new Hashtable<String, Object>();
         props.put(HttpWhiteboardConstants.HTTP_WHITEBOARD_CONTEXT_NAME, HttpWhiteboardConstants.HTTP_WHITEBOARD_DEFAULT_CONTEXT_NAME);
@@ -645,7 +643,7 @@ public final class WhiteboardManager
             try
             {
                 final Filter f = this.bundleContext.createFilter(target);
-                return f.match(this.httpServiceRuntime);
+                return f.match(this.runtimeServiceReg.getReference());
             }
             catch ( final InvalidSyntaxException ise)
             {
