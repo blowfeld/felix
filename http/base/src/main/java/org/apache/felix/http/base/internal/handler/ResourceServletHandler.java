@@ -38,7 +38,7 @@ public final class ResourceServletHandler extends ServletHandler
     @Override
     public Servlet getServlet()
     {
-        return checkInitialized(servlet);
+        return servlet;
     }
 
     @Override
