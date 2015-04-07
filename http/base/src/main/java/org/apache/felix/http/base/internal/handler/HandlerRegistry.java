@@ -51,6 +51,8 @@ import org.apache.felix.http.base.internal.whiteboard.RegistrationFailureExcepti
  */
 public final class HandlerRegistry
 {
+    private static final String HTTP_SERVICE_CONTEXT_NAME = "Http service context";
+
     private static FilterHandler[] EMPTY_FILTER_HANDLER = new FilterHandler[0];
 
     /** Current list of context registrations. */
@@ -260,7 +262,7 @@ public final class HandlerRegistry
 
     public ServletContextHelperRuntime getHttpServiceContextRuntime()
     {
-        ServletContextHelperInfo info = new ServletContextHelperInfo(Integer.MAX_VALUE, 0, "Http service context", "/", null);
+        ServletContextHelperInfo info = new ServletContextHelperInfo(Integer.MAX_VALUE, 0, HTTP_SERVICE_CONTEXT_NAME, "/", null);
         return new InfoServletContextHelperRuntime(info);
     }
 
