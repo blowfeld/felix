@@ -37,6 +37,7 @@ final class HandlerRankingMultimap<K>
     private final Map<ServletHandler, Integer> useCounts = new TreeMap<ServletHandler, Integer>();
 
     private final Map<K, PriorityQueue<ServletHandler>> handlerMultimap;
+    private final Comparator<ServletHandler> handlerComparator;
     private final Comparator<K> keyComparator;
 
     private int size = 0;
@@ -45,12 +46,19 @@ final class HandlerRankingMultimap<K>
     {
         this.handlerMultimap = new HashMap<K, PriorityQueue<ServletHandler>>();
         this.keyComparator = null;
+        this.handlerComparator = null;
     }
 
     HandlerRankingMultimap(Comparator<K> keyComparator)
     {
+        this(keyComparator, null);
+    }
+
+    HandlerRankingMultimap(Comparator<K> keyComparator, Comparator<ServletHandler> handlerComparator)
+    {
         this.keyComparator = keyComparator;
         this.handlerMultimap = new TreeMap<K, PriorityQueue<ServletHandler>>(keyComparator);
+        this.handlerComparator = handlerComparator;
     }
 
     boolean isActive(ServletHandler handler)
@@ -65,6 +73,10 @@ final class HandlerRankingMultimap<K>
 
     Update<K> add(Collection<K> keys, ServletHandler handler)
     {
+        if (handler == null)
+        {
+            throw new NullPointerException("handler must not be null");
+        }
         Map<K, ServletHandler> activate = createMap();
         Map<K, ServletHandler> deactivate = createMap();
         Set<ServletHandler> destroy = new TreeSet<ServletHandler>();
@@ -72,7 +84,7 @@ final class HandlerRankingMultimap<K>
         {
             PriorityQueue<ServletHandler> queue = getQueue(key);
 
-            if (queue.isEmpty() || queue.peek().compareTo(handler) > 0)
+            if (queue.isEmpty() || compareHandlers(queue.peek(), handler) > 0)
             {
                 activateEntry(key, handler, activate, null);
 
@@ -103,9 +115,13 @@ final class HandlerRankingMultimap<K>
         Set<ServletHandler> init = new TreeSet<ServletHandler>();
         for (K key : keys)
         {
-            PriorityQueue<ServletHandler> queue = getQueue(key);
+            PriorityQueue<ServletHandler> queue = handlerMultimap.get(key);
+            if (queue == null)
+            {
+                throw new IllegalArgumentException("Map does not contain key: " + key);
+            }
 
-            boolean isDeactivate = !queue.isEmpty() && queue.peek().compareTo(handler) == 0;
+            boolean isDeactivate = !queue.isEmpty() && compareHandlers(queue.peek(), handler) == 0;
             queue.remove(handler);
 
             if (isDeactivate)
@@ -135,7 +151,7 @@ final class HandlerRankingMultimap<K>
         PriorityQueue<ServletHandler> queue = handlerMultimap.get(key);
         if (queue == null)
         {
-            queue = new PriorityQueue<ServletHandler>();
+            queue = new PriorityQueue<ServletHandler>(1, handlerComparator);
             handlerMultimap.put(key, queue);
         }
         return queue;
@@ -207,7 +223,7 @@ final class HandlerRankingMultimap<K>
             ServletHandler head = queue.element();
             for (ServletHandler value : queue)
             {
-                if (value.compareTo(head) != 0)
+                if (compareHandlers(value, head) != 0)
                 {
                     shadowedValues.add(value);
                 }
@@ -219,6 +235,15 @@ final class HandlerRankingMultimap<K>
     int size()
     {
         return size;
+    }
+
+    private int compareHandlers(ServletHandler one, ServletHandler two)
+    {
+        if (handlerComparator == null)
+        {
+            return one.compareTo(two);
+        }
+        return handlerComparator.compare(one, two);
     }
 
     private Map<K,ServletHandler> createMap()

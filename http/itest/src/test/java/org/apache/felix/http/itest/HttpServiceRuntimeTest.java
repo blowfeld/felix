@@ -933,16 +933,15 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
         awaitServiceRegistration(initLatch);
 
         defaultContext = assertDefaultContext(runtimeWithShadowedServlet);
-//        assertEquals(0, defaultContext.servletDTOs.length);
         ServletContextDTO httpServiceContext = runtimeWithShadowedServlet.servletContextDTOs[0];
         assertEquals("Http service context", httpServiceContext.name);
         assertEquals(1, httpServiceContext.servletDTOs.length);
         assertArrayEquals(new String[] {"/pathcollision", "/pathcollision/*"}, httpServiceContext.servletDTOs[0].patterns);
 
-//        assertEquals(1, runtimeWithShadowedServlet.failedServletDTOs.length);
-//        FailedServletDTO failedServletDTO = runtimeWithShadowedServlet.failedServletDTOs[0];
-//        assertEquals("servlet 1", failedServletDTO.name);
-//        assertEquals(FAILURE_REASON_SHADOWED_BY_OTHER_SERVICE, failedServletDTO.failureReason);
+        assertEquals(1, runtimeWithShadowedServlet.failedServletDTOs.length);
+        FailedServletDTO failedServletDTO = runtimeWithShadowedServlet.failedServletDTOs[0];
+        assertEquals("servlet 1", failedServletDTO.name);
+        assertEquals(FAILURE_REASON_SHADOWED_BY_OTHER_SERVICE, failedServletDTO.failureReason);
 
         unregister(testServlet);
         awaitServiceRegistration(destroyLatch);
@@ -1043,7 +1042,7 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
 
     // As specified in OSGi Compendium Release 6, Chapter 140.9
     @Test
-    public void httServiceIdIsSet()
+    public void httpServiceIdIsSet()
     {
         ServiceReference<?> httpServiceRef = m_context.getServiceReference(HttpService.class.getName());
         ServiceReference<?> httpServiceRuntimeRef = m_context.getServiceReference(HttpServiceRuntime.class.getName());

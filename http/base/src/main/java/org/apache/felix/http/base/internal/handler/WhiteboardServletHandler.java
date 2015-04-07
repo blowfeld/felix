@@ -44,7 +44,7 @@ public final class WhiteboardServletHandler extends ServletHandler
     @Override
     public Servlet getServlet()
     {
-        return checkInitialized(servlet);
+        return servlet;
     }
 
     @Override
@@ -91,7 +91,11 @@ public final class WhiteboardServletHandler extends ServletHandler
         servlet.destroy();
 
         ServiceObjects<Servlet> so = this.bundleContext.getServiceObjects(getServletInfo().getServiceReference());
-        so.ungetService(servlet);
+        // TODO check if this is needed
+        if (so != null)
+        {
+            so.ungetService(servlet);
+        }
         servlet = null;
     }
 }

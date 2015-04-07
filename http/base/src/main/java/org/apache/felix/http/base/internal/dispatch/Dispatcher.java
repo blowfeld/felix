@@ -584,7 +584,7 @@ public final class Dispatcher implements RequestDispatcherProvider
         }
 
         // Determine which servlets we should forward the request to...
-        final ServletHandler servletHandler = this.handlerRegistry.getServletHander(requestURI);
+        final ServletHandler servletHandler = this.handlerRegistry.getServletHandler(requestURI);
 
         final HttpServletResponse wrappedResponse = new ServletResponseWrapper(req, res, servletHandler);
         if ( servletHandler == null )
@@ -661,7 +661,7 @@ public final class Dispatcher implements RequestDispatcherProvider
             requestURI = "";
         }
 
-        ServletHandler handler = this.handlerRegistry.getServletHander(requestURI);
+        ServletHandler handler = this.handlerRegistry.getServletHandler(requestURI);
         if (handler == null)
         {
             return null;

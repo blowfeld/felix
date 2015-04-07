@@ -30,7 +30,6 @@ import org.apache.felix.http.base.internal.handler.ServletHandler;
 import org.apache.felix.http.base.internal.handler.WhiteboardServletHandler;
 import org.apache.felix.http.base.internal.runtime.FilterInfo;
 import org.apache.felix.http.base.internal.runtime.ResourceInfo;
-import org.apache.felix.http.base.internal.runtime.ServletContextHelperInfo;
 import org.apache.felix.http.base.internal.runtime.ServletInfo;
 import org.osgi.framework.BundleContext;
 
@@ -62,7 +61,6 @@ public final class WhiteboardHttpService
             @Nonnull final ServletInfo servletInfo)
             throws RegistrationFailureException
     {
-        ServletContextHelperInfo contextInfo = contextHandler.getContextInfo();
         try
         {
             ServletHandler handler = new WhiteboardServletHandler(contextHandler.getContextInfo(),
@@ -70,7 +68,7 @@ public final class WhiteboardHttpService
                 servletInfo,
                 bundleContext);
 
-            handlerRegistry.addServlet(contextInfo, handler);
+            handlerRegistry.addServlet(handler);
         }
         catch (final RegistrationFailureException e)
         {
@@ -90,7 +88,7 @@ public final class WhiteboardHttpService
      */
     public void unregisterServlet(@Nonnull final ContextHandler contextHandler, @Nonnull final ServletInfo servletInfo) throws RegistrationFailureException
     {
-        handlerRegistry.removeServlet(contextHandler.getContextInfo(), servletInfo);
+        handlerRegistry.removeServlet(contextHandler.getContextInfo().getServiceId(), servletInfo);
         contextHandler.ungetServletContext(servletInfo.getServiceReference().getBundle());
     }
 
@@ -160,7 +158,7 @@ public final class WhiteboardHttpService
 
         try
         {
-            handlerRegistry.addServlet(contextHandler.getContextInfo(), handler);
+            handlerRegistry.addServlet(handler);
         }
         catch (ServletException e)
         {
@@ -177,7 +175,7 @@ public final class WhiteboardHttpService
     public void unregisterResource(@Nonnull final ContextHandler contextHandler, @Nonnull final ResourceInfo resourceInfo) throws RegistrationFailureException
     {
         final ServletInfo servletInfo = new ServletInfo(resourceInfo);
-        handlerRegistry.removeServlet(contextHandler.getContextInfo(), servletInfo);
+        handlerRegistry.removeServlet(contextHandler.getContextInfo().getServiceId(), servletInfo);
         contextHandler.ungetServletContext(servletInfo.getServiceReference().getBundle());
     }
 
