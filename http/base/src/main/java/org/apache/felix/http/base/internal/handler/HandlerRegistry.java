@@ -264,7 +264,7 @@ public final class HandlerRegistry
         return new InfoServletContextHelperRuntime(info);
     }
 
-    public void addServlet(ServletHandler handler) throws RegistrationFailureException
+    public synchronized void addServlet(ServletHandler handler) throws RegistrationFailureException
     {
         Pattern[] patterns = handler.getPatterns();
         String[] errorPages = handler.getServletInfo().getErrorPage();
@@ -283,7 +283,7 @@ public final class HandlerRegistry
         }
     }
 
-    public void removeServlet(Servlet servlet, boolean destroy)
+    public synchronized void removeServlet(Servlet servlet, boolean destroy)
     {
         try
         {
@@ -296,7 +296,7 @@ public final class HandlerRegistry
         }
     }
 
-    public Servlet removeServlet(ServletInfo servletInfo)
+    public synchronized Servlet removeServlet(ServletInfo servletInfo)
     {
         try
         {
@@ -310,7 +310,7 @@ public final class HandlerRegistry
         return null;
     }
 
-    public void removeServlet(long contextId, ServletInfo servletInfo) throws RegistrationFailureException
+    public synchronized void removeServlet(long contextId, ServletInfo servletInfo) throws RegistrationFailureException
     {
         String[] patterns = servletInfo.getPatterns();
         if (patterns != null && patterns.length > 0)
