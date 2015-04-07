@@ -16,23 +16,23 @@
  */
 package org.apache.felix.http.base.internal.whiteboard.tracker;
 
-import javax.servlet.ServletRequestAttributeListener;
+import javax.servlet.http.HttpSessionIdListener;
 
-import org.apache.felix.http.base.internal.runtime.ServletRequestAttributeListenerInfo;
+import org.apache.felix.http.base.internal.runtime.HttpSessionIdListenerInfo;
 import org.apache.felix.http.base.internal.runtime.WhiteboardServiceInfo;
 import org.apache.felix.http.base.internal.whiteboard.WhiteboardManager;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceReference;
 
-public final class ServletRequestAttributeListenerTracker extends WhiteboardServiceTracker<ServletRequestAttributeListener>
+public final class HttpSessionIdListenerTracker extends WhiteboardServiceTracker<HttpSessionIdListener>
 {
-    public ServletRequestAttributeListenerTracker(final BundleContext context, final WhiteboardManager manager)
+    public HttpSessionIdListenerTracker(final BundleContext context, final WhiteboardManager manager)
     {
-        super(manager, context, createListenerFilterExpression(ServletRequestAttributeListener.class));
+        super(manager, context, createListenerFilterExpression(HttpSessionIdListener.class));
     }
 
     @Override
-    protected WhiteboardServiceInfo<ServletRequestAttributeListener> getServiceInfo(final ServiceReference<ServletRequestAttributeListener> ref) {
-        return new ServletRequestAttributeListenerInfo(ref);
+    protected WhiteboardServiceInfo<HttpSessionIdListener> getServiceInfo(final ServiceReference<HttpSessionIdListener> ref) {
+        return new HttpSessionIdListenerInfo(ref);
     }
 }
