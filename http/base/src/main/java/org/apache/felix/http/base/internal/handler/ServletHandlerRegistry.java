@@ -16,15 +16,19 @@
  */
 package org.apache.felix.http.base.internal.handler;
 
+import static java.util.Arrays.asList;
 import static org.osgi.service.http.runtime.dto.DTOConstants.FAILURE_REASON_EXCEPTION_ON_INIT;
 import static org.osgi.service.http.runtime.dto.DTOConstants.FAILURE_REASON_SERVICE_ALREAY_USED;
 import static org.osgi.service.http.runtime.dto.DTOConstants.FAILURE_REASON_SERVLET_CONTEXT_FAILURE;
 import static org.osgi.service.http.runtime.dto.DTOConstants.FAILURE_REASON_SHADOWED_BY_OTHER_SERVICE;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.SortedSet;
 import java.util.TreeMap;
@@ -109,10 +113,10 @@ public final class ServletHandlerRegistry
             throw new RegistrationFailureException(handler.getServletInfo(), FAILURE_REASON_SERVLET_CONTEXT_FAILURE);
         }
         contextPath = contextPath.equals("/") ? "" : contextPath;
-        String[] patterns = handler.getServletInfo().getPatterns();
-        for (int i = 0; i < patterns.length; i++)
+        List<String> patterns = new ArrayList<String>(asList(handler.getServletInfo().getPatterns()));
+        for (int i = 0; i < patterns.size(); i++)
         {
-            patterns[i] = contextPath + patterns[i];
+            patterns.set(i, contextPath + patterns.get(i));
         }
         Update<String> update = this.registeredServletHandlers.add(patterns, handler);
         initHandlers(update.getInit());
@@ -179,7 +183,7 @@ public final class ServletHandlerRegistry
         while (it.hasNext())
         {
             ServletHandler handler = it.next();
-            if (handler.getServlet() == servlet)
+            if (handler.getServlet() != null && handler.getServlet() == servlet)
             {
                 removeServlet(0L, handler.getServletInfo(), destroy);
             }
@@ -190,10 +194,10 @@ public final class ServletHandlerRegistry
     {
         String contextPath = handlerComparator.getPath(handler.getContextServiceId());
         contextPath = contextPath.equals("/") ? "" : contextPath;
-        String[] patterns = handler.getServletInfo().getPatterns();
-        for (int i = 0; i < patterns.length; i++)
+        List<String> patterns = new ArrayList<String>(asList(handler.getServletInfo().getPatterns()));
+        for (int i = 0; i < patterns.size(); i++)
         {
-            patterns[i] = contextPath + patterns[i];
+            patterns.set(i, contextPath + patterns.get(i));
         }
         Update<String> update = this.registeredServletHandlers.remove(patterns, handler);
         initHandlers(update.getInit());
@@ -288,8 +292,8 @@ public final class ServletHandlerRegistry
         @Override
         public int compare(ServletHandler o1, ServletHandler o2)
         {
-            ContextRanking contextRankingOne = contextRankings.get(o1);
-            ContextRanking contextRankingTwo = contextRankings.get(o2);
+            ContextRanking contextRankingOne = contextRankings.get(o1.getContextServiceId());
+            ContextRanking contextRankingTwo = contextRankings.get(o2.getContextServiceId());
             int contextComparison = contextRankingOne.compareTo(contextRankingTwo);
             return contextComparison == 0 ? o1.compareTo(o2) : contextComparison;
         }
