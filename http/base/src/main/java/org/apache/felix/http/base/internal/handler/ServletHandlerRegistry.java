@@ -23,7 +23,6 @@ import static org.osgi.service.http.runtime.dto.DTOConstants.FAILURE_REASON_SERV
 import static org.osgi.service.http.runtime.dto.DTOConstants.FAILURE_REASON_SHADOWED_BY_OTHER_SERVICE;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -174,19 +173,26 @@ public final class ServletHandlerRegistry
             handler.destroy();
         }
 
+
         return servlet;
     }
 
     synchronized void removeServlet(Servlet servlet, final boolean destroy) throws RegistrationFailureException
     {
         Iterator<ServletHandler> it = this.allServletHandlers.iterator();
+        List<ServletHandler> removals = new ArrayList<ServletHandler>();
         while (it.hasNext())
         {
             ServletHandler handler = it.next();
             if (handler.getServlet() != null && handler.getServlet() == servlet)
             {
-                removeServlet(0L, handler.getServletInfo(), destroy);
+                removals.add(handler);
             }
+        }
+
+        for (ServletHandler servletHandler : removals)
+        {
+            removeServlet(0L, servletHandler.getServletInfo(), destroy);
         }
     }
 
@@ -206,6 +212,7 @@ public final class ServletHandlerRegistry
         {
             destroyHandlers(update.getDestroy());
         }
+        this.allServletHandlers.remove(handler);
     }
 
     private void initHandlers(Collection<ServletHandler> handlers) throws RegistrationFailureException
