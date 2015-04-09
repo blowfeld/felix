@@ -109,7 +109,6 @@ public final class WhiteboardManager
     private volatile ServletContext webContext;
 
     private volatile ServiceRegistration<HttpServiceRuntime> runtimeServiceReg;
-
     private volatile ServiceRegistration<ServletContextHelper> defaultContextRegistration;
 
     private final List<ServiceTracker<?, ?>> trackers = new ArrayList<ServiceTracker<?, ?>>();
