@@ -118,6 +118,12 @@ public final class ErrorsMapping
             return null;
         }
 
+        ServletHandler servletHandler = this.exceptionsMap.get(exception);
+        if (servletHandler != null)
+        {
+            return servletHandler;
+        }
+
         Class<?> throwable;
         try
         {
@@ -127,8 +133,6 @@ public final class ErrorsMapping
         {
             throwable = Throwable.class;
         }
-
-        ServletHandler servletHandler = this.exceptionsMap.get(exception);
 
         while (servletHandler == null &&
             throwable != null &&
