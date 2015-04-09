@@ -57,8 +57,8 @@ import org.apache.felix.http.base.internal.runtime.ServletInfo;
 import org.apache.felix.http.base.internal.runtime.ServletRequestAttributeListenerInfo;
 import org.apache.felix.http.base.internal.runtime.ServletRequestListenerInfo;
 import org.apache.felix.http.base.internal.runtime.WhiteboardServiceInfo;
-import org.apache.felix.http.base.internal.runtime.dto.ContextRuntime;
 import org.apache.felix.http.base.internal.runtime.dto.FailureRuntime;
+import org.apache.felix.http.base.internal.runtime.dto.HandlerRegistryRuntime;
 import org.apache.felix.http.base.internal.runtime.dto.RegistryRuntime;
 import org.apache.felix.http.base.internal.runtime.dto.ServletContextHelperRuntime;
 import org.apache.felix.http.base.internal.service.HttpServiceFactory;
@@ -109,7 +109,6 @@ public final class WhiteboardManager
     private volatile ServletContext webContext;
 
     private volatile ServiceRegistration<HttpServiceRuntime> runtimeServiceReg;
-
     private volatile ServiceRegistration<ServletContextHelper> defaultContextRegistration;
 
     private final List<ServiceTracker<?, ?>> trackers = new ArrayList<ServiceTracker<?, ?>>();
@@ -687,10 +686,10 @@ public final class WhiteboardManager
 
     public RegistryRuntime getRuntime(HandlerRegistry registry)
     {
-        Collection<ServletContextHelperRuntime> contextRuntimes = new TreeSet<ServletContextHelperRuntime>(ServletContextHelperRuntime.COMPARATOR);
-        List<ContextRuntime> handlerRuntimes;
+        final Collection<ServletContextHelperRuntime> contextRuntimes = new TreeSet<ServletContextHelperRuntime>(ServletContextHelperRuntime.COMPARATOR);
+        HandlerRegistryRuntime handlerRuntimes;
         final Map<Long, Collection<ServiceReference<?>>> listenerRuntimes = new HashMap<Long, Collection<ServiceReference<?>>>();
-        FailureRuntime.Builder failureRuntime = FailureRuntime.builder();
+        final FailureRuntime.Builder failureRuntime = FailureRuntime.builder();
         synchronized ( this.contextMap )
         {
             for (List<ContextHandler> contextHandlerList : this.contextMap.values())
@@ -704,9 +703,15 @@ public final class WhiteboardManager
                     listenerRuntimes.put(serviceId, handler.getListenerRegistry().getRuntime());
                 }
             }
+            contextRuntimes.add(registry.getHttpServiceContextRuntime());
             handlerRuntimes = registry.getRuntime(failureRuntime);
             failureRuntime.add(serviceFailures);
         }
-        return new RegistryRuntime(contextRuntimes, handlerRuntimes, listenerRuntimes, failureRuntime.build());
+
+        return new RegistryRuntime(contextRuntimes,
+            handlerRuntimes.getContextRuntimes(),
+            handlerRuntimes.getServletRegistryRuntime(),
+            listenerRuntimes,
+            failureRuntime.build());
     }
 }
