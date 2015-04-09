@@ -95,6 +95,17 @@ public final class ErrorsMapping
     }
 
 
+    public ServletHandler get(String exceptionType, int errorCode)
+    {
+        ServletHandler errorHandler = get(exceptionType);
+        if (errorHandler != null)
+        {
+            return errorHandler;
+        }
+
+        return get(errorCode);
+    }
+
     public ServletHandler get(int errorCode)
     {
         return this.errorCodesMap.get(errorCode);
@@ -102,7 +113,32 @@ public final class ErrorsMapping
 
     public ServletHandler get(String exception)
     {
-        return this.exceptionsMap.get(exception);
+        if (exception == null)
+        {
+            return null;
+        }
+
+        Class<?> throwable;
+        try
+        {
+            throwable = Class.forName(exception);
+        }
+        catch (ClassNotFoundException e)
+        {
+            throwable = Throwable.class;
+        }
+
+        ServletHandler servletHandler = this.exceptionsMap.get(exception);
+
+        while (servletHandler == null &&
+            throwable != null &&
+            Throwable.class.isAssignableFrom(throwable))
+        {
+            servletHandler = this.exceptionsMap.get(throwable.getName());
+            throwable = throwable.getSuperclass();
+        }
+
+        return servletHandler;
     }
 
 

@@ -216,14 +216,7 @@ public final class HandlerRegistry
             return null;
         }
 
-        // TODO check exception hierarchy
-        ServletHandler errorHandler = errorsMapping.get(exceptionType);
-        if (errorHandler != null)
-        {
-            return errorHandler;
-        }
-
-        return errorsMapping.get(code);
+        return errorsMapping.get(exceptionType, code);
     }
 
     private ErrorsMapping getErrorsMapping(final String requestURI, final Long serviceId)
