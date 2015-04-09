@@ -94,10 +94,15 @@ public final class ErrorsMapping
         this.exceptionsMap.clear();
     }
 
-
-    public ServletHandler get(String exceptionType, int errorCode)
+    /**
+     * Get the servlet handling the error
+     * @param exception Optional exception
+     * @param errorCode Error code
+     * @return The servlet handling the error or {@code null}
+     */
+    public ServletHandler get(final Throwable exception, final int errorCode)
     {
-        ServletHandler errorHandler = get(exceptionType);
+        ServletHandler errorHandler = this.get(exception);
         if (errorHandler != null)
         {
             return errorHandler;
@@ -106,42 +111,33 @@ public final class ErrorsMapping
         return get(errorCode);
     }
 
-    public ServletHandler get(int errorCode)
+    private ServletHandler get(final int errorCode)
     {
         return this.errorCodesMap.get(errorCode);
     }
 
-    public ServletHandler get(String exception)
+    private ServletHandler get(final Throwable exception)
     {
         if (exception == null)
         {
             return null;
         }
 
-        ServletHandler servletHandler = this.exceptionsMap.get(exception);
-        if (servletHandler != null)
+        ServletHandler servletHandler = null;
+        Class<?> throwableClass = exception.getClass();
+        while ( servletHandler == null && throwableClass != null )
         {
-            return servletHandler;
-        }
+            servletHandler = this.exceptionsMap.get(throwableClass.getName());
+            if ( servletHandler == null )
+            {
+                throwableClass = throwableClass.getSuperclass();
+                if ( !Throwable.class.isAssignableFrom(throwableClass) )
+                {
+                    throwableClass = null;
+                }
+            }
 
-        Class<?> throwable;
-        try
-        {
-            throwable = Class.forName(exception);
         }
-        catch (ClassNotFoundException e)
-        {
-            throwable = Throwable.class;
-        }
-
-        while (servletHandler == null &&
-            throwable != null &&
-            Throwable.class.isAssignableFrom(throwable))
-        {
-            servletHandler = this.exceptionsMap.get(throwable.getName());
-            throwable = throwable.getSuperclass();
-        }
-
         return servletHandler;
     }
 

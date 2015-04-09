@@ -208,7 +208,7 @@ public final class HandlerRegistry
         return null;
     }
 
-    public ServletHandler getErrorsHandler(String requestURI, Long serviceId, int code, String exceptionType)
+    public ServletHandler getErrorsHandler(String requestURI, Long serviceId, int code, Throwable exception)
     {
         ErrorsMapping errorsMapping = getErrorsMapping(requestURI, serviceId);
         if (errorsMapping == null)
@@ -216,7 +216,7 @@ public final class HandlerRegistry
             return null;
         }
 
-        return errorsMapping.get(exceptionType, code);
+        return errorsMapping.get(exception, code);
     }
 
     private ErrorsMapping getErrorsMapping(final String requestURI, final Long serviceId)
