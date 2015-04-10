@@ -25,9 +25,12 @@ import static org.osgi.service.http.whiteboard.HttpWhiteboardConstants.HTTP_WHIT
 import static org.osgi.service.http.whiteboard.HttpWhiteboardConstants.HTTP_WHITEBOARD_CONTEXT_PATH;
 import static org.osgi.service.http.whiteboard.HttpWhiteboardConstants.HTTP_WHITEBOARD_CONTEXT_SELECT;
 import static org.osgi.service.http.whiteboard.HttpWhiteboardConstants.HTTP_WHITEBOARD_FILTER_INIT_PARAM_PREFIX;
+import static org.osgi.service.http.whiteboard.HttpWhiteboardConstants.HTTP_WHITEBOARD_RESOURCE_PATTERN;
+import static org.osgi.service.http.whiteboard.HttpWhiteboardConstants.HTTP_WHITEBOARD_RESOURCE_PREFIX;
 import static org.osgi.service.http.whiteboard.HttpWhiteboardConstants.HTTP_WHITEBOARD_SERVLET_PATTERN;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Dictionary;
 import java.util.Hashtable;
 import java.util.concurrent.CountDownLatch;
@@ -37,6 +40,7 @@ import javax.servlet.Servlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.felix.http.itest.HttpServiceRuntimeTest.TestResource;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.ops4j.pax.exam.junit.JUnit4TestRunner;
@@ -47,7 +51,6 @@ import org.osgi.service.http.context.ServletContextHelper;
 @RunWith(JUnit4TestRunner.class)
 public class ServletPatternTest extends BaseIntegrationTest
 {
-
     @Test
     public void testHighRankReplaces() throws Exception
     {
@@ -240,5 +243,73 @@ public class ServletPatternTest extends BaseIntegrationTest
         }
 
         assertTrue(destroyLatch.await(5, TimeUnit.SECONDS));
+    }
+
+    @Test
+    public void testHighRankResourceReplaces() throws Exception
+    {
+        CountDownLatch initLatch = new CountDownLatch(1);
+        CountDownLatch destroyLatch = new CountDownLatch(1);
+
+        TestServlet lowRankServlet = new TestServlet(initLatch, destroyLatch)
+        {
+            private static final long serialVersionUID = 1L;
+
+            @Override
+            protected void doGet(HttpServletRequest req, HttpServletResponse resp)
+                throws IOException
+            {
+                resp.getWriter().print("lowRankServlet");
+                resp.flushBuffer();
+            }
+        };
+
+        Dictionary<String, Object> lowRankProps = new Hashtable<String, Object>();
+        String lowRankPattern[] = { "/foo" };
+        lowRankProps.put(HTTP_WHITEBOARD_SERVLET_PATTERN, lowRankPattern);
+        lowRankProps.put(HTTP_WHITEBOARD_FILTER_INIT_PARAM_PREFIX + ".myname", "lowRankServlet");
+        lowRankProps.put(SERVICE_RANKING, 1);
+
+        ServiceRegistration<?> lowRankReg = m_context.registerService(Servlet.class.getName(),
+            lowRankServlet, lowRankProps);
+
+        try
+        {
+            assertTrue(initLatch.await(5, TimeUnit.SECONDS));
+
+            assertContent("lowRankServlet", createURL("/foo"));
+        }
+        catch (Exception e)
+        {
+            lowRankReg.unregister();
+        }
+
+        Dictionary<String, Object> resourceProps = new Hashtable<String, Object>();
+        String highRankPattern[] = { "/foo" };
+        resourceProps.put(HTTP_WHITEBOARD_RESOURCE_PATTERN, highRankPattern);
+        resourceProps.put(HTTP_WHITEBOARD_RESOURCE_PREFIX, "/resource/test.html");
+        resourceProps.put(SERVICE_RANKING, 2);
+
+        ServiceRegistration<?> highRankReg = m_context.registerService(TestResource.class.getName(),
+            new TestResource(), resourceProps);
+
+        try
+        {
+            assertTrue(destroyLatch.await(5, TimeUnit.SECONDS));
+            Thread.sleep(500);
+
+            assertContent(getTestHtmlContent(), createURL("/foo"));
+        }
+        finally
+        {
+            highRankReg.unregister();
+            lowRankReg.unregister();
+        }
+    }
+
+    private String getTestHtmlContent() throws IOException
+    {
+        InputStream resourceAsStream = this.getClass().getResourceAsStream("/resource/test.html");
+        return slurpAsString(resourceAsStream);
     }
 }
