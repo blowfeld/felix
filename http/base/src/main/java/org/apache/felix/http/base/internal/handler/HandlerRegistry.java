@@ -17,7 +17,6 @@
 package org.apache.felix.http.base.internal.handler;
 
 import static org.osgi.service.http.runtime.dto.DTOConstants.FAILURE_REASON_SERVLET_CONTEXT_FAILURE;
-import static org.osgi.service.http.runtime.dto.DTOConstants.FAILURE_REASON_VALIDATION_FAILED;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -267,14 +266,9 @@ public final class HandlerRegistry
         {
             servletRegistry.addServlet(handler);
         }
-        else if (errorPages != null && errorPages.length > 0)
+        if (errorPages != null && errorPages.length > 0)
         {
             getRegistry(handler.getContextServiceId()).addErrorPage(handler, errorPages);
-        }
-        else
-        {
-            throw new RegistrationFailureException(handler.getServletInfo(), FAILURE_REASON_VALIDATION_FAILED,
-                "Neither patterns nor errorPages specified for " + handler.getName());
         }
     }
 

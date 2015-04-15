@@ -781,7 +781,7 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
 
     // As specified in OSGi Compendium Release 6, Chapter 140.4.1
     @Test
-    public void patternAndErrorPageSpecifiedInvalidAndAppearsAsFailure() throws InterruptedException
+    public void patternAndErrorPageSpecified() throws InterruptedException
     {
         Dictionary<String, ?> properties = createDictionary(
                 HTTP_WHITEBOARD_SERVLET_PATTERN, "/servlet",
@@ -794,14 +794,20 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
         HttpServiceRuntime serviceRuntime = (HttpServiceRuntime) getService(HttpServiceRuntime.class.getName());
         assertNotNull("HttpServiceRuntime unavailable", serviceRuntime);
 
-        ServletContextDTO defaultContext = assertDefaultContext(serviceRuntime.getRuntimeDTO());
-        assertEquals(0, defaultContext.servletDTOs.length);
-        assertEquals(0, defaultContext.errorPageDTOs.length);
+        RuntimeDTO runtimeDTO = serviceRuntime.getRuntimeDTO();
+        ServletContextDTO defaultContext = assertDefaultContext(runtimeDTO);
 
-        assertEquals(0, serviceRuntime.getRuntimeDTO().failedServletDTOs.length);
-        assertEquals(1, serviceRuntime.getRuntimeDTO().failedErrorPageDTOs.length);
-        assertEquals("servlet", serviceRuntime.getRuntimeDTO().failedErrorPageDTOs[0].name);
-        assertEquals(FAILURE_REASON_VALIDATION_FAILED, serviceRuntime.getRuntimeDTO().failedErrorPageDTOs[0].failureReason);
+        assertEquals(0, runtimeDTO.failedErrorPageDTOs.length);
+        assertEquals(0, runtimeDTO.failedServletDTOs.length);
+
+        assertEquals(1, defaultContext.servletDTOs.length);
+        assertEquals(1, defaultContext.errorPageDTOs.length);
+
+        assertEquals("servlet", defaultContext.servletDTOs[0].name);
+        assertEquals("servlet", defaultContext.errorPageDTOs[0].name);
+
+        assertArrayEquals(new String[] { "/servlet" }, defaultContext.servletDTOs[0].patterns);
+        assertArrayEquals(new long[] { 400 }, defaultContext.errorPageDTOs[0].errorCodes);
     }
 
     // As specified in OSGi Compendium Release 6, Chapter 140.4.1
