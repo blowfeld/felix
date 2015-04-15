@@ -274,32 +274,15 @@ public final class HandlerRegistry
 
     public synchronized void removeServlet(Servlet servlet, boolean destroy)
     {
-        try
-        {
-            servletRegistry.removeServlet(servlet, destroy);
-        }
-        catch (RegistrationFailureException e)
-        {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        }
+        servletRegistry.removeServlet(servlet, destroy);
     }
 
     public synchronized Servlet removeServlet(ServletInfo servletInfo)
     {
-        try
-        {
-            return servletRegistry.removeServlet(servletInfo);
-        }
-        catch (RegistrationFailureException e)
-        {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        }
-        return null;
+        return servletRegistry.removeServlet(servletInfo);
     }
 
-    public synchronized void removeServlet(long contextId, ServletInfo servletInfo) throws RegistrationFailureException
+    public synchronized void removeServlet(long contextId, ServletInfo servletInfo)
     {
         String[] patterns = servletInfo.getPatterns();
         if (patterns != null && patterns.length > 0)

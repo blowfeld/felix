@@ -603,6 +603,81 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
     }
 
     @Test
+    public void exceptionInServletInitDuringServletRemovalAppearsAsFailure() throws ServletException, InterruptedException
+    {
+        Dictionary<String, ?> properties1 = createDictionary(
+            HTTP_WHITEBOARD_SERVLET_PATTERN, "/servlet1",
+            HTTP_WHITEBOARD_SERVLET_NAME, "servlet1");
+
+        final CountDownLatch initLatch1 = new CountDownLatch(1);
+
+        @SuppressWarnings("serial")
+        Servlet failingServlet1 = new TestServlet(initLatch1, null) {
+            @Override
+            public void init() throws ServletException
+            {
+                //fail when initialized the second time
+                if (initLatch1.getCount() == 0)
+                {
+                    throw new ServletException();
+                }
+                super.init();
+            }
+        };
+
+        Dictionary<String, ?> properties2 = createDictionary(
+            HTTP_WHITEBOARD_SERVLET_PATTERN, "/servlet2",
+            HTTP_WHITEBOARD_SERVLET_NAME, "servlet2");
+
+        final CountDownLatch initLatch2 = new CountDownLatch(1);
+        @SuppressWarnings("serial")
+        Servlet failingServlet2 = new TestServlet(initLatch2, null) {
+            @Override
+            public void init() throws ServletException
+            {
+                //fail when initialized the second time
+                if (initLatch2.getCount() == 0)
+                {
+                    throw new ServletException();
+                }
+                super.init();
+            }
+        };
+
+        Dictionary<String, ?> propertiesShadowing = createDictionary(
+            HTTP_WHITEBOARD_SERVLET_PATTERN, asList("/servlet1", "/servlet2"),
+            HTTP_WHITEBOARD_SERVLET_NAME, "servletShadowing",
+            SERVICE_RANKING, Integer.MAX_VALUE);
+
+        CountDownLatch initLatchShadowing = new CountDownLatch(1);
+        Servlet servletShadowing = new TestServlet(initLatchShadowing, null);
+
+        registrations.add(m_context.registerService(Servlet.class.getName(), failingServlet1, properties1));
+        registrations.add(m_context.registerService(Servlet.class.getName(), failingServlet2, properties2));
+        awaitServiceRegistration(initLatch1);
+        awaitServiceRegistration(initLatch2);
+
+        ServiceRegistration<?> shadowingRegistration = m_context.registerService(Servlet.class.getName(), servletShadowing, propertiesShadowing);
+        registrations.add(shadowingRegistration);
+        awaitServiceRegistration(initLatchShadowing);
+
+        HttpServiceRuntime serviceRuntime = (HttpServiceRuntime) getService(HttpServiceRuntime.class.getName());
+        assertNotNull("HttpServiceRuntime unavailable", serviceRuntime);
+
+        RuntimeDTO runtimeDTO = serviceRuntime.getRuntimeDTO();
+        assertEquals(2, runtimeDTO.failedServletDTOs.length);
+        assertEquals(FAILURE_REASON_SHADOWED_BY_OTHER_SERVICE, runtimeDTO.failedServletDTOs[0].failureReason);
+        assertEquals(FAILURE_REASON_SHADOWED_BY_OTHER_SERVICE, runtimeDTO.failedServletDTOs[1].failureReason);
+
+        shadowingRegistration.unregister();
+
+        runtimeDTO = serviceRuntime.getRuntimeDTO();
+        assertEquals(2, runtimeDTO.failedServletDTOs.length);
+        assertEquals(FAILURE_REASON_EXCEPTION_ON_INIT, runtimeDTO.failedServletDTOs[0].failureReason);
+        assertEquals(FAILURE_REASON_EXCEPTION_ON_INIT, runtimeDTO.failedServletDTOs[1].failureReason);
+    }
+
+    @Test
     public void exceptionInFilterInitAppearsAsFailure() throws ServletException, InterruptedException
     {
         Dictionary<String, ?> properties = createDictionary(
