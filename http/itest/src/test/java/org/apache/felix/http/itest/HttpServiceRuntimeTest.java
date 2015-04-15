@@ -48,7 +48,9 @@ import static org.osgi.service.http.whiteboard.HttpWhiteboardConstants.HTTP_WHIT
 import static org.osgi.service.http.whiteboard.HttpWhiteboardConstants.HTTP_WHITEBOARD_SERVLET_PATTERN;
 import static org.osgi.service.http.whiteboard.HttpWhiteboardConstants.HTTP_WHITEBOARD_TARGET;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Dictionary;
 import java.util.List;
 import java.util.Map;
@@ -67,10 +69,13 @@ import javax.servlet.ServletRequestListener;
 import javax.servlet.http.HttpSessionAttributeListener;
 import javax.servlet.http.HttpSessionListener;
 
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.ops4j.pax.exam.junit.ExamReactorStrategy;
 import org.ops4j.pax.exam.junit.JUnit4TestRunner;
+import org.ops4j.pax.exam.spi.reactors.EagerSingleStagedReactorFactory;
 import org.osgi.framework.Constants;
 import org.osgi.framework.ServiceReference;
 import org.osgi.framework.ServiceRegistration;
@@ -83,9 +88,31 @@ import org.osgi.service.http.runtime.dto.RuntimeDTO;
 import org.osgi.service.http.runtime.dto.ServletContextDTO;
 
 @RunWith(JUnit4TestRunner.class)
+@ExamReactorStrategy( EagerSingleStagedReactorFactory.class )
 public class HttpServiceRuntimeTest extends BaseIntegrationTest
 {
+    Collection<ServiceRegistration<?>> registrations = new ArrayList<ServiceRegistration<?>>();
+
     private static final long DEFAULT_SLEEP = 100;
+
+    @After
+    public void unregisterServices() throws Exception
+    {
+        for (ServiceRegistration<?> serviceRegistration : registrations)
+        {
+            try
+            {
+                serviceRegistration.unregister();
+            }
+            catch (Exception e)
+            {
+                // already unregistered
+            }
+        }
+        registrations.clear();
+
+        Thread.sleep(100);
+    }
 
     private void registerServlet(String name, String path) throws InterruptedException
     {
@@ -109,7 +136,7 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
         Dictionary<String, ?> properties = createDictionary(context == null ?
                 propertyEntries.subList(0, 4).toArray() : propertyEntries.toArray());
 
-        m_context.registerService(Servlet.class.getName(), new TestServlet(initLatch, null), properties);
+        registrations.add(m_context.registerService(Servlet.class.getName(), new TestServlet(initLatch, null), properties));
     }
 
     private void registerFilter(String name, String path) throws InterruptedException
@@ -134,7 +161,7 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
         Dictionary<String, ?> properties = createDictionary(context == null ?
                 propertyEntries.subList(0, 4).toArray() : propertyEntries.toArray());
 
-        m_context.registerService(Filter.class.getName(), new TestFilter(initLatch, null), properties);
+        registrations.add(m_context.registerService(Filter.class.getName(), new TestFilter(initLatch, null), properties));
     }
 
     private void registerResource(String prefix, String path) throws InterruptedException
@@ -152,7 +179,7 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
         Dictionary<String, ?> properties = createDictionary(context == null ?
                 propertyEntries.subList(0, 4).toArray() : propertyEntries.toArray());
 
-        m_context.registerService(TestResource.class.getName(), new TestResource(), properties);
+        registrations.add(m_context.registerService(TestResource.class.getName(), new TestResource(), properties));
         awaitServiceRegistration();
     }
 
@@ -178,7 +205,7 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
         Dictionary<String, ?> properties = createDictionary(context == null ?
                 propertyEntries.subList(0, 4).toArray() : propertyEntries.toArray());
 
-        m_context.registerService(Servlet.class.getName(), new TestServlet(initLatch, null), properties);
+        registrations.add(m_context.registerService(Servlet.class.getName(), new TestServlet(initLatch, null), properties));
     }
 
     private void registerListener(Class<?> listenerClass, boolean useWithWhiteboard) throws InterruptedException
@@ -195,7 +222,7 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
         Dictionary<String, ?> properties = createDictionary(context == null ?
                 propertyEntries.subList(0, 2).toArray() : propertyEntries.toArray());
 
-        m_context.registerService(listenerClass.getName(), mock(listenerClass), properties);
+        registrations.add(m_context.registerService(listenerClass.getName(), mock(listenerClass), properties));
         awaitServiceRegistration();
     }
 
@@ -206,6 +233,7 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
                 HTTP_WHITEBOARD_CONTEXT_PATH, path);
 
         ServiceRegistration<?> contextRegistration = m_context.registerService(ServletContextHelper.class.getName(), mock(ServletContextHelper.class), properties);
+        registrations.add(contextRegistration);
         awaitServiceRegistration();
         return contextRegistration;
     }
@@ -562,7 +590,7 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
             }
         };
 
-        m_context.registerService(Servlet.class.getName(), failingServlet, properties);
+        registrations.add(m_context.registerService(Servlet.class.getName(), failingServlet, properties));
         awaitServiceRegistration(initLatch);
 
         HttpServiceRuntime serviceRuntime = (HttpServiceRuntime) getService(HttpServiceRuntime.class.getName());
@@ -592,7 +620,7 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
             }
         };
 
-        m_context.registerService(Filter.class.getName(), failingFilter, properties);
+        registrations.add(m_context.registerService(Filter.class.getName(), failingFilter, properties));
         awaitServiceRegistration(initLatch);
 
         HttpServiceRuntime serviceRuntime = (HttpServiceRuntime) getService(HttpServiceRuntime.class.getName());
@@ -663,7 +691,7 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
     {
         Dictionary<String, ?> properties = createDictionary(HTTP_WHITEBOARD_CONTEXT_PATH, "");
 
-        m_context.registerService(ServletContextHelper.class.getName(), mock(ServletContextHelper.class), properties);
+        registrations.add(m_context.registerService(ServletContextHelper.class.getName(), mock(ServletContextHelper.class), properties));
 
         HttpServiceRuntime serviceRuntime = (HttpServiceRuntime) getService(HttpServiceRuntime.class.getName());
         assertNotNull("HttpServiceRuntime unavailable", serviceRuntime);
@@ -743,7 +771,7 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
                 HTTP_WHITEBOARD_SERVLET_NAME, "servlet",
                 HTTP_WHITEBOARD_TARGET, "(org.osgi.service.http.port=8282)");
 
-        m_context.registerService(Servlet.class.getName(), new TestServlet(), properties);
+        registrations.add(m_context.registerService(Servlet.class.getName(), new TestServlet(), properties));
         awaitServiceRegistration();
 
         HttpServiceRuntime serviceRuntime = (HttpServiceRuntime) getService(HttpServiceRuntime.class.getName());
@@ -764,7 +792,7 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
         Dictionary<String, ?> properties = createDictionary(HTTP_WHITEBOARD_SERVLET_PATTERN, "/servlet");
 
         CountDownLatch initLatch = new CountDownLatch(1);
-        m_context.registerService(Servlet.class.getName(), new TestServlet(initLatch, null), properties);
+        registrations.add(m_context.registerService(Servlet.class.getName(), new TestServlet(initLatch, null), properties));
         awaitServiceRegistration(initLatch);
 
         HttpServiceRuntime serviceRuntime = (HttpServiceRuntime) getService(HttpServiceRuntime.class.getName());
@@ -788,7 +816,7 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
                 HTTP_WHITEBOARD_SERVLET_NAME, "servlet",
                 HTTP_WHITEBOARD_SERVLET_ERROR_PAGE, asList("400"));
 
-        m_context.registerService(Servlet.class.getName(), new TestServlet(), properties);
+        registrations.add(m_context.registerService(Servlet.class.getName(), new TestServlet(), properties));
         awaitServiceRegistration();
 
         HttpServiceRuntime serviceRuntime = (HttpServiceRuntime) getService(HttpServiceRuntime.class.getName());
@@ -834,6 +862,7 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
         CountDownLatch destroyLatch = new CountDownLatch(1);
         TestServlet testServlet = new TestServlet(initLatch, destroyLatch);
         ServiceRegistration<?> higherRankingServlet = m_context.registerService(Servlet.class.getName(), testServlet, properties);
+        registrations.add(higherRankingServlet);
 
         RuntimeDTO runtimeWithShadowedServlet = serviceRuntime.getRuntimeDTO();
         awaitServiceRegistration(initLatch);
@@ -882,6 +911,7 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
         CountDownLatch destroyLatch = new CountDownLatch(1);
         TestServlet testServlet = new TestServlet(initLatch, destroyLatch);
         ServiceRegistration<?> higherRankingServlet = m_context.registerService(Servlet.class.getName(), testServlet, properties);
+        registrations.add(higherRankingServlet);
         awaitServiceRegistration(initLatch);
 
         RuntimeDTO runtimeWithShadowedErrorPage = serviceRuntime.getRuntimeDTO();
@@ -966,7 +996,7 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
     {
         Dictionary<String, ?> properties = createDictionary(HTTP_WHITEBOARD_LISTENER, "invalid");
 
-        m_context.registerService(ServletRequestListener.class.getName(), mock(ServletRequestListener.class), properties);
+        registrations.add(m_context.registerService(ServletRequestListener.class.getName(), mock(ServletRequestListener.class), properties));
 
         HttpServiceRuntime serviceRuntime = (HttpServiceRuntime) getService(HttpServiceRuntime.class.getName());
         assertNotNull("HttpServiceRuntime unavailable", serviceRuntime);
@@ -1010,6 +1040,7 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
                 SERVICE_RANKING, Integer.MAX_VALUE);
 
         ServiceRegistration<?> secondContext = m_context.registerService(ServletContextHelper.class.getName(), mock(ServletContextHelper.class), properties);
+        registrations.add(secondContext);
         Long secondContextId = (Long) secondContext.getReference().getProperty(Constants.SERVICE_ID);
 
         runtimeDTO = serviceRuntime.getRuntimeDTO();
@@ -1084,7 +1115,7 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
         // Neither pattern nor error page specified
         Dictionary<String, ?> properties = createDictionary(HTTP_WHITEBOARD_SERVLET_NAME, "servlet");
 
-        m_context.registerService(Servlet.class.getName(), new TestServlet(), properties);
+        registrations.add(m_context.registerService(Servlet.class.getName(), new TestServlet(), properties));
         awaitServiceRegistration();
 
         HttpServiceRuntime serviceRuntime = (HttpServiceRuntime) getService(HttpServiceRuntime.class.getName());
@@ -1107,7 +1138,7 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
                 HTTP_WHITEBOARD_SERVLET_INIT_PARAM_PREFIX + "test", "testValue");
 
         CountDownLatch initLatch = new CountDownLatch(1);
-        m_context.registerService(Servlet.class.getName(), new TestServlet(initLatch, null), properties);
+        registrations.add(m_context.registerService(Servlet.class.getName(), new TestServlet(initLatch, null), properties));
         awaitServiceRegistration(initLatch);
 
         HttpServiceRuntime serviceRuntime = (HttpServiceRuntime) getService(HttpServiceRuntime.class.getName());
