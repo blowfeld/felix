@@ -91,7 +91,7 @@ final class ServletHandlerRegistry
         if (this.allServletHandlers.contains(handler))
         {
             throw new RegistrationFailureException(handler.getServletInfo(), FAILURE_REASON_SERVICE_ALREAY_USED,
-                "Filter instance " + handler.getName() + " already registered");
+                "Servlet instance " + handler.getName() + " already registered");
         }
 
         registerServlet(handler);
