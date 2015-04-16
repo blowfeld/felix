@@ -86,6 +86,7 @@ import org.osgi.service.http.context.ServletContextHelper;
 import org.osgi.service.http.runtime.HttpServiceRuntime;
 import org.osgi.service.http.runtime.dto.FailedErrorPageDTO;
 import org.osgi.service.http.runtime.dto.FailedServletDTO;
+import org.osgi.service.http.runtime.dto.RequestInfoDTO;
 import org.osgi.service.http.runtime.dto.RuntimeDTO;
 import org.osgi.service.http.runtime.dto.ServletContextDTO;
 
@@ -1304,6 +1305,28 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
             assertNotSame(defaultContextFirstServlet.servletDTOs[0].initParams,
                     defaultContextTwoServlets.servletDTOs[0].initParams);
         }
+    }
+
+    @Test
+    public void requestInfoDTO() throws Exception
+    {
+        registerServlet("servlet", "/default");
+        registerFilter("filter1", "/default");
+        registerFilter("filter2", "/default");
+
+        HttpServiceRuntime serviceRuntime = (HttpServiceRuntime) getService(HttpServiceRuntime.class.getName());
+        assertNotNull("HttpServiceRuntime unavailable", serviceRuntime);
+
+        ServletContextDTO defaultContext = assertDefaultContext(serviceRuntime.getRuntimeDTO());
+        long defaultContextId = defaultContext.serviceId;
+
+        RequestInfoDTO requestInfoDTO = serviceRuntime.calculateRequestInfoDTO("/default");
+        assertEquals("/default", requestInfoDTO.path);
+        assertEquals(defaultContextId, requestInfoDTO.servletContextId);
+        assertEquals("servlet", requestInfoDTO.servletDTO.name);
+        assertEquals(2, requestInfoDTO.filterDTOs.length);
+        assertEquals("filter1", requestInfoDTO.filterDTOs[0].name);
+        assertEquals("filter2", requestInfoDTO.filterDTOs[1].name);
     }
 
     private ServletContextDTO assertDefaultContext(RuntimeDTO runtimeDTO)
