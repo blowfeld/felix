@@ -354,6 +354,10 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
 
     private boolean referencesDispatcherType(FilterHandler handler, DispatcherType dispatcherType)
     {
+        if (dispatcherType == null)
+        {
+            return true;
+        }
         return Arrays.asList(handler.getFilterInfo().getDispatcher()).contains(dispatcherType);
     }
 
