@@ -32,7 +32,7 @@ import org.osgi.service.http.runtime.dto.RuntimeDTO;
 
 public final class HttpServiceRuntimeImpl implements HttpServiceRuntime
 {
-    private final Hashtable<String, Object> attributes = new Hashtable<String, Object>();
+    private volatile Hashtable<String, Object> attributes = new Hashtable<String, Object>();
 
     private final HandlerRegistry registry;
     private final WhiteboardManager contextManager;
@@ -45,7 +45,7 @@ public final class HttpServiceRuntimeImpl implements HttpServiceRuntime
     }
 
     @Override
-    public synchronized RuntimeDTO getRuntimeDTO()
+    public RuntimeDTO getRuntimeDTO()
     {
         RegistryRuntime runtime = contextManager.getRuntime(registry);
         RuntimeDTOBuilder runtimeDTOBuilder = new RuntimeDTOBuilder(runtime, attributes);
@@ -60,20 +60,23 @@ public final class HttpServiceRuntimeImpl implements HttpServiceRuntime
 
     public synchronized void setAttribute(String name, Object value)
     {
-        attributes.put(name, value);
+        Hashtable<String, Object> newAttributes = new Hashtable<String, Object>(attributes);
+        newAttributes.put(name, value);
+        attributes = newAttributes;
     }
 
-    public synchronized void setAllAttributes(Dictionary<String, Object> attributes)
+    public synchronized void setAllAttributes(Dictionary<String, Object> newAttributes)
     {
-        this.attributes.clear();
-        for (String key : list(attributes.keys()))
+        Hashtable<String, Object> replacement = new Hashtable<String, Object>();
+        for (String key : list(newAttributes.keys()))
         {
-            this.attributes.put(key, attributes.get(key));
+            replacement.put(key, newAttributes.get(key));
         }
+        attributes = replacement;
     }
 
-    public synchronized Dictionary<String, Object> getAttributes()
+    public Dictionary<String, Object> getAttributes()
     {
-        return attributes;
+        return new Hashtable<String, Object>(attributes);
     }
 }
