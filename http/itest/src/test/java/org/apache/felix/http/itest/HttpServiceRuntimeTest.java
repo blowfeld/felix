@@ -55,6 +55,8 @@ import java.util.Dictionary;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.SortedSet;
+import java.util.TreeSet;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -408,6 +410,61 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
         assertEquals("error page 2", contextDTO.errorPageDTOs[1].name);
         assertArrayEquals(new String[] { ServletException.class.getName() }, contextDTO.errorPageDTOs[1].exceptions);
         assertArrayEquals(new long[] { 500 }, contextDTO.errorPageDTOs[1].errorCodes);
+    }
+
+    @Test
+    public void dtosForSuccesfullyRegisteredErrorPageForClientErrorCodes() throws Exception
+    {
+        dtosForSuccesfullyRegisteredErrorPageWithWildcardErrorCode("4xx", 400);
+    }
+
+    @Test
+    public void dtosForSuccesfullyRegisteredErrorPageForClientErrorCodesCaseInsensitive() throws Exception
+    {
+        dtosForSuccesfullyRegisteredErrorPageWithWildcardErrorCode("4xX", 400);
+    }
+
+    @Test
+    public void dtosForSuccesfullyRegisteredErrorPageForServerErrorCodes() throws Exception
+    {
+        dtosForSuccesfullyRegisteredErrorPageWithWildcardErrorCode("5xx", 500);
+    }
+
+    @Test
+    public void dtosForSuccesfullyRegisteredErrorPageForServerErrorCodesCaseInsensitive() throws Exception
+    {
+        dtosForSuccesfullyRegisteredErrorPageWithWildcardErrorCode("5XX", 500);
+    }
+
+    public void dtosForSuccesfullyRegisteredErrorPageWithWildcardErrorCode(String code, long startCode) throws Exception
+    {
+        registerErrorPage("error page 1", asList(code));
+
+        HttpServiceRuntime serviceRuntime = (HttpServiceRuntime) getService(HttpServiceRuntime.class.getName());
+        assertNotNull("HttpServiceRuntime unavailable", serviceRuntime);
+
+        RuntimeDTO runtimeDTOWithErrorPage = serviceRuntime.getRuntimeDTO();
+
+        assertEquals(0, runtimeDTOWithErrorPage.failedServletDTOs.length);
+        assertEquals(0, runtimeDTOWithErrorPage.failedErrorPageDTOs.length);
+
+        ServletContextDTO contextDTO = assertDefaultContext(runtimeDTOWithErrorPage);
+        assertEquals(1, contextDTO.errorPageDTOs.length);
+        assertEquals("error page 1", contextDTO.errorPageDTOs[0].name);
+        assertContainsAllHundredFrom(startCode, contextDTO.errorPageDTOs[0].errorCodes);
+    }
+
+    private void assertContainsAllHundredFrom(Long start, long[] errorCodes)
+    {
+        assertEquals(100, errorCodes.length);
+        SortedSet<Long> distinctErrorCodes = new TreeSet<Long>();
+        for (Long code : errorCodes)
+        {
+            distinctErrorCodes.add(code);
+        }
+        assertEquals(100, distinctErrorCodes.size());
+        assertEquals(start, distinctErrorCodes.first());
+        assertEquals(Long.valueOf(start + 99), distinctErrorCodes.last());
     }
 
     @Test
