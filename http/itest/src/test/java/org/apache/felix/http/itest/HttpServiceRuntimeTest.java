@@ -1329,6 +1329,15 @@ public class HttpServiceRuntimeTest extends BaseIntegrationTest
         assertEquals("filter2", requestInfoDTO.filterDTOs[1].name);
     }
 
+    @Test
+    public void serviceEndpointPropertyIsSet()
+    {
+        String[] endpoint = (String[]) m_context.getServiceReference(HttpServiceRuntime.class).getProperty(HTTP_SERVICE_ENDPOINT_ATTRIBUTE);
+        assertEquals(1, endpoint.length);
+        assertTrue(endpoint[0].startsWith("http://"));
+        assertTrue(endpoint[0].endsWith(":8080/"));
+    }
+
     private ServletContextDTO assertDefaultContext(RuntimeDTO runtimeDTO)
     {
         assertTrue(1 < runtimeDTO.servletContextDTOs.length);
