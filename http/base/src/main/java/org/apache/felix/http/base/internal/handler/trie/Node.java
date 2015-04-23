@@ -26,7 +26,7 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 
 
-final class Node<V, C extends Comparable<C>> implements Comparable<Node<V, C>>
+public final class Node<V, C extends Comparable<C>> implements Comparable<Node<V, C>>
 {
     private final TreeSet<Node<V, C>> children;
     private final String path;
@@ -70,22 +70,22 @@ final class Node<V, C extends Comparable<C>> implements Comparable<Node<V, C>>
         return new Node<V, C>(children, path, newValues);
     }
 
-    String getPath()
+    public String getPath()
     {
         return path;
     }
 
-    Collection<ColoredValue<V, C>> getValues()
+    public Collection<ColoredValue<V, C>> getValues()
     {
         return unmodifiableCollection(values);
     }
 
-    boolean isEmpty()
+    public boolean isEmpty()
     {
         return values.isEmpty();
     }
 
-    C getValueColor()
+    public C getValueColor()
     {
         if (isEmpty())
         {
@@ -116,7 +116,7 @@ final class Node<V, C extends Comparable<C>> implements Comparable<Node<V, C>>
         return children.floor(new Node<V, C>(path));
     }
 
-    boolean isLeaf()
+    public boolean isLeaf()
     {
         return children.isEmpty();
     }

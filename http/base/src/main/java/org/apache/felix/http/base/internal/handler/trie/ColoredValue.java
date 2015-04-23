@@ -18,7 +18,7 @@ package org.apache.felix.http.base.internal.handler.trie;
 
 import static org.apache.felix.http.base.internal.handler.trie.CompareUtil.compareSafely;
 
-final class ColoredValue<V, C extends Comparable<C>> implements Comparable<ColoredValue<V, C>>
+public final class ColoredValue<V, C extends Comparable<C>> implements Comparable<ColoredValue<V, C>>
 {
     private final C color;
     private final V value;
@@ -29,12 +29,12 @@ final class ColoredValue<V, C extends Comparable<C>> implements Comparable<Color
         this.value = value;
     }
 
-    C getColor()
+    public C getColor()
     {
         return color;
     }
 
-    V getValue()
+    public V getValue()
     {
         return value;
     }
@@ -74,7 +74,7 @@ final class ColoredValue<V, C extends Comparable<C>> implements Comparable<Color
             @SuppressWarnings("unchecked")
             ColoredValue<V, C> other = (ColoredValue<V, C>) obj;
 
-            return value.equals(other.value) && compareTo(other) == 0;
+            return value.equals(other.value) && this.compareTo(other) == 0;
         }
         catch (ClassCastException e)
         {

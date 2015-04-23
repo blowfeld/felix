@@ -23,6 +23,7 @@ import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertThat;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 import org.junit.Before;
@@ -192,6 +193,28 @@ public class PriorityTreeTest
     }
 
     @Test
+    public void searchPathFindsCorrectPath()
+    {
+        PriorityTrie<String, Integer> trie = emptyTrie.add("/a", "", 1);
+        trie = trie.add("/a/a", "", 1);
+        trie = trie.add("/a/b", "", 1);
+        trie = trie.add("/a/a/a", "", 1);
+        trie = trie.add("/a/b/a", "", 1);
+
+        assertThat(trie.searchPath("/a/a/a/c"), contains(nodes("/a/a/a", "/a/a", "/a")));
+    }
+
+    @Test
+    public void searchPathContainsOnlyActiveNodes()
+    {
+        PriorityTrie<String, Integer> trie = emptyTrie.add("/a", "", 1);
+        trie = trie.add("/a/a", "", 2);
+        trie = trie.add("/a/a/a", "", 1);
+
+        assertThat(trie.searchPath("/a/a/a/c"), contains(nodes("/a/a/a", "/a")));
+    }
+
+    @Test
     public void nodeColorIsSetToParentIfLarger()
     {
         PriorityTrie<String, Integer> trie = emptyTrie.add("/", "", 1);
@@ -293,6 +316,46 @@ public class PriorityTreeTest
 
         assertEquals(Integer.valueOf(2), trie.getColor(node("/a")));
         assertEquals(Integer.valueOf(2), trie.getColor(node("/a/a")));
+    }
+
+    @Test
+    public void iteratorHasCorrectOrder()
+    {
+        PriorityTrie<String, Integer> trie = emptyTrie.add("/a", "", 1);
+        trie = trie.add("/a/b/a", "", 1);
+        trie = trie.add("/a/a/a", "", 1);
+        trie = trie.add("/z", "", 1);
+        trie = trie.add("/a/a", "", 1);
+        trie = trie.add("/a/b", "", 1);
+
+        List<Node<String, Integer>> iterationOrder = new ArrayList<Node<String, Integer>>();
+        Iterator<Node<String, Integer>> iterator = trie.iterator();
+        while (iterator.hasNext())
+        {
+            iterationOrder.add(iterator.next());
+        }
+
+        assertThat(iterationOrder, contains(nodes("/z", "/a/b/a", "/a/b", "/a/a/a", "/a/a", "/a")));
+    }
+
+    @Test
+    public void iteratorHasOnlyActiveNodes()
+    {
+        PriorityTrie<String, Integer> trie = emptyTrie.add("/a", "", 1);
+        trie = trie.add("/a/b/a", "", 2);
+        trie = trie.add("/a/a/a", "", 1);
+        trie = trie.add("/z", "", 1);
+        trie = trie.add("/a/a", "", 2);
+        trie = trie.add("/a/b", "", 1);
+
+        List<Node<String, Integer>> iterationOrder = new ArrayList<Node<String, Integer>>();
+        Iterator<Node<String, Integer>> iterator = trie.iterator();
+        while (iterator.hasNext())
+        {
+            iterationOrder.add(iterator.next());
+        }
+
+        assertThat(iterationOrder, contains(nodes("/z", "/a/b", "/a/a/a", "/a")));
     }
 
     @Test
