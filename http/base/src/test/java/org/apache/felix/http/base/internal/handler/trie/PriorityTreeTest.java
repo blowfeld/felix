@@ -19,6 +19,7 @@ package org.apache.felix.http.base.internal.handler.trie;
 import static org.hamcrest.Matchers.contains;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotSame;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertThat;
 
@@ -66,6 +67,52 @@ public class PriorityTreeTest
         trie = trie.add("/ab", "");
 
         assertThat(trie.findParents("/aa"), contains(nodes("/aa", "/", null)));
+    }
+
+    @Test
+    public void addAndFindParentsWithWildcard()
+    {
+        PriorityTrie<String, Integer> trie = emptyTrie.add("/", "", 1);
+        trie = trie.add("/a/*", "");
+        trie = trie.add("/a/a", "");
+
+        assertThat(trie.findParents("/a/a"), contains(asArray(
+            node("/a/a"),
+            wildcardNode("/a"),
+            node("/"),
+            node(null))));
+    }
+
+    @Test
+    public void addAndFindParentsWithWildcardAndExactMatch()
+    {
+        PriorityTrie<String, Integer> trie = emptyTrie.add("/", "", 1);
+        trie = trie.add("/a", "");
+        trie = trie.add("/a/*", "");
+        trie = trie.add("/a/a", "");
+
+        assertThat(trie.findParents("/a/a"), contains(asArray(
+            node("/a/a"),
+            wildcardNode("/a"),
+            node("/a"),
+            node("/"),
+            node(null))));
+    }
+
+    @Test
+    public void addAndFindParentsWithExactMatchAfterWildcard()
+    {
+        PriorityTrie<String, Integer> trie = emptyTrie.add("/", "", 1);
+        trie = trie.add("/a/*", "");
+        trie = trie.add("/a", "");
+        trie = trie.add("/a/a", "");
+
+        assertThat(trie.findParents("/a/a"), contains(asArray(
+            node("/a/a"),
+            wildcardNode("/a"),
+            node("/a"),
+            node("/"),
+            node(null))));
     }
 
     @Test
@@ -138,7 +185,7 @@ public class PriorityTreeTest
         PriorityTrie<String, Integer> trie = emptyTrie.add("/", "", 1);
         trie = trie.add("/a", "");
 
-        assertSame(trie.remove("/a/a", "", null), trie);
+        assertSame(trie, trie.remove("/a/a", "", null));
     }
 
     @Test
@@ -169,7 +216,53 @@ public class PriorityTreeTest
         PriorityTrie<String, Integer> trie = emptyTrie.add("/", "", 1);
         trie = trie.add("/a", "");
 
-        assertEquals(trie.search("/a/a"), node("/a"));
+        assertEquals(node("/a"), trie.search("/a"));
+    }
+
+    @Test
+    public void searchFindsCorrectParentIfParentIsNotALeaf()
+    {
+        PriorityTrie<String, Integer> trie = emptyTrie.add("/", "", 1);
+        trie = trie.add("/a", "");
+        trie = trie.add("/b", "");
+        trie = trie.add("/a/a", "");
+        trie = trie.add("/a/b", "");
+        trie = trie.add("/a/a/a/a", "");
+        trie = trie.add("/a/b/a/a", "");
+
+        assertEquals(node("/a/a"),trie.search("/a/a"));
+    }
+
+    @Test
+    public void searchFindsCorrectParentIfParentIsWildcardAndNotALeaf()
+    {
+        PriorityTrie<String, Integer> trie = emptyTrie.add("/", "", 1);
+        trie = trie.add("/a", "");
+        trie = trie.add("/b", "");
+        trie = trie.add("/a/a/*", "");
+        trie = trie.add("/a/b", "");
+        trie = trie.add("/a/a/a/a", "");
+        trie = trie.add("/a/b/a/a", "");
+
+        assertEquals(wildcardNode("/a/a"),trie.search("/a/a/a"));
+    }
+
+    @Test
+    public void searchFindsCorrectParentWithWildcard()
+    {
+        PriorityTrie<String, Integer> trie = emptyTrie.add("/", "", 1);
+        trie = trie.add("/a/*", "");
+
+        assertEquals(wildcardNode("/a"), trie.search("/a/a"));
+    }
+
+    @Test
+    public void searchDoesNotFindsParentIfNotExactMatch()
+    {
+        PriorityTrie<String, Integer> trie = emptyTrie.add("/", "", 1);
+        trie = trie.add("/a", "");
+
+        assertNull(trie.search("/a/a"));
     }
 
     @Test
@@ -188,30 +281,18 @@ public class PriorityTreeTest
         PriorityTrie<String, Integer> trie = emptyTrie.add("/a", "", 1);
         trie = trie.add("/a/a", "", 2);
 
+        assertNull(trie.search("/a/a"));
         assertEquals(Integer.valueOf(1), trie.getColor(node("/a/a")));
-        assertEquals(node("/a"), trie.search("/a/a"));
     }
 
     @Test
-    public void searchPathFindsCorrectPath()
+    public void searchIgnoresShadowedValuesFindsWildcardMatch()
     {
-        PriorityTrie<String, Integer> trie = emptyTrie.add("/a", "", 1);
-        trie = trie.add("/a/a", "", 1);
-        trie = trie.add("/a/b", "", 1);
-        trie = trie.add("/a/a/a", "", 1);
-        trie = trie.add("/a/b/a", "", 1);
-
-        assertThat(trie.searchPath("/a/a/a/c"), contains(nodes("/a/a/a", "/a/a", "/a")));
-    }
-
-    @Test
-    public void searchPathContainsOnlyActiveNodes()
-    {
-        PriorityTrie<String, Integer> trie = emptyTrie.add("/a", "", 1);
+        PriorityTrie<String, Integer> trie = emptyTrie.add("/a/*", "", 1);
         trie = trie.add("/a/a", "", 2);
-        trie = trie.add("/a/a/a", "", 1);
-
-        assertThat(trie.searchPath("/a/a/a/c"), contains(nodes("/a/a/a", "/a")));
+        System.err.println(trie);
+        assertEquals(Integer.valueOf(1), trie.getColor(node("/a/a")));
+        assertEquals(wildcardNode("/a"), trie.search("/a/a"));
     }
 
     @Test
@@ -386,6 +467,11 @@ public class PriorityTreeTest
         return new Node<String, Integer>(path);
     }
 
+    private Node<String, Integer> wildcardNode(String path)
+    {
+        return new Node<String, Integer>(path, "");
+    }
+
     private Node[] nodes(String... nodePaths)
     {
         List<Node> nodes = new ArrayList<Node>();
@@ -394,5 +480,10 @@ public class PriorityTreeTest
             nodes.add(new Node(nodePath));
         }
         return nodes.toArray(NODE_ARRAY);
+    }
+
+    private Node[] asArray(Node... nodes)
+    {
+        return nodes;
     }
 }

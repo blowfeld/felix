@@ -30,23 +30,30 @@ public final class Node<V, C extends Comparable<C>> implements Comparable<Node<V
 {
     private final TreeSet<Node<V, C>> children;
     private final String path;
+    private final String extension;
     private final Collection<ColoredValue<V, C>> values;
 
-    Node(TreeSet<Node<V, C>> children, String path, Collection<ColoredValue<V, C>> values)
+    Node(TreeSet<Node<V, C>> children, String path, String extension, Collection<ColoredValue<V, C>> values)
     {
         this.children = children;
         this.path = path;
+        this.extension = extension;
         this.values = values;
     }
 
-    Node(TreeSet<Node<V, C>> children, String path, V value, C color)
+    Node(TreeSet<Node<V, C>> children, String path, String extension, V value, C color)
     {
-        this(children, path, asList(new ColoredValue<V, C>(value, color)));
+        this(children, path, extension, asList(new ColoredValue<V, C>(value, color)));
     }
 
     Node(String path)
     {
-        this(new TreeSet<Node<V, C>>(), path, Collections.<ColoredValue<V, C>>emptyList());
+        this(path, null);
+    }
+
+    Node(String path, String extension)
+    {
+        this(new TreeSet<Node<V, C>>(), path, extension, Collections.<ColoredValue<V, C>>emptyList());
     }
 
     Node<V, C> addValue(V value, C color)
@@ -54,7 +61,7 @@ public final class Node<V, C extends Comparable<C>> implements Comparable<Node<V
         Collection<ColoredValue<V, C>> newValues = createValues();
         newValues.addAll(values);
         newValues.add(new ColoredValue<V, C>(value, color));
-        return new Node<V, C>(children, path, newValues);
+        return new Node<V, C>(children, path, getExtension(), newValues);
     }
 
     Node<V, C> removeValue(V value, C color)
@@ -67,7 +74,7 @@ public final class Node<V, C extends Comparable<C>> implements Comparable<Node<V
         Collection<ColoredValue<V, C>> newValues = createValues();
         newValues.addAll(values);
         newValues.remove(coloredValue);
-        return new Node<V, C>(children, path, newValues);
+        return new Node<V, C>(children, path, getExtension(), newValues);
     }
 
     public String getPath()
@@ -121,6 +128,21 @@ public final class Node<V, C extends Comparable<C>> implements Comparable<Node<V
         return children.isEmpty();
     }
 
+    public String getExtension()
+    {
+        return extension;
+    }
+
+    public boolean isWildcard()
+    {
+        return extension != null;
+    }
+
+    public boolean isWildcard(String extension)
+    {
+        return isWildcard() && this.extension.equals(extension);
+    }
+
     private String incrementPrefix(String prefix)
     {
         char[] charArray = prefix.toCharArray();
@@ -149,15 +171,21 @@ public final class Node<V, C extends Comparable<C>> implements Comparable<Node<V
     @Override
     public int compareTo(Node<V, C> other)
     {
+        int pathCompare;
         if (path == null)
         {
-            return -1;
+            pathCompare = other.path == null ? 0 : -1;
         }
-        if (other == null)
+        else
         {
-            return 1;
+            pathCompare = path.compareTo(other.path);
         }
-        return path.compareTo(other.path);
+
+        if (pathCompare != 0)
+        {
+            return pathCompare;
+        }
+        return 0;
     }
 
     @Override
@@ -189,16 +217,22 @@ public final class Node<V, C extends Comparable<C>> implements Comparable<Node<V
         @SuppressWarnings("rawtypes")
         Node other = (Node) obj;
 
+        boolean pathEqual = false;
         if (path == null)
         {
-            return other.path == null;
+            pathEqual = other.path == null;
         }
-        return path.equals(other.path);
+        else
+        {
+            pathEqual = path.equals(other.path);
+        }
+
+        return pathEqual && isWildcard() == other.isWildcard();
     }
 
     @Override
     public String toString()
     {
-        return path;
+        return path + (isWildcard() ? " (*)" : "");
     }
 }
