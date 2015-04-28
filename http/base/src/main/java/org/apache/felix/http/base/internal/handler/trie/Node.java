@@ -101,6 +101,15 @@ public final class Node<V, C extends Comparable<C>> implements Comparable<Node<V
         return values.iterator().next().getColor();
     }
 
+    public V firstValue()
+    {
+        if (isEmpty())
+        {
+            return null;
+        }
+        return values.iterator().next().getValue();
+    }
+
     SortedSet<Node<V, C>> getChildren()
     {
         return unmodifiableSortedSet(children);

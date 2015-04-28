@@ -21,6 +21,7 @@ import static org.apache.felix.http.base.internal.handler.trie.CompareUtil.compa
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Deque;
 import java.util.HashMap;
@@ -58,6 +59,9 @@ public final class PriorityTrie<V, C extends Comparable<C>> implements Iterable<
      */
     private PriorityTrie(Node<V, C> root, Map<Node<V, C>, C> coloring)
     {
+        checkNotNull(root);
+        checkNotNull(coloring);
+
         this.root = root;
         this.nodeColoring = coloring;
         this.nodeColoring.put(root, null);
@@ -209,36 +213,6 @@ public final class PriorityTrie<V, C extends Comparable<C>> implements Iterable<
         return newChild;
     }
 
-//    public Node<V, C> search(String path)
-//    {
-//        return searchPath(path).get(0);
-//    }
-
-    public List<Node<V, C>> searchPath(String path)
-    {
-        Matcher matcher = EXTENSION_PATTERN.matcher(path);
-        matcher.matches();
-//        String wildcard = matcher.group(1);
-        String searchPath = path;
-        List<Node<V, C>> pathToParent = findParents(searchPath);
-        if (!nodeColoring.containsKey(pathToParent.get(0)))
-        {
-            calculateColors(pathToParent);
-        }
-
-        Iterator<Node<V, C>> iterator = pathToParent.iterator();
-        while (iterator.hasNext())
-        {
-            Node<V, C> node = iterator.next();
-            //remove shadowed and empty root
-            if (!isActive(node, nodeColoring))
-            {
-                iterator.remove();
-            }
-        }
-        return pathToParent;
-    }
-
     public Node<V, C> search(String path)
     {
         checkNotNull(path);
@@ -327,7 +301,12 @@ public final class PriorityTrie<V, C extends Comparable<C>> implements Iterable<
 
     public PriorityTrie<V, C> getSubtrie(String path)
     {
-        return new PriorityTrie<V, C>(search(path), new HashMap<Node<V, C>, C>(nodeColoring));
+        Node<V, C> subTreeRoot = search(path);
+        if (subTreeRoot == null)
+        {
+            return new PriorityTrie<V, C>();
+        }
+        return new PriorityTrie<V, C>(subTreeRoot, new HashMap<Node<V, C>, C>(nodeColoring));
     }
 
     public C getColor(Node<V, C> node)
@@ -388,6 +367,18 @@ public final class PriorityTrie<V, C extends Comparable<C>> implements Iterable<
     }
 
     @Override
+    public Collection<V> activeValues()
+    {
+        List<V> values = new ArrayList<V>();
+        Iterator<Node<V, C>> iterator = iterator();
+        while (iterator.hasNext())
+        {
+            values.add(iterator.next().firstValue());
+        }
+        return values;
+    }
+
+    @Override
     public Iterator<Node<V, C>> iterator()
     {
         return createIterator(root, nodeColoring);
@@ -404,7 +395,7 @@ public final class PriorityTrie<V, C extends Comparable<C>> implements Iterable<
 
             {
                 queue.add(root);
-                next = findNextActive();
+                next = findNext();
             }
 
             @Override
@@ -417,11 +408,11 @@ public final class PriorityTrie<V, C extends Comparable<C>> implements Iterable<
             public Node<V, C> next()
             {
                 Node<V, C> returnValue = next;
-                next = findNextActive();
+                next = findNext();
                 return returnValue;
             }
 
-            private Node<V, C> findNextActive()
+            private Node<V, C> findNext()
             {
                 Node<V, C> nextNode = findNextNode();
                 while (nextNode != null && !isActive(nextNode, coloring))
@@ -506,4 +497,5 @@ public final class PriorityTrie<V, C extends Comparable<C>> implements Iterable<
         }
         return result.toString();
     }
+
 }
