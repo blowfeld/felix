@@ -43,11 +43,14 @@ import javax.servlet.http.HttpServletResponse;
 import org.junit.After;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.ops4j.pax.exam.junit.ExamReactorStrategy;
 import org.ops4j.pax.exam.junit.JUnit4TestRunner;
+import org.ops4j.pax.exam.spi.reactors.EagerSingleStagedReactorFactory;
 import org.osgi.framework.ServiceRegistration;
 import org.osgi.service.http.context.ServletContextHelper;
 
 @RunWith(JUnit4TestRunner.class)
+@ExamReactorStrategy( EagerSingleStagedReactorFactory.class )
 public class ErrorPageTest extends BaseIntegrationTest
 {
     private List<ServiceRegistration<?>> registrations = new ArrayList<ServiceRegistration<?>>();
