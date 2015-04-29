@@ -400,6 +400,22 @@ public class PriorityTreeTest
     }
 
     @Test
+    public void subtriePreservesColor()
+    {
+        PriorityTrie<String, Integer> trie = emptyTrie.add("/", "", 3);
+        trie = trie.add("/a", "", 3);
+        trie = trie.add("/a/a", "", 2);
+        trie = trie.add("/a/a/a", "", 4);
+        trie = trie.add("/a/a/b", "", 1);
+
+        trie = trie.getSubtrie("/a/a");
+
+        assertEquals(Integer.valueOf(2), trie.getColor(node("/a/a")));
+        assertEquals(Integer.valueOf(2), trie.getColor(node("/a/a/a")));
+        assertEquals(Integer.valueOf(1), trie.getColor(node("/a/a/b")));
+    }
+
+    @Test
     public void iteratorHasCorrectOrder()
     {
         PriorityTrie<String, Integer> trie = emptyTrie.add("/a", "", 1);

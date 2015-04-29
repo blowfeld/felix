@@ -35,7 +35,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 
-public final class PriorityTrie<V, C extends Comparable<C>> implements Iterable<Node<V, C>>, PriorityTree<V, C>
+public final class PriorityTrie<V extends Comparable<V>, C extends Comparable<C>> implements Iterable<Node<V, C>>, PriorityTree<V, C>
 {
     private static final String WILDCARD = "/*";
     private static final Pattern WILDCARD_PATTERN = Pattern.compile("\\Q" + WILDCARD + "\\E[.][^.]+$");
@@ -64,7 +64,6 @@ public final class PriorityTrie<V, C extends Comparable<C>> implements Iterable<
 
         this.root = root;
         this.nodeColoring = coloring;
-        this.nodeColoring.put(root, null);
     }
 
     public PriorityTrie<V, C> add(String path, V value)
@@ -153,9 +152,27 @@ public final class PriorityTrie<V, C extends Comparable<C>> implements Iterable<
         List<Node<V, C>> pathToNode = findParents(searchPath);
         Node<V, C> node = pathToNode.get(0);
 
-        if (!searchPath.equals(node.getPath()) || isWildcard != node.isWildcard())
+        if (!searchPath.equals(node.getPath()))
         {
             return this;
+        }
+
+        if (isWildcard && !node.isWildcard())
+        {
+            return this;
+        }
+
+        if (!isWildcard && node.isWildcard())
+        {
+            if (pathToNode.size() > 1 && pathToNode.get(1).getPath().equals(searchPath))
+            {
+                pathToNode.remove(0);
+                node = pathToNode.get(0);
+            }
+            else
+            {
+                return this;
+            }
         }
 
         if (color == null)
@@ -213,6 +230,12 @@ public final class PriorityTrie<V, C extends Comparable<C>> implements Iterable<
         return newChild;
     }
 
+    public Node<V, C> getParent(String path)
+    {
+        List<Node<V, C>> parents = findParents(path);
+        return parents.isEmpty() ? null : parents.get(0);
+    }
+
     public Node<V, C> search(String path)
     {
         checkNotNull(path);
@@ -226,14 +249,14 @@ public final class PriorityTrie<V, C extends Comparable<C>> implements Iterable<
         Node<V, C> parent = pathToParent.get(0);
         if (path.equals(parent.getPath()))
         {
-            if (isActive(parent, nodeColoring) && !parent.isWildcard())
+            if (isActive(parent) && !parent.isWildcard())
             {
                 return parent;
             }
             else if (parent.isWildcard())
             {
                 Node<V, C> grandParent = pathToParent.get(1);
-                if (isActive(grandParent, nodeColoring) && path.equals(grandParent.getPath()))
+                if (isActive(grandParent) && path.equals(grandParent.getPath()))
                 {
                     return grandParent;
                 }
@@ -242,7 +265,7 @@ public final class PriorityTrie<V, C extends Comparable<C>> implements Iterable<
 
         for(Node<V, C> node : pathToParent)
         {
-            if (isActive(node, nodeColoring) && node.isWildcard())
+            if (isActive(node) && node.isWildcard())
             {
                 return node;
             }
@@ -306,11 +329,20 @@ public final class PriorityTrie<V, C extends Comparable<C>> implements Iterable<
         {
             return new PriorityTrie<V, C>();
         }
+
+        // ensure color of subtrie-root is cached
+        getColor(subTreeRoot);
+
         return new PriorityTrie<V, C>(subTreeRoot, new HashMap<Node<V, C>, C>(nodeColoring));
     }
 
     public C getColor(Node<V, C> node)
     {
+        if (node == null || node.getPath() == null)
+        {
+            return null;
+        }
+
         if (!nodeColoring.containsKey(node))
         {
             //cache node coloring
@@ -415,7 +447,7 @@ public final class PriorityTrie<V, C extends Comparable<C>> implements Iterable<
             private Node<V, C> findNext()
             {
                 Node<V, C> nextNode = findNextNode();
-                while (nextNode != null && !isActive(nextNode, coloring))
+                while (nextNode != null && !isActive(nextNode))
                 {
                     nextNode = findNextNode();
                 }
@@ -451,7 +483,7 @@ public final class PriorityTrie<V, C extends Comparable<C>> implements Iterable<
         };
     }
 
-    private boolean isActive(Node<V, C> node, Map<Node<V, C>, C> nodeColoring)
+    private boolean isActive(Node<V, C> node)
     {
         return compareSafely(node.getValueColor(), getColor(node)) <= 0 && node.getPath() != null;
     }
@@ -479,7 +511,7 @@ public final class PriorityTrie<V, C extends Comparable<C>> implements Iterable<
                 }
                 result.append("|--");
                 result.append(current);
-                result.append(" [n:" + getColor(current) + ", v:" + current.getValueColor() + "]");
+                result.append(" [size: " + current.getValues().size() + " node:" + getColor(current) + ", value:" + current.getValueColor() + "]");
                 result.append("\n");
 
                 if (!current.getChildren().isEmpty())

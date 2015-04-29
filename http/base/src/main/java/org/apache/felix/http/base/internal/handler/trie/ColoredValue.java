@@ -18,7 +18,7 @@ package org.apache.felix.http.base.internal.handler.trie;
 
 import static org.apache.felix.http.base.internal.handler.trie.CompareUtil.compareSafely;
 
-public final class ColoredValue<V, C extends Comparable<C>> implements Comparable<ColoredValue<V, C>>
+public final class ColoredValue<V extends Comparable<V>, C extends Comparable<C>> implements Comparable<ColoredValue<V, C>>
 {
     private final C color;
     private final V value;
@@ -42,7 +42,8 @@ public final class ColoredValue<V, C extends Comparable<C>> implements Comparabl
     @Override
     public int compareTo(ColoredValue<V, C> other)
     {
-        return compareSafely(color, other.color);
+        int colorComparison = compareSafely(color, other.color);
+        return colorComparison == 0 ? value.compareTo(other.value) : colorComparison;
     }
 
     @Override
