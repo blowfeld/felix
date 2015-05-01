@@ -16,17 +16,17 @@
  */
 package org.apache.felix.http.base.internal.handler.trie;
 
-import static org.apache.felix.http.base.internal.handler.trie.CompareUtil.compareSafely;
+import static org.apache.felix.http.base.internal.util.CompareUtil.compareSafely;
 
 public final class ColoredValue<V extends Comparable<V>, C extends Comparable<C>> implements Comparable<ColoredValue<V, C>>
 {
-    private final C color;
     private final V value;
+    private final C color;
 
     ColoredValue(V value, C color)
     {
-        this.color = color;
         this.value = value;
+        this.color = color;
     }
 
     public C getColor()

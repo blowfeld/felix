@@ -16,8 +16,7 @@
  */
 package org.apache.felix.http.base.internal.handler.trie;
 
-import static java.util.Arrays.asList;
-import static org.apache.felix.http.base.internal.handler.trie.CompareUtil.compareSafely;
+import static org.apache.felix.http.base.internal.util.CompareUtil.compareSafely;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -31,16 +30,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 
 public final class PriorityTrie<V extends Comparable<V>, C extends Comparable<C>> implements Iterable<Node<V, C>>, PriorityTree<V, C>
 {
-    private static final String WILDCARD = "/*";
-    private static final Pattern WILDCARD_PATTERN = Pattern.compile("\\Q" + WILDCARD + "\\E[.][^.]+$");
-    private static final Pattern EXTENSION_PATTERN = Pattern.compile("[.][^.]+$");
-
     private final Node<V, C> root;
     private final Map<Node<V, C>, C> nodeColoring;
 
@@ -66,22 +59,17 @@ public final class PriorityTrie<V extends Comparable<V>, C extends Comparable<C>
         this.nodeColoring = coloring;
     }
 
-    public PriorityTrie<V, C> add(String path, V value)
+    public PriorityTrie<V, C> add(SearchPath path, V value)
     {
         checkNotNull(path);
         return add(path, value, null);
     }
 
-    public PriorityTrie<V, C> add(String path, V value, C color)
+    public PriorityTrie<V, C> add(SearchPath path, V value, C color)
     {
         checkNotNull(path);
 
-        List<String> pathComponents = splitPath(path);
-        String searchPath = pathComponents.get(0);
-        String wildcard = pathComponents.get(1);
-        boolean isWildcard = wildcard != null;
-
-        List<Node<V, C>> pathToParent = findParents(searchPath);
+        List<Node<V, C>> pathToParent = findParents(path);
 
         Node<V, C> parent = pathToParent.get(0);
         if (color == null && parent.equals(root))
@@ -93,11 +81,11 @@ public final class PriorityTrie<V extends Comparable<V>, C extends Comparable<C>
             color = getColor(parent);
         }
 
-        if (isWildcard == parent.isWildcard() && searchPath.equals(parent.getPath()))
+        if (path.equals(parent.getPath()))
         {
             return updateNodeAddValue(pathToParent, value, color);
         }
-        return addNewNode(pathToParent, searchPath, wildcard, value, color);
+        return addNewNode(pathToParent, path, value, color);
     }
 
     private PriorityTrie<V, C> updateNodeAddValue(List<Node<V, C>> pathToNode, V value, C color)
@@ -110,69 +98,39 @@ public final class PriorityTrie<V extends Comparable<V>, C extends Comparable<C>
         return new PriorityTrie<V, C>(newRoot);
     }
 
-    private PriorityTrie<V, C> addNewNode(List<Node<V, C>> pathToParent, String path, String extension, V value, C color)
+    private PriorityTrie<V, C> addNewNode(List<Node<V, C>> pathToParent, SearchPath path, V value, C color)
     {
         Node<V, C> parent = pathToParent.get(0);
-        if (parent.isWildcard() && path.equals(parent.getPath()))
-        {
-            // TODO could be new root
-            parent = pathToParent.remove(0);
-            parent = pathToParent.get(0);
-        }
-
-        Node<V, C> newParent = addNodeToParent(parent, path, extension, value, color);
+        Node<V, C> newParent = addNodeToParent(parent, path, value, color);
         Node<V, C> newRoot = updateParents(pathToParent, newParent);
 
         return new PriorityTrie<V, C>(newRoot);
     }
 
-    private Node<V, C> addNodeToParent(Node<V, C> parent, String path, String extension, V value, C color)
+    private Node<V, C> addNodeToParent(Node<V, C> parent, SearchPath path, V value, C color)
     {
         TreeSet<Node<V, C>> presentChildren = new TreeSet<Node<V, C>>(parent.getChildren(path));
         TreeSet<Node<V, C>> siblings = new TreeSet<Node<V, C>>(parent.getChildren());
         siblings.removeAll(presentChildren);
 
-        Node<V, C> newNode = new Node<V, C>(presentChildren, path, extension, value, color);
+        Node<V, C> newNode = new Node<V, C>(presentChildren, path, value, color);
 
         siblings.add(newNode);
-        Node<V, C> newParent = new Node<V, C>(siblings, parent.getPath(), parent.getExtension(), parent.getValues());
+        Node<V, C> newParent = new Node<V, C>(siblings, parent.getPath(), parent.getValues());
 
         return newParent;
     }
 
-    public PriorityTrie<V, C> remove(String path, V value, C color)
+    public PriorityTrie<V, C> remove(SearchPath path, V value, C color)
     {
         checkNotNull(path);
 
-        List<String> pathComponents = splitPath(path);
-        String searchPath = pathComponents.get(0);
-        String wildcard = pathComponents.get(1);
-        boolean isWildcard = wildcard != null;
-
-        List<Node<V, C>> pathToNode = findParents(searchPath);
+        List<Node<V, C>> pathToNode = findParents(path);
         Node<V, C> node = pathToNode.get(0);
 
-        if (!searchPath.equals(node.getPath()))
+        if (!path.equals(node.getPath()))
         {
             return this;
-        }
-
-        if (isWildcard && !node.isWildcard())
-        {
-            return this;
-        }
-
-        if (!isWildcard && node.isWildcard())
-        {
-            if (pathToNode.size() > 1 && pathToNode.get(1).getPath().equals(searchPath))
-            {
-                pathToNode.remove(0);
-                node = pathToNode.get(0);
-            }
-            else
-            {
-                return this;
-            }
         }
 
         if (color == null)
@@ -211,7 +169,7 @@ public final class PriorityTrie<V extends Comparable<V>, C extends Comparable<C>
         newChildren.remove(node);
         newChildren.addAll(node.getChildren());
 
-        return new Node<V, C>(newChildren, parent.getPath(), parent.getExtension(), parent.getValues());
+        return new Node<V, C>(newChildren, parent.getPath(), parent.getValues());
     }
 
     private Node<V, C> updateParents(List<Node<V, C>> pathToParent, Node<V, C> newNode)
@@ -225,47 +183,25 @@ public final class PriorityTrie<V extends Comparable<V>, C extends Comparable<C>
             children.add(newChild);
 
             currentChild = parent;
-            newChild = new Node<V, C>(children, parent.getPath(), parent.getExtension(), parent.getValues());
+            newChild = new Node<V, C>(children, parent.getPath(), parent.getValues());
         }
         return newChild;
     }
 
-    public Node<V, C> getParent(String path)
+    public Node<V, C> getParent(SearchPath path)
     {
         List<Node<V, C>> parents = findParents(path);
         return parents.isEmpty() ? null : parents.get(0);
     }
 
-    public Node<V, C> search(String path)
+    public Node<V, C> search(SearchPath path)
     {
         checkNotNull(path);
 
-        Matcher matcher = EXTENSION_PATTERN.matcher(path);
-        matcher.matches();
-//        String wildcard = matcher.group(1);
-        String searchPath = path;
-
-        List<Node<V, C>> pathToParent = findParents(searchPath);
-        Node<V, C> parent = pathToParent.get(0);
-        if (path.equals(parent.getPath()))
-        {
-            if (isActive(parent) && !parent.isWildcard())
-            {
-                return parent;
-            }
-            else if (parent.isWildcard())
-            {
-                Node<V, C> grandParent = pathToParent.get(1);
-                if (isActive(grandParent) && path.equals(grandParent.getPath()))
-                {
-                    return grandParent;
-                }
-            }
-        }
-
+        List<Node<V, C>> pathToParent = findParents(path);
         for(Node<V, C> node : pathToParent)
         {
-            if (isActive(node) && node.isWildcard())
+            if (isActive(node) && node.getPath().matches(path))
             {
                 return node;
             }
@@ -274,14 +210,14 @@ public final class PriorityTrie<V extends Comparable<V>, C extends Comparable<C>
         return null;
     }
 
-    List<Node<V, C>> findParents(String path)
+    List<Node<V, C>> findParents(SearchPath path)
     {
         checkNotNull(path);
 
         List<Node<V, C>> pathToParent = new ArrayList<Node<V, C>>();
         Node<V, C> current = root;
 
-        while (isPrefix(current, path))
+        while (isParent(current, path))
         {
             pathToParent.add(current);
             current = current.getFloorChild(path);
@@ -296,44 +232,40 @@ public final class PriorityTrie<V extends Comparable<V>, C extends Comparable<C>
         return pathToParent;
     }
 
-    private boolean isPrefix(Node<V, C> current, String path)
+    private boolean isParent(Node<V, C> current, SearchPath path)
     {
         if (current == null)
         {
             return false;
         }
-        return current.getPath() == null || path.startsWith(current.getPath());
+        return current.getPath() == null || current.getPath().isParentOf(path);
     }
 
-    private List<String> splitPath(String path)
+    public PriorityTrie<V, C> getSubtrie(SearchPath path)
     {
-        int wildcardLength = WILDCARD.length();
-        if (path.endsWith(WILDCARD))
+        checkNotNull(path);
+
+        Node<V, C> subtrieRoot = getParent(path);
+        cacheColors(subtrieRoot);
+        Map<Node<V, C>, C> coloring = new HashMap<Node<V, C>, C>(nodeColoring);
+
+        if (!path.equals(subtrieRoot.getPath()))
         {
-            return asList(path.substring(0, path.length() - wildcardLength), "");
+            TreeSet<Node<V, C>> matchingChildren = new TreeSet<Node<V, C>>(subtrieRoot.getChildren(path));
+            subtrieRoot = new Node<V, C>(matchingChildren, null, Collections.<ColoredValue<V, C>>emptyList());
+            coloring.put(subtrieRoot, null);
         }
-        Matcher matcher = WILDCARD_PATTERN.matcher(path);
-        if (!matcher.matches())
-        {
-            return asList(path, null);
-        }
-        String extension = matcher.group(0);
-        String searchPath = path.substring(0, extension.length() + wildcardLength);
-        return asList(searchPath, extension);
+
+        return new PriorityTrie<V, C>(subtrieRoot, coloring);
     }
 
-    public PriorityTrie<V, C> getSubtrie(String path)
+    private void cacheColors(Node<V, C> subtrieRoot)
     {
-        Node<V, C> subTreeRoot = search(path);
-        if (subTreeRoot == null)
+        Iterator<Node<V, C>> iterator = createIterator(subtrieRoot);
+        while (iterator.hasNext())
         {
-            return new PriorityTrie<V, C>();
+            iterator.next();
         }
-
-        // ensure color of subtrie-root is cached
-        getColor(subTreeRoot);
-
-        return new PriorityTrie<V, C>(subTreeRoot, new HashMap<Node<V, C>, C>(nodeColoring));
     }
 
     public C getColor(Node<V, C> node)
@@ -366,7 +298,10 @@ public final class PriorityTrie<V extends Comparable<V>, C extends Comparable<C>
                 nodeColoring.put(currentNode, color);
             }
 
-            parentColor = color;
+            if (currentNode.hasDominantColor())
+            {
+                parentColor = color;
+            }
         }
     }
 
@@ -413,11 +348,10 @@ public final class PriorityTrie<V extends Comparable<V>, C extends Comparable<C>
     @Override
     public Iterator<Node<V, C>> iterator()
     {
-        return createIterator(root, nodeColoring);
+        return createIterator(root);
     }
 
-    private Iterator<Node<V,C>> createIterator(final Node<V, C> root,
-        final Map<Node<V, C>, C> coloring)
+    private Iterator<Node<V,C>> createIterator(final Node<V, C> root)
     {
         return new Iterator<Node<V,C>>()
         {
@@ -488,9 +422,8 @@ public final class PriorityTrie<V extends Comparable<V>, C extends Comparable<C>
         return compareSafely(node.getValueColor(), getColor(node)) <= 0 && node.getPath() != null;
     }
 
-    /*
+    /**
      * Print a representation of the {@code PriorityTrie} displaying the path names for debugging.
-     *
      */
     @Override
     public String toString()

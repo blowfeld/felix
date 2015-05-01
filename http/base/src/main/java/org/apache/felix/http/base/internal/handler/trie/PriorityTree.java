@@ -16,27 +16,35 @@
  */
 package org.apache.felix.http.base.internal.handler.trie;
 
+import java.util.Collection;
+import java.util.Iterator;
 
-
-final class CompareUtil
+public interface PriorityTree<V extends Comparable<V>, C extends Comparable<C>> extends Iterable<Node<V, C>>
 {
-    static <V extends Comparable<V>> int compareSafely(V value, V other)
-    {
-        if (value == null && other == null)
-        {
-            return 0;
-        }
+    PriorityTree<V, C> add(SearchPath path, V value);
 
-        if (value == null || other == null)
-        {
-            return value == null ? -1 : 1;
-        }
+    PriorityTree<V, C> add(SearchPath path, V value, C color);
 
-        return value.compareTo(other);
-    }
+    PriorityTree<V, C> remove(SearchPath path, V value, C color);
 
-    static <V  extends Comparable<V>> V min(V valueOne, V valueTwo)
-    {
-        return compareSafely(valueOne, valueTwo) <= 0 ? valueOne : valueTwo;
-    }
+    /**
+     * Finds the active parent of the given path.
+     * @param path
+     * @return
+     */
+    Node<V, C> search(SearchPath path);
+
+    Node<V, C> getParent(SearchPath path);
+
+    PriorityTree<V, C> getSubtrie(SearchPath path);
+
+    C getColor(Node<V, C> node);
+
+    /**
+     * Returns an iterator over all active nodes.
+     */
+    @Override
+    Iterator<Node<V, C>> iterator();
+
+    Collection<V> activeValues();
 }

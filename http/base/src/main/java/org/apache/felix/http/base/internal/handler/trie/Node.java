@@ -29,31 +29,24 @@ import java.util.TreeSet;
 public final class Node<V extends Comparable<V>, C extends Comparable<C>> implements Comparable<Node<V, C>>
 {
     private final TreeSet<Node<V, C>> children;
-    private final String path;
-    private final String extension;
+    private final SearchPath path;
     private final Collection<ColoredValue<V, C>> values;
 
-    Node(TreeSet<Node<V, C>> children, String path, String extension, Collection<ColoredValue<V, C>> values)
+    Node(TreeSet<Node<V, C>> children, SearchPath path, Collection<ColoredValue<V, C>> values)
     {
         this.children = children;
         this.path = path;
-        this.extension = extension;
         this.values = values;
     }
 
-    Node(TreeSet<Node<V, C>> children, String path, String extension, V value, C color)
+    Node(TreeSet<Node<V, C>> children, SearchPath  path, V value, C color)
     {
-        this(children, path, extension, asList(new ColoredValue<V, C>(value, color)));
+        this(children, path, asList(new ColoredValue<V, C>(value, color)));
     }
 
-    Node(String path)
+    Node(SearchPath path)
     {
-        this(path, null);
-    }
-
-    Node(String path, String extension)
-    {
-        this(new TreeSet<Node<V, C>>(), path, extension, Collections.<ColoredValue<V, C>>emptyList());
+        this(new TreeSet<Node<V, C>>(), path, Collections.<ColoredValue<V, C>>emptyList());
     }
 
     Node<V, C> addValue(V value, C color)
@@ -61,7 +54,7 @@ public final class Node<V extends Comparable<V>, C extends Comparable<C>> implem
         Collection<ColoredValue<V, C>> newValues = createValues();
         newValues.addAll(values);
         newValues.add(new ColoredValue<V, C>(value, color));
-        return new Node<V, C>(children, path, getExtension(), newValues);
+        return new Node<V, C>(children, path, newValues);
     }
 
     Node<V, C> removeValue(V value, C color)
@@ -74,10 +67,10 @@ public final class Node<V extends Comparable<V>, C extends Comparable<C>> implem
         Collection<ColoredValue<V, C>> newValues = createValues();
         newValues.addAll(values);
         newValues.remove(coloredValue);
-        return new Node<V, C>(children, path, getExtension(), newValues);
+        return new Node<V, C>(children, path, newValues);
     }
 
-    public String getPath()
+    public SearchPath getPath()
     {
         return path;
     }
@@ -101,6 +94,11 @@ public final class Node<V extends Comparable<V>, C extends Comparable<C>> implem
         return values.iterator().next().getColor();
     }
 
+    boolean hasDominantColor()
+    {
+        return path.hasDominantColor();
+    }
+
     public V firstValue()
     {
         if (isEmpty())
@@ -115,19 +113,14 @@ public final class Node<V extends Comparable<V>, C extends Comparable<C>> implem
         return unmodifiableSortedSet(children);
     }
 
-    SortedSet<Node<V, C>> getChildren(String prefix)
+    SortedSet<Node<V, C>> getChildren(SearchPath prefix)
     {
-        if (prefix.equals(""))
-        {
-            return children;
-        }
-
         Node<V, C> startNode = new Node<V, C>(prefix);
-        Node<V, C> endNode = new Node<V, C>(incrementPrefix(prefix));
+        Node<V, C> endNode = new Node<V, C>(prefix.upperBound());
         return unmodifiableSortedSet(children.subSet(startNode, endNode));
     }
 
-    Node<V, C> getFloorChild(String path)
+    Node<V, C> getFloorChild(SearchPath path)
     {
         return children.floor(new Node<V, C>(path));
     }
@@ -135,34 +128,6 @@ public final class Node<V extends Comparable<V>, C extends Comparable<C>> implem
     public boolean isLeaf()
     {
         return children.isEmpty();
-    }
-
-    public String getExtension()
-    {
-        return extension;
-    }
-
-    public boolean isWildcard()
-    {
-        return extension != null;
-    }
-
-    public boolean isWildcard(String extension)
-    {
-        return isWildcard() && this.extension.equals(extension);
-    }
-
-    private String incrementPrefix(String prefix)
-    {
-        char[] charArray = prefix.toCharArray();
-        int lastIndex = charArray.length - 1;
-        if (charArray[lastIndex] == Character.MAX_VALUE)
-        {
-            throw new IllegalArgumentException("Unsupported character in path (Character.MAX_VALUE)");
-        }
-        charArray[charArray.length - 1] += 1;
-
-        return new String(charArray);
     }
 
     private Collection<ColoredValue<V, C>> createValues()
@@ -226,22 +191,19 @@ public final class Node<V extends Comparable<V>, C extends Comparable<C>> implem
         @SuppressWarnings("rawtypes")
         Node other = (Node) obj;
 
-        boolean pathEqual = false;
         if (path == null)
         {
-            pathEqual = other.path == null;
+            return other.path == null;
         }
         else
         {
-            pathEqual = path.equals(other.path);
+            return path.equals(other.path);
         }
-
-        return pathEqual && isWildcard() == other.isWildcard();
     }
 
     @Override
     public String toString()
     {
-        return path + (isWildcard() ? " (*)" : "");
+        return String.valueOf(path);
     }
 }
