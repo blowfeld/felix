@@ -106,6 +106,7 @@ public class ServletPatternTest extends BaseIntegrationTest
         };
         registrations.add(m_context.registerService(ServletContextHelper.class.getName(), servletContextHelper, properties));
 
+        // Wait for registration to finish
         Thread.sleep(500);
     }
 
@@ -117,9 +118,7 @@ public class ServletPatternTest extends BaseIntegrationTest
             serviceRegistration.unregister();
         }
 
-        assertTrue(destroyLatch.await(5, TimeUnit.SECONDS));
-
-        Thread.sleep(500);
+        assertLatch(destroyLatch);
     }
 
     @Test
@@ -130,7 +129,7 @@ public class ServletPatternTest extends BaseIntegrationTest
         setupServlet("lowRankServlet", new String[] { "/foo", "/bar" }, 1, null);
         setupServlet("highRankServlet", new String[] { "/foo", "/baz" }, 2, null);
 
-        assertTrue(initLatch.await(5, TimeUnit.SECONDS));
+        assertLatch(initLatch);
 
         assertContent("highRankServlet", createURL("/foo"));
         assertContent("lowRankServlet", createURL("/bar"));
@@ -142,8 +141,8 @@ public class ServletPatternTest extends BaseIntegrationTest
     {
         setupLatches(2);
 
-        setupContext("contextA", "/test");
-        setupServlet("whiteboardServlet", new String[]{ "/foo", "/bar" }, Integer.MAX_VALUE, "contextA");
+        setupContext("contextFoo", "/test");
+        setupServlet("whiteboardServlet", new String[]{ "/foo", "/bar" }, Integer.MAX_VALUE, "contextFoo");
 
         TestServlet httpServiceServlet = new TestServlet(initLatch, destroyLatch)
         {
@@ -180,7 +179,7 @@ public class ServletPatternTest extends BaseIntegrationTest
         setupServlet("servlet1", new String[]{ "/foo", "/bar" }, 2, null);
         setupServlet("servlet2", new String[]{ "/foo", "/baz" }, 2, null);
 
-        assertTrue(initLatch.await(5, TimeUnit.SECONDS));
+        assertLatch(initLatch);
 
         assertContent("servlet1", createURL("/foo"));
         assertContent("servlet1", createURL("/bar"));
@@ -194,7 +193,7 @@ public class ServletPatternTest extends BaseIntegrationTest
 
         setupServlet("lowRankServlet", new String[]{ "/foo" }, 1, null);
 
-        assertTrue(initLatch.await(5, TimeUnit.SECONDS));
+        assertLatch(initLatch);
         assertContent("lowRankServlet", createURL("/foo"));
 
         Dictionary<String, Object> resourceProps = new Hashtable<String, Object>();
@@ -206,8 +205,7 @@ public class ServletPatternTest extends BaseIntegrationTest
         registrations.add(m_context.registerService(TestResource.class.getName(),
             new TestResource(), resourceProps));
 
-        assertTrue(destroyLatch.await(5, TimeUnit.SECONDS));
-        Thread.sleep(500);
+        assertLatch(destroyLatch);
 
         assertContent(getTestHtmlContent(), createURL("/foo"));
     }
@@ -219,42 +217,136 @@ public class ServletPatternTest extends BaseIntegrationTest
     }
 
     @Test
-    public void contextWithLongerPrefixIsChosen() throws Exception
+    public void testContextWithLongerPrefixIsChosen() throws Exception
     {
         setupLatches(2);
 
-        setupContext("contextA", "/a");
-        setupContext("contextB", "/a/b");
+        setupContext("contextFoo", "/foo");
+        setupContext("contextBar", "/foo/bar");
 
-        setupServlet("servlet1", new String[]{ "/b/test" }, 1, "contextA");
-
+        setupServlet("servlet1", new String[]{ "/bar/test" }, 1, "contextFoo");
         Thread.sleep(500);
+
         assertEquals(1, initLatch.getCount());
-        assertContent("servlet1", createURL("/a/b/test"));
+        assertContent("servlet1", createURL("/foo/bar/test"));
 
-        setupServlet("servlet2", new String[]{ "/test" }, 1, "contextB");
+        setupServlet("servlet2", new String[]{ "/test" }, 1, "contextBar");
 
-        assertTrue(initLatch.await(5, TimeUnit.SECONDS));
-        assertContent("servlet2", createURL("/a/b/test"));
+        assertLatch(initLatch);
+        assertContent("servlet2", createURL("/foo/bar/test"));
     }
 
     @Test
-    public void contextWithLongerPrefixIsChosenWithWildcard() throws Exception
+    public void testContextWithLongerPrefixWithWildcardIsPreferedOverExactMatch() throws Exception
+    {
+        setupLatches(2);
+        setupContext("contextFoo", "/foo");
+        setupContext("contextBar", "/foo/bar");
+
+        setupServlet("servlet1", new String[]{ "/bar/test/servlet" }, 1, "contextFoo");
+
+        assertEquals(1, initLatch.getCount());
+        assertContent("servlet1", createURL("/foo/bar/test/servlet"));
+
+        setupServlet("servlet2", new String[]{ "/test/*" }, 1, "contextBar");
+
+        assertLatch(initLatch);
+        assertContent("servlet2", createURL("/foo/bar/test/servlet"));
+    }
+
+    @Test
+    public void testContextWithLongerPrefixWithExtensionIsPreferedOverExactMatch() throws Exception
+    {
+        setupLatches(2);
+        setupContext("contextFoo", "/foo");
+        setupContext("contextBar", "/foo/bar");
+
+        setupServlet("servlet1", new String[]{ "/bar/test/page.html" }, 1, "contextFoo");
+
+        assertEquals(1, initLatch.getCount());
+        assertContent("servlet1", createURL("/foo/bar/test/page.html"));
+
+        setupServlet("servlet2", new String[]{ "*.html" }, 1, "contextBar");
+
+        assertLatch(initLatch);
+        assertContent("servlet2", createURL("/foo/bar/test/page.html"));
+    }
+
+    @Test
+    public void testExtensionMatch() throws Exception
+    {
+        setupLatches(1);
+
+        setupServlet("servlet1", new String[]{ "*.exe" }, 1, null);
+
+        assertLatch(initLatch);
+        assertContent("servlet1", createURL("/test.exe"));
+    }
+
+    @Test
+    public void testExactMatchIsPreferedOverWildcardMatch() throws Exception
     {
         setupLatches(2);
 
-        setupContext("contextA", "/a");
-        setupContext("contextB", "/a/b");
+        setupServlet("servlet1", new String[]{ "test" }, 1, null);
+        setupServlet("servlet2", new String[]{ "test/*" }, 1, null);
 
-        setupServlet("servlet1", new String[]{ "/b/test/servlet" }, 1, "contextA");
+        assertLatch(initLatch);
+        assertContent("servlet1", createURL("/test"));
+    }
 
-        Thread.sleep(500);
-        assertEquals(1, initLatch.getCount());
-        assertContent("servlet1", createURL("/a/b/test/servlet"));
+    @Test
+    public void testPrefixIsIgnoredAndExtensionMatchIsChoosen() throws Exception
+    {
+        setupLatches(2);
 
-        setupServlet("servlet2", new String[]{ "/test/*" }, 1, "contextB");
+        setupServlet("servlet1", new String[]{ "catalog" }, 1, null);
+        setupServlet("servlet2", new String[]{ "*.bop" }, 1, null);
 
-        assertTrue(initLatch.await(5, TimeUnit.SECONDS));
-        assertContent("servlet2", createURL("/a/b/test/servlet"));
+        assertLatch(initLatch);
+        assertContent("servlet2", createURL("/catalog/racecar.bop"));
+    }
+
+    @Test
+    public void testPrefixIsIgnored() throws Exception
+    {
+        setupLatches(1);
+
+        setupServlet("servlet1", new String[]{ "catalog" }, 1, null);
+
+        assertLatch(initLatch);
+        assertResponseCode(404, createURL("/catalog/index.html"));
+    }
+
+    @Test
+    public void testFullPathSegmentMustMatch() throws Exception
+    {
+        setupLatches(1);
+
+        setupServlet("servlet1", new String[]{ "foo/*" }, 1, null);
+
+        assertLatch(initLatch);
+        assertResponseCode(404, createURL("/foobar"));
+    }
+
+    @Test
+    public void testFullPathSegmentMustMatchForContext() throws Exception
+    {
+        setupLatches(1);
+        setupContext("contextFoo", "/foo");
+
+        setupServlet("servlet1", new String[]{ "/*" }, 1, "contextFoo");
+
+        assertLatch(initLatch);
+        assertContent("servlet1", createURL("foo/bar"));
+        assertResponseCode(404, createURL("/foobar"));
+        assertResponseCode(404, createURL("/foob/ar"));
+    }
+
+    private void assertLatch(CountDownLatch latch) throws InterruptedException
+    {
+        assertTrue(latch.await(5, TimeUnit.SECONDS));
+        // Wait for registration to finish
+        Thread.sleep(250);
     }
 }

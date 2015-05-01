@@ -17,6 +17,7 @@
 package org.apache.felix.http.base.internal.handler;
 
 import static java.util.Arrays.asList;
+import static org.apache.felix.http.base.internal.util.CompareUtil.compareSafely;
 import static org.osgi.service.http.runtime.dto.DTOConstants.FAILURE_REASON_EXCEPTION_ON_INIT;
 import static org.osgi.service.http.runtime.dto.DTOConstants.FAILURE_REASON_SERVICE_ALREAY_USED;
 import static org.osgi.service.http.runtime.dto.DTOConstants.FAILURE_REASON_SERVLET_CONTEXT_FAILURE;
@@ -24,51 +25,49 @@ import static org.osgi.service.http.runtime.dto.DTOConstants.FAILURE_REASON_SHAD
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Comparator;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.SortedSet;
 import java.util.TreeMap;
 import java.util.TreeSet;
-import java.util.regex.Pattern;
 
 import javax.annotation.Nonnull;
 import javax.servlet.Servlet;
 import javax.servlet.ServletException;
 
-import org.apache.felix.http.base.internal.handler.HandlerRankingMultimap.Update;
+import org.apache.felix.http.base.internal.handler.trie.ColoredValue;
+import org.apache.felix.http.base.internal.handler.trie.Node;
+import org.apache.felix.http.base.internal.handler.trie.PriorityTree;
+import org.apache.felix.http.base.internal.handler.trie.PriorityTrie;
+import org.apache.felix.http.base.internal.handler.trie.SearchPath;
 import org.apache.felix.http.base.internal.runtime.ServletContextHelperInfo;
 import org.apache.felix.http.base.internal.runtime.ServletInfo;
 import org.apache.felix.http.base.internal.runtime.dto.FailureRuntime;
 import org.apache.felix.http.base.internal.runtime.dto.ServletRegistryRuntime;
 import org.apache.felix.http.base.internal.runtime.dto.ServletRuntime;
-import org.apache.felix.http.base.internal.util.PatternUtil;
-import org.apache.felix.http.base.internal.util.PatternUtil.PatternComparator;
 import org.apache.felix.http.base.internal.whiteboard.RegistrationFailureException;
 
 final class ServletHandlerRegistry
 {
-    private final HandlerRankingMultimap<String> registeredServletHandlers;
-    private final SortedSet<ServletHandler> allServletHandlers = new TreeSet<ServletHandler>();
+    private static final Integer ZERO = Integer.valueOf(0);
+    private static final Integer ONE = Integer.valueOf(1);
+
     private final Set<ServletHandler> initFailures = new TreeSet<ServletHandler>();
+    private final Map<ServletHandler, Integer> useCounts = new TreeMap<ServletHandler, Integer>();
+    private final Map<Long, ContextRanking> contextsById = new HashMap<Long, ContextRanking>();
 
-    private volatile ContextRegistry contextRegistry;
-
-    ServletHandlerRegistry()
-    {
-        this.contextRegistry = new ContextRegistry();
-        this.registeredServletHandlers = new HandlerRankingMultimap<String>(null, new ServletHandlerComparator());
-    }
+    private volatile PriorityTree<ServletHandler, ContextRanking> servletHandlers;
 
     /**
      * Register default context registry for Http Service
      */
     synchronized void init()
     {
-        contextRegistry = contextRegistry.add(0L, new ContextRanking());
+        contextsById.put(0L, new ContextRanking());
+        servletHandlers = new PriorityTrie<ServletHandler, ContextRanking>();
     }
 
     synchronized void shutdown()
@@ -76,50 +75,162 @@ final class ServletHandlerRegistry
         removeAll();
     }
 
-    synchronized void add(@Nonnull ServletContextHelperInfo info)
+    synchronized void add(ServletContextHelperInfo info)
     {
-        contextRegistry = contextRegistry.add(info);
+        contextsById.put(info.getServiceId(), new ContextRanking(info));
     }
 
-    synchronized void remove(@Nonnull ServletContextHelperInfo info)
+    synchronized void remove(ServletContextHelperInfo info)
     {
-        contextRegistry = contextRegistry.remove(info);
+        contextsById.remove(info.getServiceId());
     }
 
     synchronized void addServlet(final ServletHandler handler) throws RegistrationFailureException
     {
-        if (this.allServletHandlers.contains(handler))
+        if (this.useCounts.keySet().contains(handler))
         {
             throw new RegistrationFailureException(handler.getServletInfo(), FAILURE_REASON_SERVICE_ALREAY_USED,
                 "Servlet instance " + handler.getName() + " already registered");
         }
 
         registerServlet(handler);
-
-        this.allServletHandlers.add(handler);
     }
 
     private void registerServlet(ServletHandler handler) throws RegistrationFailureException
     {
-        long contextId = handler.getContextServiceId();
         List<String> patterns = getFullPathsChecked(handler);
+        // TODO
+        Collections.sort(patterns, Collections.reverseOrder());
 
-        Update<String> update = this.registeredServletHandlers.add(patterns, handler);
-        initFirstHandler(update.getInit());
-        contextRegistry = contextRegistry.updateServletMapping(update.getActivated(), update.getDeactivated(), contextId);
-        destroyHandlers(update.getDestroy());
+        for (String path : patterns)
+        {
+            registerServlet(path, handler);
+        }
+    }
+
+    private void registerServlet(String path, ServletHandler handler) throws RegistrationFailureException
+    {
+        ContextRanking contextRanking = contextsById.get(handler.getContextServiceId());
+        SearchPath searchPath = SearchPath.forPattern(path);
+
+        Node<ServletHandler, ContextRanking> parentNode = servletHandlers.search(searchPath);
+
+        List<ServletHandler> destroyList = findShadowedNodes(handler, path, contextRanking, parentNode);
+
+        if (!isShadowed(handler, searchPath, contextRanking, parentNode))
+        {
+            initHandler(handler);
+        }
+
+        // TODO addAll ?
+        servletHandlers = servletHandlers.add(searchPath, handler, contextRanking);
+
+        destroyHandlers(destroyList);
+    }
+
+    private boolean isShadowed(ServletHandler handler, SearchPath path, ContextRanking handlerColor, Node<ServletHandler, ContextRanking> node)
+    {
+        if (node == null)
+        {
+            return false;
+        }
+        return isShadowed(handler, path, handlerColor,
+            node.firstValue(), node.getPath(), servletHandlers.getColor(node));
+    }
+
+    private boolean isShadowed(ServletHandler handler, SearchPath path, ContextRanking handlerColor,
+        ServletHandler otherHandler, SearchPath otherPath, ContextRanking otherColor)
+    {
+        int contextComparison = otherColor.compareTo(handlerColor);
+        if (contextComparison < 0)
+        {
+            return true;
+        }
+
+        if (path.equals(otherPath) && contextComparison == 0 && otherHandler.compareTo(handler) < 0)
+        {
+            return true;
+        }
+        return false;
+    }
+
+    private List<ServletHandler> findShadowedNodes(ServletHandler handler, String path, ContextRanking handlerColor, Node<ServletHandler, ContextRanking> parent)
+    {
+        if (parent != null && servletHandlers.getColor(parent).compareTo(handlerColor) < 0)
+        {
+            return Collections.emptyList();
+        }
+
+        List<ServletHandler> destroy = new ArrayList<ServletHandler>();
+
+        SearchPath searchPath = SearchPath.forPattern(path);
+        PriorityTree<ServletHandler, ContextRanking> subtrie = servletHandlers.getSubtrie(searchPath);
+        for (Node<ServletHandler, ContextRanking> node : subtrie)
+        {
+            ServletHandler nodeHandler = node.firstValue();
+            if (isShadowed(nodeHandler, node.getPath(), servletHandlers.getColor(node), handler, searchPath, handlerColor))
+            {
+                destroy.add(nodeHandler);
+            }
+        }
+        return destroy;
+    }
+
+    private void initHandler(ServletHandler handler) throws RegistrationFailureException
+    {
+        if (!useCounts.containsKey(handler))
+        {
+            useCounts.put(handler, 0);
+        }
+
+        int useCount = useCounts.get(handler);
+        if (useCount == 0)
+        {
+            try
+            {
+                handler.init();
+            }
+            catch (ServletException e)
+            {
+                useCounts.remove(handler);
+                throw new RegistrationFailureException(handler.getServletInfo(), FAILURE_REASON_EXCEPTION_ON_INIT, e);
+            }
+        }
+
+        useCounts.put(handler, useCount + 1);
+    }
+
+    private void destroyHandlers(List<ServletHandler> destroyList)
+    {
+        destroyHandlers(destroyList, false);
+    }
+
+    private void destroyHandlers(Collection<ServletHandler> destroyList, boolean force)
+    {
+        for (ServletHandler servletHandler : destroyList)
+        {
+            Integer useCount = useCounts.get(servletHandler);
+            if (ONE.equals(useCount) || force)
+            {
+                servletHandler.destroy();
+            }
+
+            if (useCount != null && (useCount.compareTo(ZERO) > 0))
+            {
+                useCounts.put(servletHandler, useCount - 1);
+            }
+        }
     }
 
     synchronized void removeAll()
     {
-        Collection<ServletHandler> servletHandlers = this.contextRegistry.getServletHandlers();
+        Collection<ServletHandler> oldHandlers = new TreeSet<ServletHandler>(servletHandlers.activeValues());
+        this.servletHandlers = new PriorityTrie<ServletHandler, ContextRanking>();
 
-        this.contextRegistry = new ContextRegistry();
+        destroyHandlers(oldHandlers, true);
 
-        destroyHandlers(servletHandlers);
-
-        this.allServletHandlers.clear();
-        this.registeredServletHandlers.clear();
+        this.contextsById.clear();
+        this.useCounts.clear();
     }
 
     synchronized Servlet removeServlet(ServletInfo servletInfo)
@@ -134,34 +245,35 @@ final class ServletHandlerRegistry
 
     synchronized Servlet removeServlet(Long contextId, ServletInfo servletInfo, final boolean destroy)
     {
-        ServletHandler handler = getServletHandler(servletInfo);
+        ServletHandler handler = getServletHandler(contextId, servletInfo);
         if (handler == null)
         {
             return null;
         }
 
         Servlet servlet = handler.getServlet();
-
         removeServlet(handler, destroy);
 
-        if (destroy)
-        {
-            handler.destroy();
-        }
-
+        useCounts.remove(handler);
 
         return servlet;
     }
 
-    private ServletHandler getServletHandler(final ServletInfo servletInfo)
+    private ServletHandler getServletHandler(Long contextId, ServletInfo servletInfo)
     {
-        Iterator<ServletHandler> it = this.allServletHandlers.iterator();
-        while (it.hasNext())
+        ContextRanking contextRanking = contextsById.get(contextId);
+        List<String> paths = getFullPaths(contextRanking.path, servletInfo);
+
+        for (String path : paths)
         {
-            ServletHandler handler = it.next();
-            if (handler.getServletInfo().compareTo(servletInfo) == 0)
+            Node<ServletHandler, ContextRanking> node = servletHandlers.getParent(SearchPath.forPattern(path));
+            for (ColoredValue<ServletHandler, ContextRanking> value : node.getValues())
             {
-                return handler;
+                ServletHandler servletHandler = value.getValue();
+                if (servletHandler.getServletInfo().equals(servletInfo))
+                {
+                    return servletHandler;
+                }
             }
         }
         return null;
@@ -169,7 +281,7 @@ final class ServletHandlerRegistry
 
     synchronized void removeServlet(Servlet servlet, final boolean destroy)
     {
-        Iterator<ServletHandler> it = this.allServletHandlers.iterator();
+        Iterator<ServletHandler> it = this.useCounts.keySet().iterator();
         List<ServletHandler> removals = new ArrayList<ServletHandler>();
         while (it.hasNext())
         {
@@ -188,145 +300,203 @@ final class ServletHandlerRegistry
 
     private void removeServlet(ServletHandler handler, boolean destroy)
     {
-        long contextId = handler.getContextServiceId();
         List<String> patterns = getFullPaths(handler);
-        Update<String> update = this.registeredServletHandlers.remove(patterns, handler);
-        Set<ServletHandler> initializedHandlers = initHandlers(update.getInit());
-        Map<String, ServletHandler> activated = update.getActivated();
-        activated = removeFailures(activated, initializedHandlers);
-        contextRegistry = contextRegistry.updateServletMapping(activated, update.getDeactivated(), contextId);
-        if (destroy)
-        {
-            destroyHandlers(update.getDestroy());
-        }
         this.initFailures.remove(handler);
-        this.allServletHandlers.remove(handler);
+
+        for (String path : patterns)
+        {
+            removeServlet(path, handler, destroy);
+        }
     }
 
-    private Map<String, ServletHandler> removeFailures(Map<String, ServletHandler> activated,
-        Set<ServletHandler> initializedHandlers)
+    private void removeServlet(String path, ServletHandler handler, boolean destroy)
     {
-        if (activated.size() == initializedHandlers.size())
+        SearchPath searchPath = SearchPath.forPattern(path);
+        Node<ServletHandler, ContextRanking> node = servletHandlers.getParent(searchPath);
+        if (node == null || !searchPath.equals(node.getPath()))
         {
-            return activated;
+            // no such path registered
+            return;
         }
 
-        Map<String, ServletHandler> result = new HashMap<String, ServletHandler>();
-        for (Map.Entry<String, ServletHandler> entry : activated.entrySet())
+        ContextRanking oldNodeColor = servletHandlers.getColor(node);
+        ContextRanking contextColor = contextsById.get(handler.getContextServiceId());
+        PriorityTree<ServletHandler, ContextRanking> newHandlers = servletHandlers.remove(searchPath, handler, contextColor);
+
+        Node<ServletHandler, ContextRanking> newParent = newHandlers.getParent(searchPath);
+        boolean nodeRemoved = newParent == null || newParent.getPath() == null ||
+            !searchPath.equals(newParent.getPath());
+
+        ContextRanking newColor = newHandlers.getColor(newParent);
+        if (!nodeRemoved && compareSafely(newParent.getValueColor(), newColor) <= 0)
         {
-            if (initializedHandlers.contains(entry.getValue()))
+            initNode(node, newParent);
+        }
+
+        if (compareSafely(newColor, oldNodeColor) > 0)
+        {
+            PriorityTree<ServletHandler, ContextRanking> subtrie = newHandlers.getSubtrie(searchPath);
+            initSubtrie(subtrie, newColor, oldNodeColor);
+        }
+
+        servletHandlers = newHandlers;
+        if (destroy)
+        {
+            destroyHandlers(asList(handler));
+        }
+    }
+
+    private void initNode(Node<ServletHandler, ContextRanking> node, Node<ServletHandler, ContextRanking> newParent)
+    {
+        ServletHandler newHead = newParent.firstValue();
+        if (node.firstValue().compareTo(newHead) != 0)
+        {
+            try
             {
-                result.put(entry.getKey(), entry.getValue());
+                initHandler(newHead);
+            }
+            catch (RegistrationFailureException e)
+            {
+                initFailures.add(newHead);
             }
         }
-        return result;
+    }
+
+    private void initSubtrie(PriorityTree<ServletHandler, ContextRanking> subtrie,
+        ContextRanking newColor, ContextRanking oldColor)
+    {
+        for (Node<ServletHandler, ContextRanking> node : subtrie)
+        {
+            ContextRanking nodeColor = subtrie.getColor(node);
+            if (compareSafely(nodeColor, oldColor) > 0 && compareSafely(nodeColor, newColor) <= 0)
+            {
+                ServletHandler nodeHead = node.firstValue();
+                try
+                {
+                    initHandler(nodeHead);
+                }
+                catch (RegistrationFailureException e)
+                {
+                    initFailures.add(nodeHead);
+                }
+            }
+        }
     }
 
     private List<String> getFullPathsChecked(ServletHandler handler) throws RegistrationFailureException
     {
-        String contextPath = contextRegistry.getPath(handler.getContextServiceId());
+        String contextPath = contextsById.get(handler.getContextServiceId()).path;
         if (contextPath == null)
         {
             throw new RegistrationFailureException(handler.getServletInfo(), FAILURE_REASON_SERVLET_CONTEXT_FAILURE);
         }
-        return getFullPaths(contextPath, handler);
+        return getFullPaths(contextPath, handler.getServletInfo());
     }
 
     private List<String> getFullPaths(ServletHandler handler)
     {
-        String contextPath = contextRegistry.getPath(handler.getContextServiceId());
-        return getFullPaths(contextPath, handler);
+        String contextPath = contextsById.get(handler.getContextServiceId()).path;
+        return getFullPaths(contextPath, handler.getServletInfo());
     }
 
-    private List<String> getFullPaths(String contextPath, ServletHandler handler)
+    private List<String> getFullPaths(String contextPath, ServletInfo info)
     {
         contextPath = contextPath.equals("/") ? "" : contextPath;
 
-        List<String> patterns = new ArrayList<String>(asList(handler.getServletInfo().getPatterns()));
+        List<String> patterns = new ArrayList<String>(asList(info.getPatterns()));
         for (int i = 0; i < patterns.size(); i++)
         {
-            patterns.set(i, contextPath + patterns.get(i));
+            String pattern = patterns.get(i);
+            pattern = pattern.startsWith("/") ? pattern : "/" + pattern;
+            patterns.set(i, contextPath + pattern);
         }
         return patterns;
     }
 
-    private void initFirstHandler(Collection<ServletHandler> handlers) throws RegistrationFailureException
-    {
-        if (handlers.isEmpty())
-        {
-            return;
-        }
-
-        ServletHandler handler = handlers.iterator().next();
-        try
-        {
-            handler.init();
-        }
-        catch (ServletException e)
-        {
-            throw new RegistrationFailureException(handler.getServletInfo(), FAILURE_REASON_EXCEPTION_ON_INIT, e);
-        }
-    }
-
-    private Set<ServletHandler> initHandlers(Collection<ServletHandler> handlers)
-    {
-        Set<ServletHandler> success = new TreeSet<ServletHandler>();
-        List<ServletHandler> failure = new ArrayList<ServletHandler>();
-        for (ServletHandler servletHandler : handlers)
-        {
-            try
-            {
-                servletHandler.init();
-                success.add(servletHandler);
-            }
-            catch (ServletException e)
-            {
-                failure.add(servletHandler);
-            }
-        }
-
-        this.initFailures.addAll(failure);
-
-        return success;
-    }
-
-    private void destroyHandlers(Collection<? extends AbstractHandler<?>> servletHandlers)
-    {
-        for (AbstractHandler<?> handler : servletHandlers)
-        {
-            handler.destroy();
-        }
-    }
-
     ServletHandler getServletHandler(String requestURI)
     {
-        return contextRegistry.getServletHandler(requestURI);
+        PriorityTree<ServletHandler, ContextRanking> currentHandlers = servletHandlers;
+
+        Node<ServletHandler, ContextRanking> pathNode = currentHandlers.search(SearchPath.forPath(requestURI));
+        SearchPath extensionPath = SearchPath.forExtensionPath(requestURI);
+        Node<ServletHandler, ContextRanking> extensionNode = null;
+        if (extensionPath != null)
+        {
+            extensionNode = currentHandlers.search(extensionPath);
+        }
+
+        Node<ServletHandler, ContextRanking> result = null;
+        if (pathNode == null && extensionNode == null)
+        {
+            return null;
+        }
+        else if (pathNode != null && extensionNode != null)
+        {
+            ContextRanking pathRanking = extensionNode.getValueColor();
+            ContextRanking extensionRanking = pathNode.getValueColor();
+            result = compareSafely(pathRanking, extensionRanking) < 0 ? extensionNode : pathNode;
+        }
+        else
+        {
+            result = pathNode != null ? pathNode : extensionNode;
+        }
+
+        ServletHandler servletHandler = result.firstValue();
+        if (initFailures.contains(servletHandler))
+        {
+            return null;
+        }
+        return servletHandler;
     }
 
     ServletHandler getServletHandlerByName(final Long contextId, @Nonnull final String name)
     {
-        HandlerMapping<ServletHandler> servletMapping = contextRegistry.getServletMapping(contextId);
-        return servletMapping != null ? servletMapping.getByName(name) : null;
+        SearchPath searchPath = SearchPath.forPattern(contextsById.get(contextId).path);
+        PriorityTree<ServletHandler, ContextRanking> contextTrie = servletHandlers.getSubtrie(searchPath);
+        for (Node<ServletHandler, ContextRanking> node : contextTrie)
+        {
+            ServletHandler servletHandler = node.firstValue();
+            if (servletHandler.getName().equals(name))
+            {
+                return servletHandler;
+            }
+        }
+        return null;
     }
 
     synchronized ServletRegistryRuntime getRuntime(FailureRuntime.Builder failureRuntimeBuilder)
     {
-        addFailures(failureRuntimeBuilder, this.registeredServletHandlers.getShadowedValues(), FAILURE_REASON_SHADOWED_BY_OTHER_SERVICE);
         addFailures(failureRuntimeBuilder, this.initFailures, FAILURE_REASON_EXCEPTION_ON_INIT);
 
         Collection<ServletRuntime> servletRuntimes = new TreeSet<ServletRuntime>(ServletRuntime.COMPARATOR);
         Collection<ServletRuntime> resourceRuntimes = new TreeSet<ServletRuntime>(ServletRuntime.COMPARATOR);
-        for (ServletHandler activeHandler : this.registeredServletHandlers.getActiveValues())
+        for (Map.Entry<ServletHandler, Integer> countEntry : this.useCounts.entrySet())
         {
-            if (activeHandler.getServletInfo().isResource())
+            ServletHandler handler = countEntry.getKey();
+
+            // TODO remove initFailures from trie and useCounts
+            if (initFailures.contains(handler))
             {
-                resourceRuntimes.add(activeHandler);
+                continue;
+            }
+
+            if (countEntry.getValue() > 0)
+            {
+                if (handler.getServletInfo().isResource())
+                {
+                    resourceRuntimes.add(handler);
+                }
+                else
+                {
+                    servletRuntimes.add(handler);
+                }
             }
             else
             {
-                servletRuntimes.add(activeHandler);
+                failureRuntimeBuilder.add(handler.getServletInfo(), FAILURE_REASON_SHADOWED_BY_OTHER_SERVICE);
             }
         }
+
         return new ServletRegistryRuntime(servletRuntimes, resourceRuntimes);
     }
 
@@ -335,148 +505,6 @@ final class ServletHandlerRegistry
         for (ServletHandler handler : handlers)
         {
             failureRuntimeBuilder.add(handler.getServletInfo(), failureCode);
-        }
-    }
-
-    private class ServletHandlerComparator implements Comparator<ServletHandler>
-    {
-        @Override
-        public int compare(ServletHandler o1, ServletHandler o2)
-        {
-            ContextRanking contextRankingOne = contextRegistry.getContextRanking(o1.getContextServiceId());
-            ContextRanking contextRankingTwo = contextRegistry.getContextRanking(o2.getContextServiceId());
-            int contextComparison = contextRankingOne.compareTo(contextRankingTwo);
-            return contextComparison == 0 ? o1.compareTo(o2) : contextComparison;
-        }
-    }
-
-    private static class ContextRegistry
-    {
-        private final Map<Long, ContextRanking> contextRankingsPerId;
-        private final TreeSet<ContextRanking> contextRankings;
-        private final Map<Long, HandlerMapping<ServletHandler>> servletMappingsPerContext;
-
-        ContextRegistry()
-        {
-            this(new HashMap<Long, ContextRanking>(),
-                new TreeSet<ContextRanking>(),
-                new HashMap<Long, HandlerMapping<ServletHandler>>());
-        }
-
-        ContextRegistry(Map<Long, ContextRanking> contextRankingsPerId, TreeSet<ContextRanking> contextRankings, Map<Long, HandlerMapping<ServletHandler>> servletMappingsPerContext)
-        {
-            this.contextRankingsPerId = contextRankingsPerId;
-            this.contextRankings = contextRankings;
-            this.servletMappingsPerContext = servletMappingsPerContext;
-        }
-
-        ContextRanking getContextRanking(long contextServiceId)
-        {
-            return contextRankingsPerId.get(contextServiceId);
-        }
-
-        ServletHandler getServletHandler(String requestURI)
-        {
-            List<Long> contextIds = getContextId(requestURI);
-            for (Long contextId : contextIds)
-            {
-                HandlerMapping<ServletHandler> servletMapping = this.servletMappingsPerContext.get(contextId);
-                if (servletMapping != null)
-                {
-                    ServletHandler bestMatch = servletMapping.getBestMatch(requestURI);
-                    if (bestMatch != null)
-                    {
-                        return bestMatch;
-                    }
-                }
-            }
-            return null;
-        }
-
-        HandlerMapping<ServletHandler> getServletMapping(Long contextId)
-        {
-            return servletMappingsPerContext.get(contextId);
-        }
-
-        ContextRegistry add(long id, ContextRanking contextRanking)
-        {
-            Map<Long, ContextRanking> newContextRankingsPerId = new HashMap<Long, ContextRanking>(contextRankingsPerId);
-            TreeSet<ContextRanking> newContextRankings = new TreeSet<ContextRanking>(contextRankings);
-            Map<Long, HandlerMapping<ServletHandler>> newServletMappingsPerContext = new HashMap<Long, HandlerMapping<ServletHandler>>(servletMappingsPerContext);
-            newContextRankingsPerId.put(id, contextRanking);
-            newContextRankings.add(contextRanking);
-            newServletMappingsPerContext.put(id, new HandlerMapping<ServletHandler>());
-
-            return new ContextRegistry(newContextRankingsPerId, newContextRankings, newServletMappingsPerContext);
-        }
-
-        ContextRegistry add(ServletContextHelperInfo info)
-        {
-            return add(info.getServiceId(), new ContextRanking(info));
-        }
-
-        ContextRegistry remove(ServletContextHelperInfo info)
-        {
-            Map<Long, ContextRanking> newContextRankingsPerId = new HashMap<Long, ContextRanking>(contextRankingsPerId);
-            TreeSet<ContextRanking> newContextRankings = new TreeSet<ContextRanking>(contextRankings);
-            Map<Long, HandlerMapping<ServletHandler>> newServletMappingsPerContext = new HashMap<Long, HandlerMapping<ServletHandler>>(servletMappingsPerContext);
-            newContextRankingsPerId.remove(info.getServiceId());
-            newContextRankings.remove(new ContextRanking(info));
-            newServletMappingsPerContext.remove(info.getServiceId());
-
-            return new ContextRegistry(newContextRankingsPerId, newContextRankings, newServletMappingsPerContext);
-        }
-
-        String getPath(long contextId)
-        {
-            return contextRankingsPerId.get(contextId).path;
-        }
-
-        private List<Long> getContextId(String path)
-        {
-            List<Long> ids = new ArrayList<Long>();
-            for (ContextRanking contextRanking : contextRankings)
-            {
-                if (contextRanking.isMatching(path))
-                {
-                    ids.add(contextRanking.serviceId);
-                }
-            }
-            return ids;
-        }
-
-        ContextRegistry updateServletMapping(Map<String, ServletHandler> activated, Map<String, ServletHandler> deactivated, long contextId)
-        {
-            Map<Long, HandlerMapping<ServletHandler>> newServletMappingsPerContext = new HashMap<Long, HandlerMapping<ServletHandler>>(servletMappingsPerContext);
-            HandlerMapping<ServletHandler> servletMapping = newServletMappingsPerContext.get(contextId);
-            if (servletMapping == null)
-            {
-                servletMapping = new HandlerMapping<ServletHandler>();
-            }
-            newServletMappingsPerContext.put(contextId, servletMapping.update(convert(activated), convert(deactivated)));
-            return new ContextRegistry(contextRankingsPerId, contextRankings, newServletMappingsPerContext);
-        }
-
-        private Map<Pattern, ServletHandler> convert(Map<String, ServletHandler> mapping)
-        {
-            TreeMap<Pattern, ServletHandler> converted = new TreeMap<Pattern, ServletHandler>(PatternComparator.INSTANCE);
-            for (Map.Entry<String, ServletHandler> entry : mapping.entrySet())
-            {
-                Pattern pattern = Pattern.compile(PatternUtil.convertToRegEx(entry.getKey()));
-                converted.put(pattern, entry.getValue());
-            }
-            return converted;
-        }
-
-        Collection<ServletHandler> getServletHandlers()
-        {
-            Collection<ServletHandler> servletHandlers = new ArrayList<ServletHandler>();
-            for (HandlerMapping<ServletHandler> servletMapping : this.servletMappingsPerContext.values())
-            {
-                servletHandlers.addAll(servletMapping.values());
-            }
-
-            return servletHandlers;
         }
     }
 
@@ -522,11 +550,6 @@ final class ServletHandlerRegistry
                 return Integer.compare(other.ranking, this.ranking);
             }
             return result;
-        }
-
-        boolean isMatching(final String requestURI)
-        {
-            return "".equals(path) || "/".equals(path) || requestURI.startsWith(path);
         }
     }
 }
