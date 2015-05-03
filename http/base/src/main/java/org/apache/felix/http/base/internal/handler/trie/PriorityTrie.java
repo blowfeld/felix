@@ -23,19 +23,19 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Deque;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 
 public final class PriorityTrie<V extends Comparable<V>, C extends Comparable<C>> implements Iterable<Node<V, C>>, PriorityTree<V, C>
 {
     private final Node<V, C> root;
-    private final Map<Node<V, C>, C> nodeColoring;
+    private final ConcurrentMap<Node<V, C>, C> nodeColoring;
 
     public PriorityTrie()
     {
@@ -44,13 +44,13 @@ public final class PriorityTrie<V extends Comparable<V>, C extends Comparable<C>
 
     private PriorityTrie(Node<V, C> root)
     {
-        this(root, new HashMap<Node<V,C>, C>());
+        this(root, new ConcurrentHashMap<Node<V,C>, C>());
     }
 
     /**
      * Only for use in subtries!
      */
-    private PriorityTrie(Node<V, C> root, Map<Node<V, C>, C> coloring)
+    private PriorityTrie(Node<V, C> root, ConcurrentMap<Node<V, C>, C> coloring)
     {
         checkNotNull(root);
         checkNotNull(coloring);
@@ -116,7 +116,7 @@ public final class PriorityTrie<V extends Comparable<V>, C extends Comparable<C>
         Node<V, C> newNode = new Node<V, C>(presentChildren, path, value, color);
 
         siblings.add(newNode);
-        Node<V, C> newParent = new Node<V, C>(siblings, parent.getPath(), parent.getValues());
+        Node<V, C> newParent = new Node<V, C>(siblings, parent.getPath(), parent.copyOfValues());
 
         return newParent;
     }
@@ -169,7 +169,7 @@ public final class PriorityTrie<V extends Comparable<V>, C extends Comparable<C>
         newChildren.remove(node);
         newChildren.addAll(node.getChildren());
 
-        return new Node<V, C>(newChildren, parent.getPath(), parent.getValues());
+        return new Node<V, C>(newChildren, parent.getPath(), parent.copyOfValues());
     }
 
     private Node<V, C> updateParents(List<Node<V, C>> pathToParent, Node<V, C> newNode)
@@ -183,7 +183,7 @@ public final class PriorityTrie<V extends Comparable<V>, C extends Comparable<C>
             children.add(newChild);
 
             currentChild = parent;
-            newChild = new Node<V, C>(children, parent.getPath(), parent.getValues());
+            newChild = new Node<V, C>(children, parent.getPath(), parent.copyOfValues());
         }
         return newChild;
     }
@@ -238,7 +238,7 @@ public final class PriorityTrie<V extends Comparable<V>, C extends Comparable<C>
         {
             return false;
         }
-        return current.getPath() == null || current.getPath().isParentOf(path);
+        return isBareRoot(current) || current.getPath().isParentOf(path);
     }
 
     public PriorityTrie<V, C> getSubtrie(SearchPath path)
@@ -247,21 +247,19 @@ public final class PriorityTrie<V extends Comparable<V>, C extends Comparable<C>
 
         Node<V, C> subtrieRoot = getParent(path);
         cacheColors(subtrieRoot);
-        Map<Node<V, C>, C> coloring = new HashMap<Node<V, C>, C>(nodeColoring);
 
         if (!path.equals(subtrieRoot.getPath()))
         {
             TreeSet<Node<V, C>> matchingChildren = new TreeSet<Node<V, C>>(subtrieRoot.getChildren(path));
             subtrieRoot = new Node<V, C>(matchingChildren, null, Collections.<ColoredValue<V, C>>emptyList());
-            coloring.put(subtrieRoot, null);
         }
 
-        return new PriorityTrie<V, C>(subtrieRoot, coloring);
+        return new PriorityTrie<V, C>(subtrieRoot, nodeColoring);
     }
 
     private void cacheColors(Node<V, C> subtrieRoot)
     {
-        Iterator<Node<V, C>> iterator = createIterator(subtrieRoot);
+        Iterator<Node<V, C>> iterator = createDepthFirstIterator(subtrieRoot);
         while (iterator.hasNext())
         {
             iterator.next();
@@ -270,9 +268,14 @@ public final class PriorityTrie<V extends Comparable<V>, C extends Comparable<C>
 
     public C getColor(Node<V, C> node)
     {
-        if (node == null || node.getPath() == null)
+        if (node == null || isBareRoot(node))
         {
             return null;
+        }
+
+        if (node.equals(root))
+        {
+            return root.getValueColor();
         }
 
         if (!nodeColoring.containsKey(node))
@@ -286,8 +289,7 @@ public final class PriorityTrie<V extends Comparable<V>, C extends Comparable<C>
     private void calculateColors(List<Node<V, C>> nodes)
     {
         Node<V, C> root = nodes.get(nodes.size() - 1);
-        C parentColor = calculateColor(root, nodeColoring.get(root));
-        nodeColoring.put(root, parentColor);
+        C parentColor = calculateColor(root, getColor(root));
         for (int i = nodes.size() - 2; i >= 0; i--)
         {
             Node<V, C> currentNode = nodes.get(i);
@@ -298,7 +300,7 @@ public final class PriorityTrie<V extends Comparable<V>, C extends Comparable<C>
                 nodeColoring.put(currentNode, color);
             }
 
-            if (currentNode.hasDominantColor())
+            if (currentNode.hasDominantColor() || isBareRoot(currentNode))
             {
                 parentColor = color;
             }
@@ -348,10 +350,10 @@ public final class PriorityTrie<V extends Comparable<V>, C extends Comparable<C>
     @Override
     public Iterator<Node<V, C>> iterator()
     {
-        return createIterator(root);
+        return createDepthFirstIterator(root);
     }
 
-    private Iterator<Node<V,C>> createIterator(final Node<V, C> root)
+    private Iterator<Node<V,C>> createDepthFirstIterator(final Node<V, C> root)
     {
         return new Iterator<Node<V,C>>()
         {
@@ -419,7 +421,12 @@ public final class PriorityTrie<V extends Comparable<V>, C extends Comparable<C>
 
     private boolean isActive(Node<V, C> node)
     {
-        return compareSafely(node.getValueColor(), getColor(node)) <= 0 && node.getPath() != null;
+        return compareSafely(node.getValueColor(), getColor(node)) <= 0 && !isBareRoot(node);
+    }
+
+    private boolean isBareRoot(Node<V, C> current)
+    {
+        return current.getPath() == null;
     }
 
     /**
@@ -462,5 +469,4 @@ public final class PriorityTrie<V extends Comparable<V>, C extends Comparable<C>
         }
         return result.toString();
     }
-
 }

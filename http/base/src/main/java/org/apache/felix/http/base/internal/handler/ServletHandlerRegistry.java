@@ -328,9 +328,9 @@ final class ServletHandlerRegistry
             !searchPath.equals(newParent.getPath());
 
         ContextRanking newColor = newHandlers.getColor(newParent);
-        if (!nodeRemoved && compareSafely(newParent.getValueColor(), newColor) <= 0)
+        if (!nodeRemoved)
         {
-            initNode(node, newParent);
+            initNode(node, newParent, newColor);
         }
 
         if (compareSafely(newColor, oldNodeColor) > 0)
@@ -346,10 +346,10 @@ final class ServletHandlerRegistry
         }
     }
 
-    private void initNode(Node<ServletHandler, ContextRanking> node, Node<ServletHandler, ContextRanking> newParent)
+    private void initNode(Node<ServletHandler, ContextRanking> node, Node<ServletHandler, ContextRanking> newParent, ContextRanking newColor)
     {
         ServletHandler newHead = newParent.firstValue();
-        if (node.firstValue().compareTo(newHead) != 0)
+        if (compareSafely(newParent.getValueColor(), newColor) <= 0 && node.firstValue().compareTo(newHead) != 0)
         {
             try
             {

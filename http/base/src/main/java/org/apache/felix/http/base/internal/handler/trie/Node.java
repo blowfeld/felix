@@ -22,6 +22,7 @@ import static java.util.Collections.unmodifiableSortedSet;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.PriorityQueue;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
@@ -51,7 +52,7 @@ public final class Node<V extends Comparable<V>, C extends Comparable<C>> implem
 
     Node<V, C> addValue(V value, C color)
     {
-        Collection<ColoredValue<V, C>> newValues = createValues();
+        Collection<ColoredValue<V, C>> newValues = createValuesCollection();
         newValues.addAll(values);
         newValues.add(new ColoredValue<V, C>(value, color));
         return new Node<V, C>(children, path, newValues);
@@ -64,7 +65,7 @@ public final class Node<V extends Comparable<V>, C extends Comparable<C>> implem
         {
             return this;
         }
-        Collection<ColoredValue<V, C>> newValues = createValues();
+        Collection<ColoredValue<V, C>> newValues = createValuesCollection();
         newValues.addAll(values);
         newValues.remove(coloredValue);
         return new Node<V, C>(children, path, newValues);
@@ -78,6 +79,13 @@ public final class Node<V extends Comparable<V>, C extends Comparable<C>> implem
     public Collection<ColoredValue<V, C>> getValues()
     {
         return unmodifiableCollection(values);
+    }
+
+    Collection<ColoredValue<V, C>> copyOfValues()
+    {
+        Collection<ColoredValue<V, C>> result = createValuesCollection();
+        result.addAll(values);
+        return result;
     }
 
     public boolean isEmpty()
@@ -130,9 +138,9 @@ public final class Node<V extends Comparable<V>, C extends Comparable<C>> implem
         return children.isEmpty();
     }
 
-    private Collection<ColoredValue<V, C>> createValues()
+    private Collection<ColoredValue<V, C>> createValuesCollection()
     {
-        return new TreeSet<ColoredValue<V,C>>();
+        return new PriorityQueue<ColoredValue<V,C>>(1);
     }
 
     private static <V extends Comparable<V>, C extends Comparable<C>> Collection<ColoredValue<V, C>> asList(ColoredValue<V, C> coloredValue)
@@ -206,4 +214,5 @@ public final class Node<V extends Comparable<V>, C extends Comparable<C>> implem
     {
         return String.valueOf(path);
     }
+
 }
