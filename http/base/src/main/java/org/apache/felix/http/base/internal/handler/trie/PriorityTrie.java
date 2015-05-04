@@ -188,7 +188,7 @@ public final class PriorityTrie<V extends Comparable<V>, C extends Comparable<C>
         return newChild;
     }
 
-    public Node<V, C> getParent(SearchPath path)
+    public Node<V, C> getPrefix(SearchPath path)
     {
         List<Node<V, C>> parents = findParents(path);
         return parents.isEmpty() ? null : parents.get(0);
@@ -245,7 +245,7 @@ public final class PriorityTrie<V extends Comparable<V>, C extends Comparable<C>
     {
         checkNotNull(path);
 
-        Node<V, C> subtrieRoot = getParent(path);
+        Node<V, C> subtrieRoot = getPrefix(path);
         cacheColors(subtrieRoot);
 
         if (!path.equals(subtrieRoot.getPath()))

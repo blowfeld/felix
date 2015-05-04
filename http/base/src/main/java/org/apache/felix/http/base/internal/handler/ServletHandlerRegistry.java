@@ -266,7 +266,7 @@ final class ServletHandlerRegistry
 
         for (String path : paths)
         {
-            Node<ServletHandler, ContextRanking> node = servletHandlers.getParent(SearchPath.forPattern(path));
+            Node<ServletHandler, ContextRanking> node = servletHandlers.getPrefix(SearchPath.forPattern(path));
             for (ColoredValue<ServletHandler, ContextRanking> value : node.getValues())
             {
                 ServletHandler servletHandler = value.getValue();
@@ -312,7 +312,7 @@ final class ServletHandlerRegistry
     private void removeServlet(String path, ServletHandler handler, boolean destroy)
     {
         SearchPath searchPath = SearchPath.forPattern(path);
-        Node<ServletHandler, ContextRanking> node = servletHandlers.getParent(searchPath);
+        Node<ServletHandler, ContextRanking> node = servletHandlers.getPrefix(searchPath);
         if (node == null || !searchPath.equals(node.getPath()))
         {
             // no such path registered
@@ -323,7 +323,7 @@ final class ServletHandlerRegistry
         ContextRanking contextColor = contextsById.get(handler.getContextServiceId());
         PriorityTree<ServletHandler, ContextRanking> newHandlers = servletHandlers.remove(searchPath, handler, contextColor);
 
-        Node<ServletHandler, ContextRanking> newParent = newHandlers.getParent(searchPath);
+        Node<ServletHandler, ContextRanking> newParent = newHandlers.getPrefix(searchPath);
         boolean nodeRemoved = newParent == null || newParent.getPath() == null ||
             !searchPath.equals(newParent.getPath());
 
