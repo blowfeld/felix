@@ -40,7 +40,7 @@ import javax.servlet.ServletException;
 
 import org.apache.felix.http.base.internal.handler.trie.ColoredValue;
 import org.apache.felix.http.base.internal.handler.trie.Node;
-import org.apache.felix.http.base.internal.handler.trie.PriorityTree;
+import org.apache.felix.http.base.internal.handler.trie.PriorityTrieMultimap;
 import org.apache.felix.http.base.internal.handler.trie.PriorityTrie;
 import org.apache.felix.http.base.internal.handler.trie.SearchPath;
 import org.apache.felix.http.base.internal.runtime.ServletContextHelperInfo;
@@ -59,7 +59,7 @@ final class ServletHandlerRegistry
     private final Map<ServletHandler, Integer> useCounts = new TreeMap<ServletHandler, Integer>();
     private final Map<Long, ContextRanking> contextsById = new HashMap<Long, ContextRanking>();
 
-    private volatile PriorityTree<ServletHandler, ContextRanking> servletHandlers;
+    private volatile PriorityTrieMultimap<ServletHandler, ContextRanking> servletHandlers;
 
     /**
      * Register default context registry for Http Service
@@ -164,7 +164,7 @@ final class ServletHandlerRegistry
         List<ServletHandler> destroy = new ArrayList<ServletHandler>();
 
         SearchPath searchPath = SearchPath.forPattern(path);
-        PriorityTree<ServletHandler, ContextRanking> subtrie = servletHandlers.getSubtrie(searchPath);
+        PriorityTrieMultimap<ServletHandler, ContextRanking> subtrie = servletHandlers.getSubtrie(searchPath);
         for (Node<ServletHandler, ContextRanking> node : subtrie)
         {
             ServletHandler nodeHandler = node.firstValue();
@@ -321,7 +321,7 @@ final class ServletHandlerRegistry
 
         ContextRanking oldNodeColor = servletHandlers.getColor(node);
         ContextRanking contextColor = contextsById.get(handler.getContextServiceId());
-        PriorityTree<ServletHandler, ContextRanking> newHandlers = servletHandlers.remove(searchPath, handler, contextColor);
+        PriorityTrieMultimap<ServletHandler, ContextRanking> newHandlers = servletHandlers.remove(searchPath, handler, contextColor);
 
         Node<ServletHandler, ContextRanking> newParent = newHandlers.getPrefix(searchPath);
         boolean nodeRemoved = newParent == null || newParent.getPath() == null ||
@@ -335,7 +335,7 @@ final class ServletHandlerRegistry
 
         if (compareSafely(newColor, oldNodeColor) > 0)
         {
-            PriorityTree<ServletHandler, ContextRanking> subtrie = newHandlers.getSubtrie(searchPath);
+            PriorityTrieMultimap<ServletHandler, ContextRanking> subtrie = newHandlers.getSubtrie(searchPath);
             initSubtrie(subtrie, newColor, oldNodeColor);
         }
 
@@ -362,7 +362,7 @@ final class ServletHandlerRegistry
         }
     }
 
-    private void initSubtrie(PriorityTree<ServletHandler, ContextRanking> subtrie,
+    private void initSubtrie(PriorityTrieMultimap<ServletHandler, ContextRanking> subtrie,
         ContextRanking newColor, ContextRanking oldColor)
     {
         for (Node<ServletHandler, ContextRanking> node : subtrie)
@@ -415,7 +415,7 @@ final class ServletHandlerRegistry
 
     ServletHandler getServletHandler(String requestURI)
     {
-        PriorityTree<ServletHandler, ContextRanking> currentHandlers = servletHandlers;
+        PriorityTrieMultimap<ServletHandler, ContextRanking> currentHandlers = servletHandlers;
 
         Node<ServletHandler, ContextRanking> pathNode = currentHandlers.search(SearchPath.forPath(requestURI));
         SearchPath extensionPath = SearchPath.forExtensionPath(requestURI);
@@ -452,7 +452,7 @@ final class ServletHandlerRegistry
     ServletHandler getServletHandlerByName(final Long contextId, @Nonnull final String name)
     {
         SearchPath searchPath = SearchPath.forPattern(contextsById.get(contextId).path);
-        PriorityTree<ServletHandler, ContextRanking> contextTrie = servletHandlers.getSubtrie(searchPath);
+        PriorityTrieMultimap<ServletHandler, ContextRanking> contextTrie = servletHandlers.getSubtrie(searchPath);
         for (Node<ServletHandler, ContextRanking> node : contextTrie)
         {
             ServletHandler servletHandler = node.firstValue();

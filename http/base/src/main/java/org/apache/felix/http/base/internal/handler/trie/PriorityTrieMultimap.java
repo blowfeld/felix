@@ -21,9 +21,9 @@ import java.util.Iterator;
 
 
 /**
- * {@code PriorityTree} is a colored trie structure for retrieval of highest priority elements.
+ * {@code PriorityTrieMultimap} is a colored trie structure for retrieval of highest priority elements.
  * <p>
- * The {@code PriorityTree} provides storage of values by {@link SearchPath}
+ * The {@code PriorityTrieMultimap} provides storage of values by {@link SearchPath}
  * keys which represent a path in the trie. Depending on the used
  * {@code SearchPath}s, lookup matches the key with the longest matching
  * sub-path (prefix).
@@ -52,10 +52,10 @@ import java.util.Iterator;
  * and the <em>least</em> element with respect to this ordering has the highest
  * priority.
  *
- * @param <V> the value type to be stored in the {@code PriorityTree}.
+ * @param <V> the value type to be stored in the {@code PriorityTrieMultimap}.
  * @param <C> the color type
  */
-public interface PriorityTree<V extends Comparable<V>, C extends Comparable<C>> extends Iterable<Node<V, C>>
+public interface PriorityTrieMultimap<V extends Comparable<V>, C extends Comparable<C>> extends Iterable<Node<V, C>>
 {
     /**
      * Returns a copy of this trie with the value added associated with the given path.
@@ -70,7 +70,7 @@ public interface PriorityTree<V extends Comparable<V>, C extends Comparable<C>> 
      * @return a copy of this trie with the new value added associated at the
      *          given path
      */
-    PriorityTree<V, C> add(SearchPath path, V value, C color);
+    PriorityTrieMultimap<V, C> add(SearchPath path, V value, C color);
 
     /**
      * Returns a copy of this trie with the value association removed from the given path.
@@ -83,7 +83,7 @@ public interface PriorityTree<V extends Comparable<V>, C extends Comparable<C>> 
      * @return a copy of this trie with the value association removed from the
      *          given path, or this trie if there was no such association
      */
-    PriorityTree<V, C> remove(SearchPath path, V value, C color);
+    PriorityTrieMultimap<V, C> remove(SearchPath path, V value, C color);
 
     /**
      * Finds the active matching node for the given path.
@@ -145,7 +145,7 @@ public interface PriorityTree<V extends Comparable<V>, C extends Comparable<C>> 
      * @return a sub-trie containing all nodes from this trie for with the given
      *          path is a prefix
      */
-    PriorityTree<V, C> getSubtrie(SearchPath path);
+    PriorityTrieMultimap<V, C> getSubtrie(SearchPath path);
 
     /**
      * Returns the highest priority values from the active nodes in this trie.

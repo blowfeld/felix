@@ -32,7 +32,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 
-public final class PriorityTrie<V extends Comparable<V>, C extends Comparable<C>> implements Iterable<Node<V, C>>, PriorityTree<V, C>
+public final class PriorityTrie<V extends Comparable<V>, C extends Comparable<C>> implements Iterable<Node<V, C>>, PriorityTrieMultimap<V, C>
 {
     private final Node<V, C> root;
     private final ConcurrentMap<Node<V, C>, C> nodeColoring;
