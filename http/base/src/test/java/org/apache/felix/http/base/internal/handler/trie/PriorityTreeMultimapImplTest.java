@@ -31,22 +31,22 @@ import org.junit.Before;
 import org.junit.Test;
 
 @SuppressWarnings("rawtypes")
-public class PriorityTreeTest
+public class PriorityTreeMultimapImplTest
 {
     private static final Node[] NODE_ARRAY = new Node[0];
 
-    private PriorityTrie<String, Integer> emptyTrie;
+    private PriorityTrieMulitmapImpl<String, Integer> emptyTrie;
 
     @Before
     public void setup()
     {
-        emptyTrie = new PriorityTrie<String, Integer>();
+        emptyTrie = new PriorityTrieMulitmapImpl<String, Integer>();
     }
 
     @Test
     public void addAndFindParents()
     {
-        PriorityTrie<String, Integer> trie = emptyTrie.add(SearchPath.forPattern("/"), "", 1);
+        PriorityTrieMulitmapImpl<String, Integer> trie = emptyTrie.add(SearchPath.forPattern("/"), "", 1);
 
         assertThat(trie.findParents(SearchPath.forPattern("/a")), contains(nodes("/", null)));
     }
@@ -54,7 +54,7 @@ public class PriorityTreeTest
     @Test
     public void addAndFindParentsExactMatch()
     {
-        PriorityTrie<String, Integer> trie = emptyTrie.add(SearchPath.forPattern("/a"), "", 1);
+        PriorityTrieMulitmapImpl<String, Integer> trie = emptyTrie.add(SearchPath.forPattern("/a"), "", 1);
 
         assertThat(trie.findParents(SearchPath.forPattern("/a")), contains(nodes("/a", null)));
     }
@@ -62,7 +62,7 @@ public class PriorityTreeTest
     @Test
     public void addAndFindParentsWithSiblings()
     {
-        PriorityTrie<String, Integer> trie = emptyTrie.add(SearchPath.forPattern("/"), "", 1);
+        PriorityTrieMulitmapImpl<String, Integer> trie = emptyTrie.add(SearchPath.forPattern("/"), "", 1);
         trie = trie.add(SearchPath.forPattern("/aa"), "");
         trie = trie.add(SearchPath.forPattern("/ab"), "");
 
@@ -72,7 +72,7 @@ public class PriorityTreeTest
     @Test
     public void addAndFindParentsWithWildcard()
     {
-        PriorityTrie<String, Integer> trie = emptyTrie.add(SearchPath.forPattern("/"), "", 1);
+        PriorityTrieMulitmapImpl<String, Integer> trie = emptyTrie.add(SearchPath.forPattern("/"), "", 1);
         trie = trie.add(SearchPath.forPattern("/a/*"), "");
         trie = trie.add(SearchPath.forPattern("/a/a"), "");
 
@@ -86,7 +86,7 @@ public class PriorityTreeTest
     @Test
     public void addAndFindParentsWithWildcardAndExactMatch()
     {
-        PriorityTrie<String, Integer> trie = emptyTrie.add(SearchPath.forPattern("/"), "", 1);
+        PriorityTrieMulitmapImpl<String, Integer> trie = emptyTrie.add(SearchPath.forPattern("/"), "", 1);
         trie = trie.add(SearchPath.forPattern("/a"), "");
         trie = trie.add(SearchPath.forPattern("/a/*"), "");
         trie = trie.add(SearchPath.forPattern("/a/a"), "");
@@ -102,7 +102,7 @@ public class PriorityTreeTest
     @Test
     public void addAndFindParentsWithExactMatchAfterWildcard()
     {
-        PriorityTrie<String, Integer> trie = emptyTrie.add(SearchPath.forPattern("/"), "", 1);
+        PriorityTrieMulitmapImpl<String, Integer> trie = emptyTrie.add(SearchPath.forPattern("/"), "", 1);
         trie = trie.add(SearchPath.forPattern("/a/*"), "");
         trie = trie.add(SearchPath.forPattern("/a"), "");
         trie = trie.add(SearchPath.forPattern("/a/a"), "");
@@ -118,7 +118,7 @@ public class PriorityTreeTest
     @Test
     public void addAndFindParentsWithChildrensPresent()
     {
-        PriorityTrie<String, Integer> trie = emptyTrie.add(SearchPath.forPattern("/"), "", 1);
+        PriorityTrieMulitmapImpl<String, Integer> trie = emptyTrie.add(SearchPath.forPattern("/"), "", 1);
         trie = trie.add(SearchPath.forPattern("/a"), "");
         trie = trie.add(SearchPath.forPattern("/a0"), "");
         trie = trie.add(SearchPath.forPattern("/a/a"), "");
@@ -129,7 +129,7 @@ public class PriorityTreeTest
     @Test
     public void addAndFindParentsWithMultipleBranchesAddedInRandomOrder()
     {
-        PriorityTrie<String, Integer> trie = emptyTrie.add(SearchPath.forPattern("/a/a/a"), "", 1);
+        PriorityTrieMulitmapImpl<String, Integer> trie = emptyTrie.add(SearchPath.forPattern("/a/a/a"), "", 1);
         trie = trie.add(SearchPath.forPattern(""), "", 1);
         trie = trie.add(SearchPath.forPattern("/bb/a/a"), "");
         trie = trie.add(SearchPath.forPattern("/"), "");
@@ -154,7 +154,7 @@ public class PriorityTreeTest
     @Test
     public void removeLeaf()
     {
-        PriorityTrie<String, Integer> trie = emptyTrie.add(SearchPath.forPattern("/"), "", 1);
+        PriorityTrieMulitmapImpl<String, Integer> trie = emptyTrie.add(SearchPath.forPattern("/"), "", 1);
         trie = trie.add(SearchPath.forPattern("/a"), "");
         trie = trie.add(SearchPath.forPattern("/a/a"), "");
         trie = trie.add(SearchPath.forPattern("/a/b"), "");
@@ -168,7 +168,7 @@ public class PriorityTreeTest
     @Test
     public void removeNodeWithChildrenAddsChildrenToParent()
     {
-        PriorityTrie<String, Integer> trie = emptyTrie.add(SearchPath.forPattern("/"), "", 1);
+        PriorityTrieMulitmapImpl<String, Integer> trie = emptyTrie.add(SearchPath.forPattern("/"), "", 1);
         trie = trie.add(SearchPath.forPattern("/a"), "");
         trie = trie.add(SearchPath.forPattern("/a/a"), "");
         trie = trie.add(SearchPath.forPattern("/a/b"), "");
@@ -182,7 +182,7 @@ public class PriorityTreeTest
     @Test
     public void removeNoneExistingNodeReturnsSameInstance()
     {
-        PriorityTrie<String, Integer> trie = emptyTrie.add(SearchPath.forPattern("/"), "", 1);
+        PriorityTrieMulitmapImpl<String, Integer> trie = emptyTrie.add(SearchPath.forPattern("/"), "", 1);
         trie = trie.add(SearchPath.forPattern("/a"), "");
 
         assertSame(trie, trie.remove(SearchPath.forPattern("/a/a"), "", null));
@@ -191,8 +191,8 @@ public class PriorityTreeTest
     @Test
     public void removeNoneExistingValueReturnsSameInstance()
     {
-        PriorityTrie<String, Integer> trie = emptyTrie.add(SearchPath.forPattern("/a"), "", 1);
-        PriorityTrie<String, Integer> trieAfterRemoval = trie.remove(SearchPath.forPattern("/a"), "", 2);
+        PriorityTrieMulitmapImpl<String, Integer> trie = emptyTrie.add(SearchPath.forPattern("/a"), "", 1);
+        PriorityTrieMulitmapImpl<String, Integer> trieAfterRemoval = trie.remove(SearchPath.forPattern("/a"), "", 2);
 
         assertSame(trie, trieAfterRemoval);
     }
@@ -200,7 +200,7 @@ public class PriorityTreeTest
     @Test
     public void removeMinimumValueUpdatesToParentColor()
     {
-        PriorityTrie<String, Integer> trie = emptyTrie.add(SearchPath.forPattern("/a/*"), "", 3);
+        PriorityTrieMulitmapImpl<String, Integer> trie = emptyTrie.add(SearchPath.forPattern("/a/*"), "", 3);
         trie = trie.add(SearchPath.forPattern("/a/a/*"), "", 2);
         trie = trie.add(SearchPath.forPattern("/a/a/*"), "", 4);
 
@@ -213,7 +213,7 @@ public class PriorityTreeTest
     @Test
     public void searchFindsCorrectParent()
     {
-        PriorityTrie<String, Integer> trie = emptyTrie.add(SearchPath.forPattern("/"), "", 1);
+        PriorityTrieMulitmapImpl<String, Integer> trie = emptyTrie.add(SearchPath.forPattern("/"), "", 1);
         trie = trie.add(SearchPath.forPattern("/a"), "");
 
         assertEquals(node("/a"), trie.search(SearchPath.forPattern("/a")));
@@ -222,7 +222,7 @@ public class PriorityTreeTest
     @Test
     public void searchFindsCorrectParentIfParentIsNotALeaf()
     {
-        PriorityTrie<String, Integer> trie = emptyTrie.add(SearchPath.forPattern("/"), "", 1);
+        PriorityTrieMulitmapImpl<String, Integer> trie = emptyTrie.add(SearchPath.forPattern("/"), "", 1);
         trie = trie.add(SearchPath.forPattern("/a"), "");
         trie = trie.add(SearchPath.forPattern("/b"), "");
         trie = trie.add(SearchPath.forPattern("/a/a"), "");
@@ -236,7 +236,7 @@ public class PriorityTreeTest
     @Test
     public void searchFindsCorrectParentIfParentIsWildcardAndNotALeaf()
     {
-        PriorityTrie<String, Integer> trie = emptyTrie.add(SearchPath.forPattern("/"), "", 1);
+        PriorityTrieMulitmapImpl<String, Integer> trie = emptyTrie.add(SearchPath.forPattern("/"), "", 1);
         trie = trie.add(SearchPath.forPattern("/a"), "");
         trie = trie.add(SearchPath.forPattern("/b"), "");
         trie = trie.add(SearchPath.forPattern("/a/a/*"), "");
@@ -250,7 +250,7 @@ public class PriorityTreeTest
     @Test
     public void searchFindsCorrectParentWithWildcard()
     {
-        PriorityTrie<String, Integer> trie = emptyTrie.add(SearchPath.forPattern("/"), "", 1);
+        PriorityTrieMulitmapImpl<String, Integer> trie = emptyTrie.add(SearchPath.forPattern("/"), "", 1);
         trie = trie.add(SearchPath.forPattern("/a/*"), "");
 
         assertEquals(node("/a/*"), trie.search(SearchPath.forPattern("/a/a")));
@@ -259,7 +259,7 @@ public class PriorityTreeTest
     @Test
     public void searchFindsExactMatchBeforeWildcard()
     {
-        PriorityTrie<String, Integer> trie = emptyTrie.add(SearchPath.forPattern("/"), "", 1);
+        PriorityTrieMulitmapImpl<String, Integer> trie = emptyTrie.add(SearchPath.forPattern("/"), "", 1);
         trie = trie.add(SearchPath.forPattern("/a/*"), "");
         trie = trie.add(SearchPath.forPattern("/a/a"), "");
         trie = trie.add(SearchPath.forPattern("/a/a/*"), "");
@@ -271,7 +271,7 @@ public class PriorityTreeTest
     @Test
     public void searchDoesNotFindsParentIfNotExactMatch()
     {
-        PriorityTrie<String, Integer> trie = emptyTrie.add(SearchPath.forPattern("/"), "", 1);
+        PriorityTrieMulitmapImpl<String, Integer> trie = emptyTrie.add(SearchPath.forPattern("/"), "", 1);
         trie = trie.add(SearchPath.forPattern("/a"), "");
 
         assertNull(trie.search(SearchPath.forPattern("/a/a")));
@@ -280,7 +280,7 @@ public class PriorityTreeTest
     @Test
     public void searchFindsCorrectParentWithColoring()
     {
-        PriorityTrie<String, Integer> trie = emptyTrie.add(SearchPath.forPattern("/"), "", 1);
+        PriorityTrieMulitmapImpl<String, Integer> trie = emptyTrie.add(SearchPath.forPattern("/"), "", 1);
         trie = trie.add(SearchPath.forPattern("/a"), "", 1);
         trie = trie.add(SearchPath.forPattern("/a/a"), "", 2);
 
@@ -290,7 +290,7 @@ public class PriorityTreeTest
     @Test
     public void searchIgnoresShadowedValues()
     {
-        PriorityTrie<String, Integer> trie = emptyTrie.add(SearchPath.forPattern("/a/*"), "", 1);
+        PriorityTrieMulitmapImpl<String, Integer> trie = emptyTrie.add(SearchPath.forPattern("/a/*"), "", 1);
         trie = trie.add(SearchPath.forPattern("/a/a"), "", 2);
 
         assertEquals(Integer.valueOf(1), trie.getColor(node("/a/a")));
@@ -300,7 +300,7 @@ public class PriorityTreeTest
     @Test
     public void nodeColorIsSetToParentIfLarger()
     {
-        PriorityTrie<String, Integer> trie = emptyTrie.add(SearchPath.forPattern("/"), "", 1);
+        PriorityTrieMulitmapImpl<String, Integer> trie = emptyTrie.add(SearchPath.forPattern("/"), "", 1);
         trie = trie.add(SearchPath.forPattern("/a/*"), "", 1);
         trie = trie.add(SearchPath.forPattern("/a/a/a"), "", 1);
         trie = trie.add(SearchPath.forPattern("/a/a/*"), "", 2);
@@ -312,7 +312,7 @@ public class PriorityTreeTest
     @Test
     public void nodeColorIsSetToParentIfEqual()
     {
-        PriorityTrie<String, Integer> trie = emptyTrie.add(SearchPath.forPattern("/"), "", 1);
+        PriorityTrieMulitmapImpl<String, Integer> trie = emptyTrie.add(SearchPath.forPattern("/"), "", 1);
         trie = trie.add(SearchPath.forPattern("/a/*"), "", 1);
         trie = trie.add(SearchPath.forPattern("/a/a/a"), "", 1);
         trie = trie.add(SearchPath.forPattern("/a/a/*"), "", 1);
@@ -324,7 +324,7 @@ public class PriorityTreeTest
     @Test
     public void nodeColorIsSetToParentIfSmaller()
     {
-        PriorityTrie<String, Integer> trie = emptyTrie.add(SearchPath.forPattern("/"), "", 2);
+        PriorityTrieMulitmapImpl<String, Integer> trie = emptyTrie.add(SearchPath.forPattern("/"), "", 2);
         trie = trie.add(SearchPath.forPattern("/a/*"), "", 2);
         trie = trie.add(SearchPath.forPattern("/a/a/a"), "", 2);
         trie = trie.add(SearchPath.forPattern("/a/a/*"), "", 1);
@@ -336,7 +336,7 @@ public class PriorityTreeTest
     @Test
     public void nodeColorsAreUpdatedAtRemove()
     {
-        PriorityTrie<String, Integer> trie = emptyTrie.add(SearchPath.forPattern("/"), "", 3);
+        PriorityTrieMulitmapImpl<String, Integer> trie = emptyTrie.add(SearchPath.forPattern("/"), "", 3);
         trie = trie.add(SearchPath.forPattern("/a/*"), "", 3);
         trie = trie.add(SearchPath.forPattern("/a/a/*"), "", 2);
         trie = trie.add(SearchPath.forPattern("/a/a/a"), "", 4);
@@ -357,7 +357,7 @@ public class PriorityTreeTest
     @Test
     public void nodeColorsAreUpdatedAtRemoveRoot()
     {
-        PriorityTrie<String, Integer> trie = emptyTrie.add(SearchPath.forPattern("/*"), "", 2);
+        PriorityTrieMulitmapImpl<String, Integer> trie = emptyTrie.add(SearchPath.forPattern("/*"), "", 2);
         trie = trie.add(SearchPath.forPattern("/a/*"), "", 3);
         trie = trie.add(SearchPath.forPattern("/a/a/*"), "", 2);
         trie = trie.add(SearchPath.forPattern("/a/a/a"), "", 4);
@@ -374,7 +374,7 @@ public class PriorityTreeTest
     @Test
     public void multipleValuesInOneNode()
     {
-        PriorityTrie<String, Integer> trie = emptyTrie.add(SearchPath.forPattern("/a/*"), "", 2);
+        PriorityTrieMulitmapImpl<String, Integer> trie = emptyTrie.add(SearchPath.forPattern("/a/*"), "", 2);
         trie = trie.add(SearchPath.forPattern("/a/a"), "", 3);
 
         assertEquals(Integer.valueOf(2), trie.getColor(node("/a/*")));
@@ -389,7 +389,7 @@ public class PriorityTreeTest
     @Test
     public void multipleValuesInOneNodeAddedInReverseOrder()
     {
-        PriorityTrie<String, Integer> trie = emptyTrie.add(SearchPath.forPattern("/a"), "", 2);
+        PriorityTrieMulitmapImpl<String, Integer> trie = emptyTrie.add(SearchPath.forPattern("/a"), "", 2);
         trie = trie.add(SearchPath.forPattern("/a/a"), "", 2);
 
         assertEquals(Integer.valueOf(2), trie.getColor(node("/a")));
@@ -404,7 +404,7 @@ public class PriorityTreeTest
     @Test
     public void subtriePreservesColor()
     {
-        PriorityTrie<String, Integer> trie = emptyTrie.add(SearchPath.forPattern("/"), "", 3);
+        PriorityTrieMulitmapImpl<String, Integer> trie = emptyTrie.add(SearchPath.forPattern("/"), "", 3);
         trie = trie.add(SearchPath.forPattern("/a/*"), "", 3);
         trie = trie.add(SearchPath.forPattern("/a/a/*"), "", 3);
         trie = trie.add(SearchPath.forPattern("/a/a"), "", 2);
@@ -427,7 +427,7 @@ public class PriorityTreeTest
     @Test
     public void iteratorHasCorrectOrder()
     {
-        PriorityTrie<String, Integer> trie = emptyTrie.add(SearchPath.forPattern("/a"), "", 1);
+        PriorityTrieMulitmapImpl<String, Integer> trie = emptyTrie.add(SearchPath.forPattern("/a"), "", 1);
         trie = trie.add(SearchPath.forPattern("/a/b/a"), "", 1);
         trie = trie.add(SearchPath.forPattern("/a/a/a"), "", 1);
         trie = trie.add(SearchPath.forPattern("/z"), "", 1);
@@ -447,7 +447,7 @@ public class PriorityTreeTest
     @Test
     public void iteratorHasOnlyActiveNodes()
     {
-        PriorityTrie<String, Integer> trie = emptyTrie.add(SearchPath.forPattern("/a/*"), "", 1);
+        PriorityTrieMulitmapImpl<String, Integer> trie = emptyTrie.add(SearchPath.forPattern("/a/*"), "", 1);
         trie = trie.add(SearchPath.forPattern("/a/b/a"), "", 2);
         trie = trie.add(SearchPath.forPattern("/a/a/a"), "", 1);
         trie = trie.add(SearchPath.forPattern("/z"), "", 1);
@@ -467,8 +467,8 @@ public class PriorityTreeTest
     @Test
     public void addReturnsNewInstance()
     {
-        PriorityTrie<String, Integer> trie = emptyTrie.add(SearchPath.forPattern("/a"), "", 1);
-        PriorityTrie<String, Integer> trieWithMultipleValues = trie.add(SearchPath.forPattern("/a"), "", 2);
+        PriorityTrieMulitmapImpl<String, Integer> trie = emptyTrie.add(SearchPath.forPattern("/a"), "", 1);
+        PriorityTrieMulitmapImpl<String, Integer> trieWithMultipleValues = trie.add(SearchPath.forPattern("/a"), "", 2);
 
         assertNotSame(emptyTrie, trie);
         assertNotSame(trie, trieWithMultipleValues);
@@ -477,11 +477,11 @@ public class PriorityTreeTest
     @Test
     public void removeReturnsNewInstance()
     {
-        PriorityTrie<String, Integer> trie = emptyTrie.add(SearchPath.forPattern("/a"), "", 1);
+        PriorityTrieMulitmapImpl<String, Integer> trie = emptyTrie.add(SearchPath.forPattern("/a"), "", 1);
         trie = trie.add(SearchPath.forPattern("/a"), "", 2);
 
-        PriorityTrie<String, Integer> trieAfterFirstRemoval = trie.remove(SearchPath.forPattern("/a"), "", 2);
-        PriorityTrie<String, Integer> trieAfterSecondRemoval = trieAfterFirstRemoval.remove(SearchPath.forPattern("/a"), "", 1);
+        PriorityTrieMulitmapImpl<String, Integer> trieAfterFirstRemoval = trie.remove(SearchPath.forPattern("/a"), "", 2);
+        PriorityTrieMulitmapImpl<String, Integer> trieAfterSecondRemoval = trieAfterFirstRemoval.remove(SearchPath.forPattern("/a"), "", 1);
 
         assertNotSame(trie, trieAfterFirstRemoval);
         assertNotSame(trieAfterFirstRemoval, trieAfterSecondRemoval);

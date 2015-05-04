@@ -32,17 +32,17 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 
-public final class PriorityTrie<V extends Comparable<V>, C extends Comparable<C>> implements Iterable<Node<V, C>>, PriorityTrieMultimap<V, C>
+public final class PriorityTrieMulitmapImpl<V extends Comparable<V>, C extends Comparable<C>> implements Iterable<Node<V, C>>, PriorityTrieMultimap<V, C>
 {
     private final Node<V, C> root;
     private final ConcurrentMap<Node<V, C>, C> nodeColoring;
 
-    public PriorityTrie()
+    public PriorityTrieMulitmapImpl()
     {
         this(new Node<V, C>(null));
     }
 
-    private PriorityTrie(Node<V, C> root)
+    private PriorityTrieMulitmapImpl(Node<V, C> root)
     {
         this(root, new ConcurrentHashMap<Node<V,C>, C>());
     }
@@ -50,7 +50,7 @@ public final class PriorityTrie<V extends Comparable<V>, C extends Comparable<C>
     /**
      * Only for use in subtries!
      */
-    private PriorityTrie(Node<V, C> root, ConcurrentMap<Node<V, C>, C> coloring)
+    private PriorityTrieMulitmapImpl(Node<V, C> root, ConcurrentMap<Node<V, C>, C> coloring)
     {
         checkNotNull(root);
         checkNotNull(coloring);
@@ -59,13 +59,13 @@ public final class PriorityTrie<V extends Comparable<V>, C extends Comparable<C>
         this.nodeColoring = coloring;
     }
 
-    public PriorityTrie<V, C> add(SearchPath path, V value)
+    public PriorityTrieMulitmapImpl<V, C> add(SearchPath path, V value)
     {
         checkNotNull(path);
         return add(path, value, null);
     }
 
-    public PriorityTrie<V, C> add(SearchPath path, V value, C color)
+    public PriorityTrieMulitmapImpl<V, C> add(SearchPath path, V value, C color)
     {
         checkNotNull(path);
 
@@ -88,23 +88,23 @@ public final class PriorityTrie<V extends Comparable<V>, C extends Comparable<C>
         return addNewNode(pathToParent, path, value, color);
     }
 
-    private PriorityTrie<V, C> updateNodeAddValue(List<Node<V, C>> pathToNode, V value, C color)
+    private PriorityTrieMulitmapImpl<V, C> updateNodeAddValue(List<Node<V, C>> pathToNode, V value, C color)
     {
         Node<V, C> node = pathToNode.get(0);
 
         Node<V, C> newNode = node.addValue(value, color);
         Node<V, C> newRoot = updateParents(pathToNode, newNode);
 
-        return new PriorityTrie<V, C>(newRoot);
+        return new PriorityTrieMulitmapImpl<V, C>(newRoot);
     }
 
-    private PriorityTrie<V, C> addNewNode(List<Node<V, C>> pathToParent, SearchPath path, V value, C color)
+    private PriorityTrieMulitmapImpl<V, C> addNewNode(List<Node<V, C>> pathToParent, SearchPath path, V value, C color)
     {
         Node<V, C> parent = pathToParent.get(0);
         Node<V, C> newParent = addNodeToParent(parent, path, value, color);
         Node<V, C> newRoot = updateParents(pathToParent, newParent);
 
-        return new PriorityTrie<V, C>(newRoot);
+        return new PriorityTrieMulitmapImpl<V, C>(newRoot);
     }
 
     private Node<V, C> addNodeToParent(Node<V, C> parent, SearchPath path, V value, C color)
@@ -121,7 +121,7 @@ public final class PriorityTrie<V extends Comparable<V>, C extends Comparable<C>
         return newParent;
     }
 
-    public PriorityTrie<V, C> remove(SearchPath path, V value, C color)
+    public PriorityTrieMulitmapImpl<V, C> remove(SearchPath path, V value, C color)
     {
         checkNotNull(path);
 
@@ -149,10 +149,10 @@ public final class PriorityTrie<V extends Comparable<V>, C extends Comparable<C>
             return removeEmptyNode(pathToNode);
         }
         Node<V, C> newRoot = updateParents(pathToNode, newNode);
-        return new PriorityTrie<V, C>(newRoot);
+        return new PriorityTrieMulitmapImpl<V, C>(newRoot);
     }
 
-    private PriorityTrie<V, C> removeEmptyNode(List<Node<V, C>> pathToNode)
+    private PriorityTrieMulitmapImpl<V, C> removeEmptyNode(List<Node<V, C>> pathToNode)
     {
         Node<V, C> node = pathToNode.get(0);
         Node<V, C> parent = pathToNode.get(1);
@@ -160,7 +160,7 @@ public final class PriorityTrie<V extends Comparable<V>, C extends Comparable<C>
         Node<V, C> newParent = removeNode(parent, node);
         Node<V, C> newRoot = updateParents(pathToNode.subList(1, pathToNode.size()), newParent);
 
-        return new PriorityTrie<V, C>(newRoot);
+        return new PriorityTrieMulitmapImpl<V, C>(newRoot);
     }
 
     private Node<V, C> removeNode(Node<V, C> parent, Node<V, C> node)
@@ -241,7 +241,7 @@ public final class PriorityTrie<V extends Comparable<V>, C extends Comparable<C>
         return isBareRoot(current) || current.getPath().isParentOf(path);
     }
 
-    public PriorityTrie<V, C> getSubtrie(SearchPath path)
+    public PriorityTrieMulitmapImpl<V, C> getSubtrie(SearchPath path)
     {
         checkNotNull(path);
 
@@ -254,7 +254,7 @@ public final class PriorityTrie<V extends Comparable<V>, C extends Comparable<C>
             subtrieRoot = new Node<V, C>(matchingChildren, null, Collections.<ColoredValue<V, C>>emptyList());
         }
 
-        return new PriorityTrie<V, C>(subtrieRoot, nodeColoring);
+        return new PriorityTrieMulitmapImpl<V, C>(subtrieRoot, nodeColoring);
     }
 
     private void cacheColors(Node<V, C> subtrieRoot)
