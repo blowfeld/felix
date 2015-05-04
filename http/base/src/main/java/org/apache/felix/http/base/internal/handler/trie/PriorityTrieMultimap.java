@@ -58,7 +58,7 @@ import java.util.Iterator;
  * @param <V> the value type to be stored in the {@code PriorityTrieMultimap}.
  * @param <C> the color type
  */
-public interface PriorityTrieMultimap<V extends Comparable<V>, C extends Comparable<C>> extends Iterable<Node<V, C>>
+public interface PriorityTrieMultimap<V extends Comparable<V>, C extends Comparable<C>> extends Iterable<TrieNode<V, C>>
 {
     /**
      * Returns a copy of this trie with the value added associated with the given path.
@@ -101,7 +101,7 @@ public interface PriorityTrieMultimap<V extends Comparable<V>, C extends Compara
      *
      * @return the active matching node with the longest prefix
      */
-    Node<V, C> search(SearchPath path);
+    TrieNode<V, C> search(SearchPath path);
 
     /**
      * Returns the node with the longest matching sub-path (prefix) for the given path.
@@ -114,7 +114,7 @@ public interface PriorityTrieMultimap<V extends Comparable<V>, C extends Compara
      *
      * @return the node with the longest prefix from the trie
      */
-    Node<V, C> getPrefix(SearchPath path);
+    TrieNode<V, C> getPrefix(SearchPath path);
 
     /**
      * Returns the color associated with the given node.
@@ -135,7 +135,7 @@ public interface PriorityTrieMultimap<V extends Comparable<V>, C extends Compara
      *
      * @return the node with the longest prefix from the trie
      */
-    C getColor(Node<V, C> node);
+    C getColor(TrieNode<V, C> node);
 
     /**
      * Returns a sub-trie starting from the given path.
@@ -168,6 +168,6 @@ public interface PriorityTrieMultimap<V extends Comparable<V>, C extends Compara
      * @return an iterator over all active nodes in this trie
      */
     @Override
-    Iterator<Node<V, C>> iterator();
+    Iterator<TrieNode<V, C>> iterator();
 
 }

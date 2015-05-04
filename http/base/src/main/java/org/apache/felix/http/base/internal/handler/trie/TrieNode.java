@@ -26,38 +26,38 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 
 
-public final class Node<V extends Comparable<V>, C extends Comparable<C>> implements Comparable<Node<V, C>>
+public final class TrieNode<V extends Comparable<V>, C extends Comparable<C>> implements Comparable<TrieNode<V, C>>
 {
-    private final TreeSet<Node<V, C>> children;
+    private final TreeSet<TrieNode<V, C>> children;
     private final SearchPath path;
     private final Collection<ColoredValue<V, C>> values;
 
-    Node(TreeSet<Node<V, C>> children, SearchPath path, Collection<ColoredValue<V, C>> values)
+    TrieNode(TreeSet<TrieNode<V, C>> children, SearchPath path, Collection<ColoredValue<V, C>> values)
     {
         this.children = children;
         this.path = path;
         this.values = values;
     }
 
-    Node(TreeSet<Node<V, C>> children, SearchPath  path, V value, C color)
+    TrieNode(TreeSet<TrieNode<V, C>> children, SearchPath  path, V value, C color)
     {
         this(children, path, asList(new ColoredValue<V, C>(value, color)));
     }
 
-    Node(SearchPath path)
+    TrieNode(SearchPath path)
     {
-        this(new TreeSet<Node<V, C>>(), path, Collections.<ColoredValue<V, C>>emptyList());
+        this(new TreeSet<TrieNode<V, C>>(), path, Collections.<ColoredValue<V, C>>emptyList());
     }
 
-    Node<V, C> addValue(V value, C color)
+    TrieNode<V, C> addValue(V value, C color)
     {
         Collection<ColoredValue<V, C>> newValues = createValuesCollection();
         newValues.addAll(values);
         newValues.add(new ColoredValue<V, C>(value, color));
-        return new Node<V, C>(children, path, newValues);
+        return new TrieNode<V, C>(children, path, newValues);
     }
 
-    Node<V, C> removeValue(V value, C color)
+    TrieNode<V, C> removeValue(V value, C color)
     {
         ColoredValue<V, C> coloredValue = new ColoredValue<V, C>(value, color);
         if (!values.contains(coloredValue))
@@ -67,7 +67,7 @@ public final class Node<V extends Comparable<V>, C extends Comparable<C>> implem
         Collection<ColoredValue<V, C>> newValues = createValuesCollection();
         newValues.addAll(values);
         newValues.remove(coloredValue);
-        return new Node<V, C>(children, path, newValues);
+        return new TrieNode<V, C>(children, path, newValues);
     }
 
     public SearchPath getPath()
@@ -120,21 +120,21 @@ public final class Node<V extends Comparable<V>, C extends Comparable<C>> implem
         return values.iterator().next().getValue();
     }
 
-    SortedSet<Node<V, C>> getChildren()
+    SortedSet<TrieNode<V, C>> getChildren()
     {
         return unmodifiableSortedSet(children);
     }
 
-    SortedSet<Node<V, C>> getChildren(SearchPath prefix)
+    SortedSet<TrieNode<V, C>> getChildren(SearchPath prefix)
     {
-        Node<V, C> startNode = new Node<V, C>(prefix);
-        Node<V, C> endNode = new Node<V, C>(prefix.upperBound());
+        TrieNode<V, C> startNode = new TrieNode<V, C>(prefix);
+        TrieNode<V, C> endNode = new TrieNode<V, C>(prefix.upperBound());
         return unmodifiableSortedSet(children.subSet(startNode, endNode));
     }
 
-    Node<V, C> getFloorChild(SearchPath path)
+    TrieNode<V, C> getFloorChild(SearchPath path)
     {
-        return children.floor(new Node<V, C>(path));
+        return children.floor(new TrieNode<V, C>(path));
     }
 
     public boolean isLeaf()
@@ -155,7 +155,7 @@ public final class Node<V extends Comparable<V>, C extends Comparable<C>> implem
     }
 
     @Override
-    public int compareTo(Node<V, C> other)
+    public int compareTo(TrieNode<V, C> other)
     {
         int pathCompare;
         if (path == null)
@@ -195,13 +195,13 @@ public final class Node<V extends Comparable<V>, C extends Comparable<C>> implem
         {
             return false;
         }
-        if (!(obj instanceof Node))
+        if (!(obj instanceof TrieNode))
         {
             return false;
         }
 
         @SuppressWarnings("rawtypes")
-        Node other = (Node) obj;
+        TrieNode other = (TrieNode) obj;
 
         if (path == null)
         {

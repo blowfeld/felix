@@ -33,7 +33,7 @@ import org.junit.Test;
 @SuppressWarnings("rawtypes")
 public class PriorityTreeMultimapImplTest
 {
-    private static final Node[] NODE_ARRAY = new Node[0];
+    private static final TrieNode[] NODE_ARRAY = new TrieNode[0];
 
     private PriorityTrieMulitmapImpl<String, Integer> emptyTrie;
 
@@ -434,8 +434,8 @@ public class PriorityTreeMultimapImplTest
         trie = trie.add(SearchPath.forPattern("/a/a"), "", 1);
         trie = trie.add(SearchPath.forPattern("/a/b"), "", 1);
 
-        List<Node<String, Integer>> iterationOrder = new ArrayList<Node<String, Integer>>();
-        Iterator<Node<String, Integer>> iterator = trie.iterator();
+        List<TrieNode<String, Integer>> iterationOrder = new ArrayList<TrieNode<String, Integer>>();
+        Iterator<TrieNode<String, Integer>> iterator = trie.iterator();
         while (iterator.hasNext())
         {
             iterationOrder.add(iterator.next());
@@ -454,8 +454,8 @@ public class PriorityTreeMultimapImplTest
         trie = trie.add(SearchPath.forPattern("/a/a/*"), "", 2);
         trie = trie.add(SearchPath.forPattern("/a/b/*"), "", 1);
 
-        List<Node<String, Integer>> iterationOrder = new ArrayList<Node<String, Integer>>();
-        Iterator<Node<String, Integer>> iterator = trie.iterator();
+        List<TrieNode<String, Integer>> iterationOrder = new ArrayList<TrieNode<String, Integer>>();
+        Iterator<TrieNode<String, Integer>> iterator = trie.iterator();
         while (iterator.hasNext())
         {
             iterationOrder.add(iterator.next());
@@ -487,14 +487,14 @@ public class PriorityTreeMultimapImplTest
         assertNotSame(trieAfterFirstRemoval, trieAfterSecondRemoval);
     }
 
-    private Node<String, Integer> node(String path)
+    private TrieNode<String, Integer> node(String path)
     {
-        return new Node<String, Integer>(path == null ? null : SearchPath.forPattern(path));
+        return new TrieNode<String, Integer>(path == null ? null : SearchPath.forPattern(path));
     }
 
-    private Node[] nodes(String... nodePaths)
+    private TrieNode[] nodes(String... nodePaths)
     {
-        List<Node> nodes = new ArrayList<Node>();
+        List<TrieNode> nodes = new ArrayList<TrieNode>();
         for (String nodePath : nodePaths)
         {
             nodes.add(node(nodePath));
@@ -502,7 +502,7 @@ public class PriorityTreeMultimapImplTest
         return nodes.toArray(NODE_ARRAY);
     }
 
-    private Node[] asArray(Node... nodes)
+    private TrieNode[] asArray(TrieNode... nodes)
     {
         return nodes;
     }

@@ -38,7 +38,7 @@ import javax.annotation.Nonnull;
 import javax.servlet.Servlet;
 import javax.servlet.ServletException;
 
-import org.apache.felix.http.base.internal.handler.trie.Node;
+import org.apache.felix.http.base.internal.handler.trie.TrieNode;
 import org.apache.felix.http.base.internal.handler.trie.PriorityTrieMulitmapImpl;
 import org.apache.felix.http.base.internal.handler.trie.PriorityTrieMultimap;
 import org.apache.felix.http.base.internal.handler.trie.SearchPath;
@@ -112,7 +112,7 @@ final class ServletHandlerRegistry
         ContextRanking contextRanking = contextsById.get(handler.getContextServiceId());
         SearchPath searchPath = SearchPath.forPattern(path);
 
-        Node<ServletHandler, ContextRanking> parentNode = servletHandlers.search(searchPath);
+        TrieNode<ServletHandler, ContextRanking> parentNode = servletHandlers.search(searchPath);
 
         List<ServletHandler> destroyList = findShadowedNodes(handler, path, contextRanking, parentNode);
 
@@ -127,7 +127,7 @@ final class ServletHandlerRegistry
         destroyHandlers(destroyList);
     }
 
-    private boolean isShadowed(ServletHandler handler, SearchPath path, ContextRanking handlerColor, Node<ServletHandler, ContextRanking> node)
+    private boolean isShadowed(ServletHandler handler, SearchPath path, ContextRanking handlerColor, TrieNode<ServletHandler, ContextRanking> node)
     {
         if (node == null)
         {
@@ -153,7 +153,7 @@ final class ServletHandlerRegistry
         return false;
     }
 
-    private List<ServletHandler> findShadowedNodes(ServletHandler handler, String path, ContextRanking handlerColor, Node<ServletHandler, ContextRanking> parent)
+    private List<ServletHandler> findShadowedNodes(ServletHandler handler, String path, ContextRanking handlerColor, TrieNode<ServletHandler, ContextRanking> parent)
     {
         if (parent != null && servletHandlers.getColor(parent).compareTo(handlerColor) < 0)
         {
@@ -164,7 +164,7 @@ final class ServletHandlerRegistry
 
         SearchPath searchPath = SearchPath.forPattern(path);
         PriorityTrieMultimap<ServletHandler, ContextRanking> subtrie = servletHandlers.getSubtrie(searchPath);
-        for (Node<ServletHandler, ContextRanking> node : subtrie)
+        for (TrieNode<ServletHandler, ContextRanking> node : subtrie)
         {
             ServletHandler nodeHandler = node.firstValue();
             if (isShadowed(nodeHandler, node.getPath(), servletHandlers.getColor(node), handler, searchPath, handlerColor))
@@ -265,7 +265,7 @@ final class ServletHandlerRegistry
 
         for (String path : paths)
         {
-            Node<ServletHandler, ContextRanking> node = servletHandlers.getPrefix(SearchPath.forPattern(path));
+            TrieNode<ServletHandler, ContextRanking> node = servletHandlers.getPrefix(SearchPath.forPattern(path));
             for (ServletHandler value : node.getValues())
             {
                 ServletHandler servletHandler = value;
@@ -311,7 +311,7 @@ final class ServletHandlerRegistry
     private void removeServlet(String path, ServletHandler handler, boolean destroy)
     {
         SearchPath searchPath = SearchPath.forPattern(path);
-        Node<ServletHandler, ContextRanking> node = servletHandlers.getPrefix(searchPath);
+        TrieNode<ServletHandler, ContextRanking> node = servletHandlers.getPrefix(searchPath);
         if (node == null || !searchPath.equals(node.getPath()))
         {
             // no such path registered
@@ -322,7 +322,7 @@ final class ServletHandlerRegistry
         ContextRanking contextColor = contextsById.get(handler.getContextServiceId());
         PriorityTrieMultimap<ServletHandler, ContextRanking> newHandlers = servletHandlers.remove(searchPath, handler, contextColor);
 
-        Node<ServletHandler, ContextRanking> newParent = newHandlers.getPrefix(searchPath);
+        TrieNode<ServletHandler, ContextRanking> newParent = newHandlers.getPrefix(searchPath);
         boolean nodeRemoved = newParent == null || newParent.getPath() == null ||
             !searchPath.equals(newParent.getPath());
 
@@ -345,7 +345,7 @@ final class ServletHandlerRegistry
         }
     }
 
-    private void initNode(Node<ServletHandler, ContextRanking> node, Node<ServletHandler, ContextRanking> newParent, ContextRanking newColor)
+    private void initNode(TrieNode<ServletHandler, ContextRanking> node, TrieNode<ServletHandler, ContextRanking> newParent, ContextRanking newColor)
     {
         ServletHandler newHead = newParent.firstValue();
         if (compareSafely(newParent.getValueColor(), newColor) <= 0 && node.firstValue().compareTo(newHead) != 0)
@@ -364,7 +364,7 @@ final class ServletHandlerRegistry
     private void initSubtrie(PriorityTrieMultimap<ServletHandler, ContextRanking> subtrie,
         ContextRanking newColor, ContextRanking oldColor)
     {
-        for (Node<ServletHandler, ContextRanking> node : subtrie)
+        for (TrieNode<ServletHandler, ContextRanking> node : subtrie)
         {
             ContextRanking nodeColor = subtrie.getColor(node);
             if (compareSafely(nodeColor, oldColor) > 0 && compareSafely(nodeColor, newColor) <= 0)
@@ -416,15 +416,15 @@ final class ServletHandlerRegistry
     {
         PriorityTrieMultimap<ServletHandler, ContextRanking> currentHandlers = servletHandlers;
 
-        Node<ServletHandler, ContextRanking> pathNode = currentHandlers.search(SearchPath.forPath(requestURI));
+        TrieNode<ServletHandler, ContextRanking> pathNode = currentHandlers.search(SearchPath.forPath(requestURI));
         SearchPath extensionPath = SearchPath.forExtensionPath(requestURI);
-        Node<ServletHandler, ContextRanking> extensionNode = null;
+        TrieNode<ServletHandler, ContextRanking> extensionNode = null;
         if (extensionPath != null)
         {
             extensionNode = currentHandlers.search(extensionPath);
         }
 
-        Node<ServletHandler, ContextRanking> result = null;
+        TrieNode<ServletHandler, ContextRanking> result = null;
         if (pathNode == null && extensionNode == null)
         {
             return null;
@@ -452,7 +452,7 @@ final class ServletHandlerRegistry
     {
         SearchPath searchPath = SearchPath.forPattern(contextsById.get(contextId).path);
         PriorityTrieMultimap<ServletHandler, ContextRanking> contextTrie = servletHandlers.getSubtrie(searchPath);
-        for (Node<ServletHandler, ContextRanking> node : contextTrie)
+        for (TrieNode<ServletHandler, ContextRanking> node : contextTrie)
         {
             ServletHandler servletHandler = node.firstValue();
             if (servletHandler.getName().equals(name))

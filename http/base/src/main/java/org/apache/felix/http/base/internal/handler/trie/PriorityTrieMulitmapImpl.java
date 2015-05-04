@@ -32,25 +32,25 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 
-public final class PriorityTrieMulitmapImpl<V extends Comparable<V>, C extends Comparable<C>> implements Iterable<Node<V, C>>, PriorityTrieMultimap<V, C>
+public final class PriorityTrieMulitmapImpl<V extends Comparable<V>, C extends Comparable<C>> implements Iterable<TrieNode<V, C>>, PriorityTrieMultimap<V, C>
 {
-    private final Node<V, C> root;
-    private final ConcurrentMap<Node<V, C>, C> nodeColoring;
+    private final TrieNode<V, C> root;
+    private final ConcurrentMap<TrieNode<V, C>, C> nodeColoring;
 
     public PriorityTrieMulitmapImpl()
     {
-        this(new Node<V, C>(null));
+        this(new TrieNode<V, C>(null));
     }
 
-    private PriorityTrieMulitmapImpl(Node<V, C> root)
+    private PriorityTrieMulitmapImpl(TrieNode<V, C> root)
     {
-        this(root, new ConcurrentHashMap<Node<V,C>, C>());
+        this(root, new ConcurrentHashMap<TrieNode<V,C>, C>());
     }
 
     /**
      * Only for use in subtries!
      */
-    private PriorityTrieMulitmapImpl(Node<V, C> root, ConcurrentMap<Node<V, C>, C> coloring)
+    private PriorityTrieMulitmapImpl(TrieNode<V, C> root, ConcurrentMap<TrieNode<V, C>, C> coloring)
     {
         checkNotNull(root);
         checkNotNull(coloring);
@@ -70,9 +70,9 @@ public final class PriorityTrieMulitmapImpl<V extends Comparable<V>, C extends C
     {
         checkNotNull(path);
 
-        List<Node<V, C>> pathToParent = findParents(path);
+        List<TrieNode<V, C>> pathToParent = findParents(path);
 
-        Node<V, C> parent = pathToParent.get(0);
+        TrieNode<V, C> parent = pathToParent.get(0);
         if (color == null && parent.equals(root))
         {
             throw new IllegalArgumentException("Root nodes must be colored");
@@ -89,35 +89,35 @@ public final class PriorityTrieMulitmapImpl<V extends Comparable<V>, C extends C
         return addNewNode(pathToParent, path, value, color);
     }
 
-    private PriorityTrieMulitmapImpl<V, C> updateNodeAddValue(List<Node<V, C>> pathToNode, V value, C color)
+    private PriorityTrieMulitmapImpl<V, C> updateNodeAddValue(List<TrieNode<V, C>> pathToNode, V value, C color)
     {
-        Node<V, C> node = pathToNode.get(0);
+        TrieNode<V, C> node = pathToNode.get(0);
 
-        Node<V, C> newNode = node.addValue(value, color);
-        Node<V, C> newRoot = updateParents(pathToNode, newNode);
+        TrieNode<V, C> newNode = node.addValue(value, color);
+        TrieNode<V, C> newRoot = updateParents(pathToNode, newNode);
 
         return new PriorityTrieMulitmapImpl<V, C>(newRoot);
     }
 
-    private PriorityTrieMulitmapImpl<V, C> addNewNode(List<Node<V, C>> pathToParent, SearchPath path, V value, C color)
+    private PriorityTrieMulitmapImpl<V, C> addNewNode(List<TrieNode<V, C>> pathToParent, SearchPath path, V value, C color)
     {
-        Node<V, C> parent = pathToParent.get(0);
-        Node<V, C> newParent = addNodeToParent(parent, path, value, color);
-        Node<V, C> newRoot = updateParents(pathToParent, newParent);
+        TrieNode<V, C> parent = pathToParent.get(0);
+        TrieNode<V, C> newParent = addNodeToParent(parent, path, value, color);
+        TrieNode<V, C> newRoot = updateParents(pathToParent, newParent);
 
         return new PriorityTrieMulitmapImpl<V, C>(newRoot);
     }
 
-    private Node<V, C> addNodeToParent(Node<V, C> parent, SearchPath path, V value, C color)
+    private TrieNode<V, C> addNodeToParent(TrieNode<V, C> parent, SearchPath path, V value, C color)
     {
-        TreeSet<Node<V, C>> presentChildren = new TreeSet<Node<V, C>>(parent.getChildren(path));
-        TreeSet<Node<V, C>> siblings = new TreeSet<Node<V, C>>(parent.getChildren());
+        TreeSet<TrieNode<V, C>> presentChildren = new TreeSet<TrieNode<V, C>>(parent.getChildren(path));
+        TreeSet<TrieNode<V, C>> siblings = new TreeSet<TrieNode<V, C>>(parent.getChildren());
         siblings.removeAll(presentChildren);
 
-        Node<V, C> newNode = new Node<V, C>(presentChildren, path, value, color);
+        TrieNode<V, C> newNode = new TrieNode<V, C>(presentChildren, path, value, color);
 
         siblings.add(newNode);
-        Node<V, C> newParent = new Node<V, C>(siblings, parent.getPath(), parent.copyOfValues());
+        TrieNode<V, C> newParent = new TrieNode<V, C>(siblings, parent.getPath(), parent.copyOfValues());
 
         return newParent;
     }
@@ -127,8 +127,8 @@ public final class PriorityTrieMulitmapImpl<V extends Comparable<V>, C extends C
     {
         checkNotNull(path);
 
-        List<Node<V, C>> pathToNode = findParents(path);
-        Node<V, C> node = pathToNode.get(0);
+        List<TrieNode<V, C>> pathToNode = findParents(path);
+        TrieNode<V, C> node = pathToNode.get(0);
 
         if (!path.equals(node.getPath()))
         {
@@ -140,7 +140,7 @@ public final class PriorityTrieMulitmapImpl<V extends Comparable<V>, C extends C
             color = getColor(node);
         }
 
-        Node<V, C> newNode = node.removeValue(value, color);
+        TrieNode<V, C> newNode = node.removeValue(value, color);
         if (newNode == node)
         {
             return this;
@@ -150,60 +150,60 @@ public final class PriorityTrieMulitmapImpl<V extends Comparable<V>, C extends C
         {
             return removeEmptyNode(pathToNode);
         }
-        Node<V, C> newRoot = updateParents(pathToNode, newNode);
+        TrieNode<V, C> newRoot = updateParents(pathToNode, newNode);
         return new PriorityTrieMulitmapImpl<V, C>(newRoot);
     }
 
-    private PriorityTrieMulitmapImpl<V, C> removeEmptyNode(List<Node<V, C>> pathToNode)
+    private PriorityTrieMulitmapImpl<V, C> removeEmptyNode(List<TrieNode<V, C>> pathToNode)
     {
-        Node<V, C> node = pathToNode.get(0);
-        Node<V, C> parent = pathToNode.get(1);
+        TrieNode<V, C> node = pathToNode.get(0);
+        TrieNode<V, C> parent = pathToNode.get(1);
 
-        Node<V, C> newParent = removeNode(parent, node);
-        Node<V, C> newRoot = updateParents(pathToNode.subList(1, pathToNode.size()), newParent);
+        TrieNode<V, C> newParent = removeNode(parent, node);
+        TrieNode<V, C> newRoot = updateParents(pathToNode.subList(1, pathToNode.size()), newParent);
 
         return new PriorityTrieMulitmapImpl<V, C>(newRoot);
     }
 
-    private Node<V, C> removeNode(Node<V, C> parent, Node<V, C> node)
+    private TrieNode<V, C> removeNode(TrieNode<V, C> parent, TrieNode<V, C> node)
     {
-        TreeSet<Node<V, C>> newChildren = new TreeSet<Node<V, C>>(parent.getChildren());
+        TreeSet<TrieNode<V, C>> newChildren = new TreeSet<TrieNode<V, C>>(parent.getChildren());
         newChildren.remove(node);
         newChildren.addAll(node.getChildren());
 
-        return new Node<V, C>(newChildren, parent.getPath(), parent.copyOfValues());
+        return new TrieNode<V, C>(newChildren, parent.getPath(), parent.copyOfValues());
     }
 
-    private Node<V, C> updateParents(List<Node<V, C>> pathToParent, Node<V, C> newNode)
+    private TrieNode<V, C> updateParents(List<TrieNode<V, C>> pathToParent, TrieNode<V, C> newNode)
     {
-        Node<V, C> currentChild = pathToParent.get(0);
-        Node<V, C> newChild = newNode;
-        for (Node<V, C> parent : pathToParent.subList(1, pathToParent.size()))
+        TrieNode<V, C> currentChild = pathToParent.get(0);
+        TrieNode<V, C> newChild = newNode;
+        for (TrieNode<V, C> parent : pathToParent.subList(1, pathToParent.size()))
         {
-            TreeSet<Node<V, C>> children = new TreeSet<Node<V, C>>(parent.getChildren());
+            TreeSet<TrieNode<V, C>> children = new TreeSet<TrieNode<V, C>>(parent.getChildren());
             children.remove(currentChild);
             children.add(newChild);
 
             currentChild = parent;
-            newChild = new Node<V, C>(children, parent.getPath(), parent.copyOfValues());
+            newChild = new TrieNode<V, C>(children, parent.getPath(), parent.copyOfValues());
         }
         return newChild;
     }
 
     @Override
-    public Node<V, C> getPrefix(SearchPath path)
+    public TrieNode<V, C> getPrefix(SearchPath path)
     {
-        List<Node<V, C>> parents = findParents(path);
+        List<TrieNode<V, C>> parents = findParents(path);
         return parents.isEmpty() ? null : parents.get(0);
     }
 
     @Override
-    public Node<V, C> search(SearchPath path)
+    public TrieNode<V, C> search(SearchPath path)
     {
         checkNotNull(path);
 
-        List<Node<V, C>> pathToParent = findParents(path);
-        for(Node<V, C> node : pathToParent)
+        List<TrieNode<V, C>> pathToParent = findParents(path);
+        for(TrieNode<V, C> node : pathToParent)
         {
             if (isActive(node) && node.getPath().matches(path))
             {
@@ -214,12 +214,12 @@ public final class PriorityTrieMulitmapImpl<V extends Comparable<V>, C extends C
         return null;
     }
 
-    List<Node<V, C>> findParents(SearchPath path)
+    List<TrieNode<V, C>> findParents(SearchPath path)
     {
         checkNotNull(path);
 
-        List<Node<V, C>> pathToParent = new ArrayList<Node<V, C>>();
-        Node<V, C> current = root;
+        List<TrieNode<V, C>> pathToParent = new ArrayList<TrieNode<V, C>>();
+        TrieNode<V, C> current = root;
 
         while (isParent(current, path))
         {
@@ -236,7 +236,7 @@ public final class PriorityTrieMulitmapImpl<V extends Comparable<V>, C extends C
         return pathToParent;
     }
 
-    private boolean isParent(Node<V, C> current, SearchPath path)
+    private boolean isParent(TrieNode<V, C> current, SearchPath path)
     {
         if (current == null)
         {
@@ -250,21 +250,21 @@ public final class PriorityTrieMulitmapImpl<V extends Comparable<V>, C extends C
     {
         checkNotNull(path);
 
-        Node<V, C> subtrieRoot = getPrefix(path);
+        TrieNode<V, C> subtrieRoot = getPrefix(path);
         cacheColors(subtrieRoot);
 
         if (!path.equals(subtrieRoot.getPath()))
         {
-            TreeSet<Node<V, C>> matchingChildren = new TreeSet<Node<V, C>>(subtrieRoot.getChildren(path));
-            subtrieRoot = new Node<V, C>(matchingChildren, null, Collections.<ColoredValue<V, C>>emptyList());
+            TreeSet<TrieNode<V, C>> matchingChildren = new TreeSet<TrieNode<V, C>>(subtrieRoot.getChildren(path));
+            subtrieRoot = new TrieNode<V, C>(matchingChildren, null, Collections.<ColoredValue<V, C>>emptyList());
         }
 
         return new PriorityTrieMulitmapImpl<V, C>(subtrieRoot, nodeColoring);
     }
 
-    private void cacheColors(Node<V, C> subtrieRoot)
+    private void cacheColors(TrieNode<V, C> subtrieRoot)
     {
-        Iterator<Node<V, C>> iterator = createDepthFirstIterator(subtrieRoot);
+        Iterator<TrieNode<V, C>> iterator = createDepthFirstIterator(subtrieRoot);
         while (iterator.hasNext())
         {
             iterator.next();
@@ -272,7 +272,7 @@ public final class PriorityTrieMulitmapImpl<V extends Comparable<V>, C extends C
     }
 
     @Override
-    public C getColor(Node<V, C> node)
+    public C getColor(TrieNode<V, C> node)
     {
         if (node == null || isBareRoot(node))
         {
@@ -292,13 +292,13 @@ public final class PriorityTrieMulitmapImpl<V extends Comparable<V>, C extends C
         return nodeColoring.get(node);
     }
 
-    private void calculateColors(List<Node<V, C>> nodes)
+    private void calculateColors(List<TrieNode<V, C>> nodes)
     {
-        Node<V, C> root = nodes.get(nodes.size() - 1);
+        TrieNode<V, C> root = nodes.get(nodes.size() - 1);
         C parentColor = calculateColor(root, getColor(root));
         for (int i = nodes.size() - 2; i >= 0; i--)
         {
-            Node<V, C> currentNode = nodes.get(i);
+            TrieNode<V, C> currentNode = nodes.get(i);
             C color = nodeColoring.get(currentNode);
             if (color == null)
             {
@@ -313,7 +313,7 @@ public final class PriorityTrieMulitmapImpl<V extends Comparable<V>, C extends C
         }
     }
 
-    private C calculateColor(Node<V, C> node, C cachedColor)
+    private C calculateColor(TrieNode<V, C> node, C cachedColor)
     {
         C valueColor = node.getValueColor();
         if (cachedColor == null){
@@ -345,7 +345,7 @@ public final class PriorityTrieMulitmapImpl<V extends Comparable<V>, C extends C
     public Collection<V> activeValues()
     {
         List<V> values = new ArrayList<V>();
-        Iterator<Node<V, C>> iterator = iterator();
+        Iterator<TrieNode<V, C>> iterator = iterator();
         while (iterator.hasNext())
         {
             values.add(iterator.next().firstValue());
@@ -354,18 +354,18 @@ public final class PriorityTrieMulitmapImpl<V extends Comparable<V>, C extends C
     }
 
     @Override
-    public Iterator<Node<V, C>> iterator()
+    public Iterator<TrieNode<V, C>> iterator()
     {
         return createDepthFirstIterator(root);
     }
 
-    private Iterator<Node<V,C>> createDepthFirstIterator(final Node<V, C> root)
+    private Iterator<TrieNode<V,C>> createDepthFirstIterator(final TrieNode<V, C> root)
     {
-        return new Iterator<Node<V,C>>()
+        return new Iterator<TrieNode<V,C>>()
         {
-            private final Deque<Node<V, C>> queue = new ArrayDeque<Node<V,C>>();
-            private final Set<Node<V, C>> visited = new HashSet<Node<V,C>>();
-            private Node<V, C> next;
+            private final Deque<TrieNode<V, C>> queue = new ArrayDeque<TrieNode<V,C>>();
+            private final Set<TrieNode<V, C>> visited = new HashSet<TrieNode<V,C>>();
+            private TrieNode<V, C> next;
 
             {
                 queue.add(root);
@@ -379,16 +379,16 @@ public final class PriorityTrieMulitmapImpl<V extends Comparable<V>, C extends C
             }
 
             @Override
-            public Node<V, C> next()
+            public TrieNode<V, C> next()
             {
-                Node<V, C> returnValue = next;
+                TrieNode<V, C> returnValue = next;
                 next = findNext();
                 return returnValue;
             }
 
-            private Node<V, C> findNext()
+            private TrieNode<V, C> findNext()
             {
-                Node<V, C> nextNode = findNextNode();
+                TrieNode<V, C> nextNode = findNextNode();
                 while (nextNode != null && !isActive(nextNode))
                 {
                     nextNode = findNextNode();
@@ -396,18 +396,18 @@ public final class PriorityTrieMulitmapImpl<V extends Comparable<V>, C extends C
                 return nextNode;
             }
 
-            private Node<V,C> findNextNode()
+            private TrieNode<V,C> findNextNode()
             {
                 if (queue.isEmpty())
                 {
                     return null;
                 }
 
-                Node<V, C> head = queue.peekFirst();
+                TrieNode<V, C> head = queue.peekFirst();
                 while (!head.isLeaf() && !visited.contains(head))
                 {
-                    Set<Node<V, C>> children = head.getChildren();
-                    for (Node<V, C> node : children)
+                    Set<TrieNode<V, C>> children = head.getChildren();
+                    for (TrieNode<V, C> node : children)
                     {
                         queue.addFirst(node);
                     }
@@ -425,12 +425,12 @@ public final class PriorityTrieMulitmapImpl<V extends Comparable<V>, C extends C
         };
     }
 
-    private boolean isActive(Node<V, C> node)
+    private boolean isActive(TrieNode<V, C> node)
     {
         return compareSafely(node.getValueColor(), getColor(node)) <= 0 && !isBareRoot(node);
     }
 
-    private boolean isBareRoot(Node<V, C> current)
+    private boolean isBareRoot(TrieNode<V, C> current)
     {
         return current.getPath() == null;
     }
@@ -441,14 +441,14 @@ public final class PriorityTrieMulitmapImpl<V extends Comparable<V>, C extends C
     @Override
     public String toString()
     {
-        Set<Node<V, C>> visited = new HashSet<Node<V, C>>();
+        Set<TrieNode<V, C>> visited = new HashSet<TrieNode<V, C>>();
         StringBuilder result = new StringBuilder();
-        Deque<Node<V, C>> queue = new ArrayDeque<Node<V, C>>();
+        Deque<TrieNode<V, C>> queue = new ArrayDeque<TrieNode<V, C>>();
         queue.add(root);
         int indent = 0;
         while(!queue.isEmpty())
         {
-            Node<V, C> current = queue.removeLast();
+            TrieNode<V, C> current = queue.removeLast();
             if (!visited.contains(current))
             {
                 for (int i = 0; i < indent; i++)
