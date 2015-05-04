@@ -24,6 +24,40 @@ import java.util.List;
 import java.util.regex.Pattern;
 
 
+/**
+ * {@code SearchPath} represents a path in {@code PriorityTrieMultimap}.
+ * <p>
+ * {@code SearchPath} are based on path names and support different wildcard
+ * mechanisms. {@code SearchPath}s can be defined in three ways:
+ * <ul>
+ *      <li>as exact path
+ *      <li>as wildcard path (path mapping)
+ *      <li>as extension wildcard path (extension mapping)
+ * </ul>
+ * <p>
+ * For searching in a {@code PriorityTrieMultimap} a {@code SearchPath}s
+ * defines a matching relationship with other {@code SearchPath}s. An exact
+ * path matches only paths with exactly the same path segments, wildcard paths
+ * match paths that start with the same path segments and extension wildcard
+ * paths match paths that start with the same path segments and have equal
+ * extension.
+ * <p>
+ * To define the tree structure of the {@code PriorityTrieMultimap},
+ * {@code SearchPath}s define a prefix relationship to other {@code SearchPath}s.
+ * To determine if a {@code SearchPath} is a prefix of an other
+ * {@code SearchPath}, the following rules are used:
+ * <ul>
+ *      <li>the other {@code SearchPath} starts with the same path segments as
+ *          the prefixing path
+ *      <li>both {@code SearchPath}s have the same extension value
+ *      <li>a wildcard {@code SearchPath} is a prefix of the exact
+ *          {@code SearchPath} with the same path segments
+ * </ul>
+ * In addition nodes do not inherit the color value of a node at an exact
+ * matching path. In this case the color of next wildcard parent is passed on.
+ * <p>
+ * (see {@link PriorityTrieMultimap})
+ */
 public class SearchPath implements Comparable<SearchPath>
 {
     private static final String MAX_CHAR = String.valueOf(Character.MAX_VALUE);
@@ -103,7 +137,7 @@ public class SearchPath implements Comparable<SearchPath>
         return new String(charArray);
     }
 
-    public boolean isParentOf(SearchPath other)
+    public boolean isPrefix(SearchPath other)
     {
         if (!equalSafely(extension, other.extension))
         {
@@ -125,7 +159,7 @@ public class SearchPath implements Comparable<SearchPath>
             return path.equals(other.path) && equalSafely(extension, other.extension);
         }
 
-        if (!isParentOf(other))
+        if (!isPrefix(other))
         {
             return false;
         }

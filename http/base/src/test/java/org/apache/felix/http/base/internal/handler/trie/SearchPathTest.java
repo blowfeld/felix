@@ -84,8 +84,8 @@ public class SearchPathTest
         SearchPath prefix = SearchPath.forPattern("/testpath");
         SearchPath path = SearchPath.forPattern("/testpath/test");
 
-        assertTrue(prefix.isParentOf(path));
-        assertFalse(path.isParentOf(prefix));
+        assertTrue(prefix.isPrefix(path));
+        assertFalse(path.isPrefix(prefix));
     }
 
     @Test
@@ -94,8 +94,8 @@ public class SearchPathTest
         SearchPath prefix = SearchPath.forPattern("/testpath/*");
         SearchPath path = SearchPath.forPattern("/testpath/test");
 
-        assertTrue(prefix.isParentOf(path));
-        assertFalse(path.isParentOf(prefix));
+        assertTrue(prefix.isPrefix(path));
+        assertFalse(path.isPrefix(prefix));
     }
 
     @Test
@@ -104,8 +104,8 @@ public class SearchPathTest
         SearchPath wildcard = SearchPath.forPattern("/testpath/*");
         SearchPath exact = SearchPath.forPattern("/testpath/");
 
-        assertTrue(wildcard.isParentOf(exact));
-        assertFalse(exact.isParentOf(wildcard));
+        assertTrue(wildcard.isPrefix(exact));
+        assertFalse(exact.isPrefix(wildcard));
     }
 
     @Test
@@ -115,11 +115,11 @@ public class SearchPathTest
         SearchPath extension = SearchPath.forPattern("/testpath/*.exe");
         SearchPath prefixedExtension = SearchPath.forPattern("/testpath/test/*.exe");
 
-        assertFalse(wildcard.isParentOf(extension));
-        assertFalse(extension.isParentOf(wildcard));
+        assertFalse(wildcard.isPrefix(extension));
+        assertFalse(extension.isPrefix(wildcard));
 
-        assertFalse(wildcard.isParentOf(prefixedExtension));
-        assertFalse(prefixedExtension.isParentOf(wildcard));
+        assertFalse(wildcard.isPrefix(prefixedExtension));
+        assertFalse(prefixedExtension.isPrefix(wildcard));
     }
 
     @Test
@@ -129,11 +129,11 @@ public class SearchPathTest
         SearchPath extension = SearchPath.forPattern("/testpath/*.exe");
         SearchPath prefixedExtension = SearchPath.forPattern("/testpath/test/*.exe");
 
-        assertFalse(exact.isParentOf(extension));
-        assertFalse(extension.isParentOf(exact));
+        assertFalse(exact.isPrefix(extension));
+        assertFalse(extension.isPrefix(exact));
 
-        assertFalse(exact.isParentOf(prefixedExtension));
-        assertFalse(prefixedExtension.isParentOf(exact));
+        assertFalse(exact.isPrefix(prefixedExtension));
+        assertFalse(prefixedExtension.isPrefix(exact));
     }
 
     @Test
@@ -141,7 +141,7 @@ public class SearchPathTest
     {
         SearchPath wildcard = SearchPath.forPattern("/testpath/*");
 
-        assertTrue(wildcard.isParentOf(wildcard));
+        assertTrue(wildcard.isPrefix(wildcard));
     }
 
     @Test
@@ -149,7 +149,7 @@ public class SearchPathTest
     {
         SearchPath exact = SearchPath.forPattern("/testpath");
 
-        assertTrue(exact.isParentOf(exact));
+        assertTrue(exact.isPrefix(exact));
     }
 
     @Test
@@ -157,7 +157,7 @@ public class SearchPathTest
     {
         SearchPath extension = SearchPath.forPattern("/testpath/*.html");
 
-        assertTrue(extension.isParentOf(extension));
+        assertTrue(extension.isPrefix(extension));
     }
 
     @Test

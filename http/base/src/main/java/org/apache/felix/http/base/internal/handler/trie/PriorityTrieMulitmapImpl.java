@@ -242,7 +242,7 @@ public final class PriorityTrieMulitmapImpl<V extends Comparable<V>, C extends C
         {
             return false;
         }
-        return isBareRoot(current) || current.getPath().isParentOf(path);
+        return isBareRoot(current) || current.getPath().isPrefix(path);
     }
 
     @Override
