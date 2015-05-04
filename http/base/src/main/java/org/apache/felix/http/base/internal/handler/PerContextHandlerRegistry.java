@@ -55,58 +55,33 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
     private final HandlerRankingMultimap<String> registeredErrorPages = new HandlerRankingMultimap<String>();
     private final Set<ServletHandler> initFailures = new TreeSet<ServletHandler>();
 
-    private final long serviceId;
-
-    private final int ranking;
-
-    private final String path;
-
+    private final ContextRanking contextRanking;
     private final String prefix;
 
     public PerContextHandlerRegistry()
     {
-        this.serviceId = 0;
-        this.ranking = Integer.MAX_VALUE;
-        this.path = "/";
+        this.contextRanking = new ContextRanking();
         this.prefix = null;
     }
 
     public PerContextHandlerRegistry(final ServletContextHelperInfo info)
     {
-        this.serviceId = info.getServiceId();
-        this.ranking = info.getRanking();
-        this.path = info.getPath();
-        if ( this.path.equals("/") )
+        this.contextRanking = new ContextRanking(info);
+        String path = this.contextRanking.getPath();
+        if ( path.equals("/") )
         {
             this.prefix = null;
         }
         else
         {
-            this.prefix = this.path + "/";
+            this.prefix = path + "/";
         }
     }
 
     @Override
     public int compareTo(final PerContextHandlerRegistry other)
     {
-        // the context of the HttpService is the least element
-        if (this.serviceId == 0 ^ other.serviceId == 0)
-        {
-            return this.serviceId == 0 ? -1 : 1;
-        }
-
-        final int result = Integer.compare(other.path.length(), this.path.length());
-        if ( result == 0 ) {
-            if (this.ranking == other.ranking)
-            {
-                // Service id's can be negative. Negative id's follow the reverse natural ordering of integers.
-                int reverseOrder = ( this.serviceId <= 0 && other.serviceId <= 0 ) ? -1 : 1;
-                return reverseOrder * Long.compare(this.serviceId, other.serviceId);
-            }
-
-            return Integer.compare(other.ranking, this.ranking);
-        }
-        return result;
+        return this.contextRanking.compareTo(other.contextRanking);
     }
 
     public synchronized void addFilter(FilterHandler handler) throws RegistrationFailureException
@@ -382,7 +357,7 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
 
     public String isMatching(final String requestURI)
     {
-        if (requestURI.equals(this.path))
+        if (requestURI.equals(this.contextRanking.getPath()))
         {
             return "";
         }
@@ -399,7 +374,7 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
 
     public long getContextServiceId()
     {
-        return this.serviceId;
+        return this.contextRanking.getServiceId();
     }
 
     public synchronized ContextRuntime getRuntime(FailureRuntime.Builder failureRuntimeBuilder) {
@@ -418,7 +393,7 @@ public final class PerContextHandlerRegistry implements Comparable<PerContextHan
         addFailures(failureRuntimeBuilder, this.registeredErrorPages.getShadowedValues(), FAILURE_REASON_SHADOWED_BY_OTHER_SERVICE);
         addFailures(failureRuntimeBuilder, this.initFailures, FAILURE_REASON_EXCEPTION_ON_INIT);
 
-        return new ContextRuntime(filterRuntimes, errorPages, this.serviceId);
+        return new ContextRuntime(filterRuntimes, errorPages, getContextServiceId());
     }
 
     private void addFailures(FailureRuntime.Builder failureRuntimeBuilder, Collection<ServletHandler> handlers, int failureCode)

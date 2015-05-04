@@ -38,10 +38,10 @@ import javax.annotation.Nonnull;
 import javax.servlet.Servlet;
 import javax.servlet.ServletException;
 
-import org.apache.felix.http.base.internal.handler.trie.TrieNode;
 import org.apache.felix.http.base.internal.handler.trie.PriorityTrieMulitmapImpl;
 import org.apache.felix.http.base.internal.handler.trie.PriorityTrieMultimap;
 import org.apache.felix.http.base.internal.handler.trie.SearchPath;
+import org.apache.felix.http.base.internal.handler.trie.TrieNode;
 import org.apache.felix.http.base.internal.runtime.ServletContextHelperInfo;
 import org.apache.felix.http.base.internal.runtime.ServletInfo;
 import org.apache.felix.http.base.internal.runtime.dto.FailureRuntime;
@@ -56,7 +56,7 @@ final class ServletHandlerRegistry
 
     private final Set<ServletHandler> initFailures = new TreeSet<ServletHandler>();
     private final Map<ServletHandler, Integer> useCounts = new TreeMap<ServletHandler, Integer>();
-    private final Map<Long, ContextRanking> contextsById = new HashMap<Long, ContextRanking>();
+    private final Map<Long, ContextRanking> contextRankingsById = new HashMap<Long, ContextRanking>();
 
     private volatile PriorityTrieMultimap<ServletHandler, ContextRanking> servletHandlers;
 
@@ -65,7 +65,7 @@ final class ServletHandlerRegistry
      */
     synchronized void init()
     {
-        contextsById.put(0L, new ContextRanking());
+        contextRankingsById.put(0L, new ContextRanking());
         servletHandlers = new PriorityTrieMulitmapImpl<ServletHandler, ContextRanking>();
     }
 
@@ -76,12 +76,12 @@ final class ServletHandlerRegistry
 
     synchronized void add(ServletContextHelperInfo info)
     {
-        contextsById.put(info.getServiceId(), new ContextRanking(info));
+        contextRankingsById.put(info.getServiceId(), new ContextRanking(info));
     }
 
     synchronized void remove(ServletContextHelperInfo info)
     {
-        contextsById.remove(info.getServiceId());
+        contextRankingsById.remove(info.getServiceId());
     }
 
     synchronized void addServlet(final ServletHandler handler) throws RegistrationFailureException
@@ -109,7 +109,7 @@ final class ServletHandlerRegistry
 
     private void registerServlet(String path, ServletHandler handler) throws RegistrationFailureException
     {
-        ContextRanking contextRanking = contextsById.get(handler.getContextServiceId());
+        ContextRanking contextRanking = contextRankingsById.get(handler.getContextServiceId());
         SearchPath searchPath = SearchPath.forPattern(path);
 
         TrieNode<ServletHandler, ContextRanking> parentNode = servletHandlers.search(searchPath);
@@ -228,7 +228,7 @@ final class ServletHandlerRegistry
 
         destroyHandlers(oldHandlers, true);
 
-        this.contextsById.clear();
+        this.contextRankingsById.clear();
         this.useCounts.clear();
     }
 
@@ -260,8 +260,8 @@ final class ServletHandlerRegistry
 
     private ServletHandler getServletHandler(Long contextId, ServletInfo servletInfo)
     {
-        ContextRanking contextRanking = contextsById.get(contextId);
-        List<String> paths = getFullPaths(contextRanking.path, servletInfo);
+        ContextRanking contextRanking = contextRankingsById.get(contextId);
+        List<String> paths = getFullPaths(contextRanking.getPath(), servletInfo);
 
         for (String path : paths)
         {
@@ -319,7 +319,7 @@ final class ServletHandlerRegistry
         }
 
         ContextRanking oldNodeColor = servletHandlers.getColor(node);
-        ContextRanking contextColor = contextsById.get(handler.getContextServiceId());
+        ContextRanking contextColor = contextRankingsById.get(handler.getContextServiceId());
         PriorityTrieMultimap<ServletHandler, ContextRanking> newHandlers = servletHandlers.remove(searchPath, handler, contextColor);
 
         TrieNode<ServletHandler, ContextRanking> newParent = newHandlers.getPrefix(searchPath);
@@ -384,7 +384,7 @@ final class ServletHandlerRegistry
 
     private List<String> getFullPathsChecked(ServletHandler handler) throws RegistrationFailureException
     {
-        String contextPath = contextsById.get(handler.getContextServiceId()).path;
+        String contextPath = contextRankingsById.get(handler.getContextServiceId()).getPath();
         if (contextPath == null)
         {
             throw new RegistrationFailureException(handler.getServletInfo(), FAILURE_REASON_SERVLET_CONTEXT_FAILURE);
@@ -394,7 +394,7 @@ final class ServletHandlerRegistry
 
     private List<String> getFullPaths(ServletHandler handler)
     {
-        String contextPath = contextsById.get(handler.getContextServiceId()).path;
+        String contextPath = contextRankingsById.get(handler.getContextServiceId()).getPath();
         return getFullPaths(contextPath, handler.getServletInfo());
     }
 
@@ -450,7 +450,7 @@ final class ServletHandlerRegistry
 
     ServletHandler getServletHandlerByName(final Long contextId, @Nonnull final String name)
     {
-        SearchPath searchPath = SearchPath.forPattern(contextsById.get(contextId).path);
+        SearchPath searchPath = SearchPath.forPattern(contextRankingsById.get(contextId).getPath());
         PriorityTrieMultimap<ServletHandler, ContextRanking> contextTrie = servletHandlers.getSubtrie(searchPath);
         for (TrieNode<ServletHandler, ContextRanking> node : contextTrie)
         {
@@ -504,51 +504,6 @@ final class ServletHandlerRegistry
         for (ServletHandler handler : handlers)
         {
             failureRuntimeBuilder.add(handler.getServletInfo(), failureCode);
-        }
-    }
-
-    // TODO combine with PerContextHandlerRegistry
-    private static class ContextRanking implements Comparable<ContextRanking>
-    {
-        private final long serviceId;
-        private final int ranking;
-        private final String path;
-
-        ContextRanking()
-        {
-            this.serviceId = 0;
-            this.ranking = Integer.MAX_VALUE;
-            this.path = "/";
-        }
-
-        ContextRanking(ServletContextHelperInfo info)
-        {
-            this.serviceId = info.getServiceId();
-            this.ranking = info.getRanking();
-            this.path = info.getPath();
-        }
-
-        @Override
-        public int compareTo(ContextRanking other)
-        {
-            // the context of the HttpService is the least element
-            if (this.serviceId == 0 ^ other.serviceId == 0)
-            {
-                return this.serviceId == 0 ? -1 : 1;
-            }
-
-            final int result = Integer.compare(other.path.length(), this.path.length());
-            if ( result == 0 ) {
-                if (this.ranking == other.ranking)
-                {
-                    // Service id's can be negative. Negative id's follow the reverse natural ordering of integers.
-                    int reverseOrder = ( this.serviceId <= 0 && other.serviceId <= 0 ) ? -1 : 1;
-                    return reverseOrder * Long.compare(this.serviceId, other.serviceId);
-                }
-
-                return Integer.compare(other.ranking, this.ranking);
-            }
-            return result;
         }
     }
 }
