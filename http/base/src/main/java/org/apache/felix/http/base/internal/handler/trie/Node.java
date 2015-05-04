@@ -16,7 +16,6 @@
  */
 package org.apache.felix.http.base.internal.handler.trie;
 
-import static java.util.Collections.unmodifiableCollection;
 import static java.util.Collections.unmodifiableSortedSet;
 
 import java.util.ArrayList;
@@ -76,9 +75,14 @@ public final class Node<V extends Comparable<V>, C extends Comparable<C>> implem
         return path;
     }
 
-    public Collection<ColoredValue<V, C>> getValues()
+    public Collection<V> getValues()
     {
-        return unmodifiableCollection(values);
+        ArrayList<V> result = new ArrayList<V>();
+        for (ColoredValue<V, C> coloredValue : values)
+        {
+            result.add(coloredValue.getValue());
+        }
+        return result;
     }
 
     Collection<ColoredValue<V, C>> copyOfValues()

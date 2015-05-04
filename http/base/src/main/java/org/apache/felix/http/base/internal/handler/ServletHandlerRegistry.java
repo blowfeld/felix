@@ -38,10 +38,9 @@ import javax.annotation.Nonnull;
 import javax.servlet.Servlet;
 import javax.servlet.ServletException;
 
-import org.apache.felix.http.base.internal.handler.trie.ColoredValue;
 import org.apache.felix.http.base.internal.handler.trie.Node;
-import org.apache.felix.http.base.internal.handler.trie.PriorityTrieMultimap;
 import org.apache.felix.http.base.internal.handler.trie.PriorityTrie;
+import org.apache.felix.http.base.internal.handler.trie.PriorityTrieMultimap;
 import org.apache.felix.http.base.internal.handler.trie.SearchPath;
 import org.apache.felix.http.base.internal.runtime.ServletContextHelperInfo;
 import org.apache.felix.http.base.internal.runtime.ServletInfo;
@@ -267,9 +266,9 @@ final class ServletHandlerRegistry
         for (String path : paths)
         {
             Node<ServletHandler, ContextRanking> node = servletHandlers.getPrefix(SearchPath.forPattern(path));
-            for (ColoredValue<ServletHandler, ContextRanking> value : node.getValues())
+            for (ServletHandler value : node.getValues())
             {
-                ServletHandler servletHandler = value.getValue();
+                ServletHandler servletHandler = value;
                 if (servletHandler.getServletInfo().equals(servletInfo))
                 {
                     return servletHandler;
