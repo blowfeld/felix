@@ -23,26 +23,29 @@ import java.util.Iterator;
 /**
  * {@code PriorityTrieMultimap} is a colored trie structure for retrieval of highest priority elements.
  * <p>
- * The {@code PriorityTrieMultimap} provides storage of values by {@link SearchPath}
- * keys which represent a path in the trie. Depending on the used
- * {@code SearchPath}s, lookup matches the key with the longest matching
- * sub-path (prefix).
+ * The {@code PriorityTrieMultimap} provides storage of collections of values
+ * against {@link SearchPath} keys which represent a node in the trie.
+ * Depending on the used {@code SearchPath}s, lookup matches the key with the
+ * longest matching sub-path (prefix). It structure corresponds to a
+ * <a href="http://en.wikipedia.org/wiki/Trie">Trie</a> that allows for multiple
+ * values associated with each node.
  * <p>
- * Each key can store multiple values, where each value has a priority and can
- * be associated with a color. The color resulting from the values stored in a
- * node is the color of the highest priority associated with those values.
- * The color of a node in the trie is determined by the following rules:
+ * Each key can be associated with multiple values, where each value has a
+ * priority and can be associated with a color. The color resulting from the
+ * values stored in a node (key) is the color with the highest priority
+ * associated with those values. The color of a node in the trie is determined
+ * by the following rules:
  * <ul>
  *  <li>a node inherits the color from its parent if that is of higher priority
  *      than the color resulting from its values</li>
  *  <li>if the parent has no color or the parent color is of lower priority,
  *      the color of the node is the color resulting from its values</li>
  * </ul>
- * {@code SearchPath} keys can define to be ignored in the color inheritance.
+ * {@code SearchPath} keys can be defined to be ignored in the color inheritance.
  * In that case they pass on the color of their parent.
  * <p>
  * A node in the trie is considered active if the color resulting from its
- * values has the same priority than the color of the node.
+ * values has the same priority than the color associated with the node.
  * <p>
  * Value retrieval from a node provides the value that has the highest
  * priority among the values associated with the highest priority color of the
@@ -88,10 +91,11 @@ public interface PriorityTrieMultimap<V extends Comparable<V>, C extends Compara
     /**
      * Finds the active matching node for the given path.
      * <p>
-     * The method returns the node that matches the given path and has the
-     * longest sub-path (prefix) among the nodes stored in the trie. Nodes
-     * that are not active, i.e. the color resulting from the associated values
-     * has lower priority than the node color, are ignored by this search.
+     * The method returns the node that matches the given path
+     * ({@link SearchPath#matches(SearchPath)}) and has the longest overlapping
+     * sub-path (prefix) among the nodes stored in the trie. Nodes that are not
+     * active, i.e. the color resulting from the associated values has lower
+     * priority than the node color, are ignored by this search.
      *
      * @param path the {@link SearchPath} key to search for
      *
@@ -102,9 +106,9 @@ public interface PriorityTrieMultimap<V extends Comparable<V>, C extends Compara
     /**
      * Returns the node with the longest matching sub-path (prefix) for the given path.
      * <p>
-     * The method returns the node that has the longest sub-path (prefix) for
-     * the given path in the trie. Opposite to {@link #search(SearchPath)} also
-     * inactive or non matching nodes are taken into account.
+     * The method returns the node that has the longest overlapping sub-path
+     * (prefix) for the given path in the trie. Opposite to {@link #search(SearchPath)}
+     * also inactive or non matching nodes are taken into account.
      *
      * @param path the {@link SearchPath} key to search for
      *
@@ -134,13 +138,13 @@ public interface PriorityTrieMultimap<V extends Comparable<V>, C extends Compara
     C getColor(Node<V, C> node);
 
     /**
-     * Returns the sub-trie starting from the given path.
+     * Returns a sub-trie starting from the given path.
      * <p>
      * The sub-trie contains all nodes from this tree for with the given path
      * is a prefix. If the root node for the sub-trie is not contained in this
      * trie, and inactive, empty root node is generated.
      *
-     * @param path the starting {@link SearchPath} key for the sub-trie
+     * @param path the root {@link SearchPath} key for the sub-trie
      *
      * @return a sub-trie containing all nodes from this trie for with the given
      *          path is a prefix
@@ -148,7 +152,7 @@ public interface PriorityTrieMultimap<V extends Comparable<V>, C extends Compara
     PriorityTrieMultimap<V, C> getSubtrie(SearchPath path);
 
     /**
-     * Returns the highest priority values from the active nodes in this trie.
+     * Returns the highest priority values associated with the active nodes in this trie.
      *
      * @return a {@link Collection} containing the highest priority values from
      *          the active nodes in this trie
