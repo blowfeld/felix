@@ -65,6 +65,7 @@ public final class PriorityTrieMulitmapImpl<V extends Comparable<V>, C extends C
         return add(path, value, null);
     }
 
+    @Override
     public PriorityTrieMulitmapImpl<V, C> add(SearchPath path, V value, C color)
     {
         checkNotNull(path);
@@ -121,6 +122,7 @@ public final class PriorityTrieMulitmapImpl<V extends Comparable<V>, C extends C
         return newParent;
     }
 
+    @Override
     public PriorityTrieMulitmapImpl<V, C> remove(SearchPath path, V value, C color)
     {
         checkNotNull(path);
@@ -188,12 +190,14 @@ public final class PriorityTrieMulitmapImpl<V extends Comparable<V>, C extends C
         return newChild;
     }
 
+    @Override
     public Node<V, C> getPrefix(SearchPath path)
     {
         List<Node<V, C>> parents = findParents(path);
         return parents.isEmpty() ? null : parents.get(0);
     }
 
+    @Override
     public Node<V, C> search(SearchPath path)
     {
         checkNotNull(path);
@@ -241,6 +245,7 @@ public final class PriorityTrieMulitmapImpl<V extends Comparable<V>, C extends C
         return isBareRoot(current) || current.getPath().isParentOf(path);
     }
 
+    @Override
     public PriorityTrieMulitmapImpl<V, C> getSubtrie(SearchPath path)
     {
         checkNotNull(path);
@@ -266,6 +271,7 @@ public final class PriorityTrieMulitmapImpl<V extends Comparable<V>, C extends C
         }
     }
 
+    @Override
     public C getColor(Node<V, C> node)
     {
         if (node == null || isBareRoot(node))
