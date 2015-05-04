@@ -55,7 +55,7 @@ import java.util.regex.Pattern;
  * </ul>
  * In addition nodes do not inherit the color value of a node at an exact
  * matching path. In this case the color of next wildcard parent is passed on.
- * <p>
+ *
  * (see {@link PriorityTrieMultimap})
  */
 public class SearchPath implements Comparable<SearchPath>
@@ -77,6 +77,22 @@ public class SearchPath implements Comparable<SearchPath>
         this.isWildcard = isWildcard;
     }
 
+    /**
+     * Creates a {@code SearchPath} from a pattern.
+     * <p>
+     * Patterns are interpreted in the following way:
+     * <ul>
+     *      <li>if the pattern ends with "/*", a wildcard {@code SearchPath} is
+     *          created
+     *      <li>if the pattern ends with "*." followed by an extension, a
+     *          wildcard {@code SearchPath} with the given extension is created
+     *      <li>otherwise a {@code SearchPath} for an exact path is created
+     * </ul>
+     *
+     * @param path a pattern defining the path
+     *
+     * @return a {@code SearchPath} based on the specified extension pattern
+     */
     public static SearchPath forPattern(String pattern)
     {
         List<String> pathComponents = splitPath(pattern);
@@ -87,14 +103,31 @@ public class SearchPath implements Comparable<SearchPath>
         return new SearchPath(path, extension, isWildcard);
     }
 
-    public static SearchPath forPath(String url)
+    /**
+     * Creates an exact {@code SearchPath}.
+     *
+     * @param path the exact path
+     * @return a {@code SearchPath} with an exact path
+     */
+    public static SearchPath forPath(String path)
     {
-        return new SearchPath(url, null, false);
+        return new SearchPath(path, null, false);
     }
 
-    public static SearchPath forExtensionPath(String url)
+    /**
+     * Creates a {@code SearchPath} with an extension.
+     * <p>
+     * The specified path must have an extension, i.e. end in a segment
+     * separated by a dot.
+     *
+     * @param path the exact path, ending in an extension
+     *
+     * @return a {@code SearchPath} with an extension or null, if the specified
+     *          path does not have an extension
+     */
+    public static SearchPath forExtensionPath(String path)
     {
-        String[] urlComponents = EXTENSION_PATTERN.split(url);
+        String[] urlComponents = EXTENSION_PATTERN.split(path);
         if (urlComponents.length < 2)
         {
             return null;
@@ -114,7 +147,13 @@ public class SearchPath implements Comparable<SearchPath>
         return asList(WILDCARD_PATTERN.split(path));
     }
 
-    public SearchPath upperBound()
+    /**
+     * Returns the least {@code SearchPath} that is not a child of this {@code SearchPath}.
+     *
+     * @return the least {@code SearchPath} that is not a child of this
+     *          {@code SearchPath}
+     */
+    public SearchPath childBound()
     {
         return new SearchPath(incrementPrefix(path), extension, isWildcard);
     }
@@ -200,10 +239,26 @@ public class SearchPath implements Comparable<SearchPath>
     }
 
     @Override
-    public int compareTo(SearchPath o)
+    public int compareTo(SearchPath other)
     {
-        int extensionComparison = compareSafely(extension, o.extension);
-        return extensionComparison != 0 ? extensionComparison : path.compareTo(o.path);
+        int extensionComparison = compareSafely(extension, other.extension);
+        if (extensionComparison != 0)
+        {
+            return extensionComparison;
+        }
+
+        int pathComparison = path.compareTo(other.path);
+        if (pathComparison != 0)
+        {
+            return pathComparison;
+        }
+
+        if (isWildcard == other.isWildcard)
+        {
+            return 0;
+        }
+
+        return isPrefix(other) ? -1 : 1;
     }
 
     @Override
@@ -213,7 +268,7 @@ public class SearchPath implements Comparable<SearchPath>
         int result = 1;
         result = prime * result + ((extension == null) ? 0 : extension.hashCode());
         result = prime * result + (isWildcard ? 1231 : 1237);
-        result = prime * result + ((path == null) ? 0 : path.hashCode());
+        result = prime * result + path.hashCode();
         return result;
     }
 

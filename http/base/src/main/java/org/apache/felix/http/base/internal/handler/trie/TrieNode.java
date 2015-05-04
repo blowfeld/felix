@@ -128,7 +128,7 @@ public final class TrieNode<V extends Comparable<V>, C extends Comparable<C>> im
     SortedSet<TrieNode<V, C>> getChildren(SearchPath prefix)
     {
         TrieNode<V, C> startNode = new TrieNode<V, C>(prefix);
-        TrieNode<V, C> endNode = new TrieNode<V, C>(prefix.upperBound());
+        TrieNode<V, C> endNode = new TrieNode<V, C>(prefix.childBound());
         return unmodifiableSortedSet(children.subSet(startNode, endNode));
     }
 
