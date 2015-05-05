@@ -70,23 +70,23 @@ public final class PriorityTrieMultimapImpl<V extends Comparable<V>, C extends C
     {
         checkNotNull(path);
 
-        List<TrieNode<V, C>> pathToParent = findParents(path);
+        List<TrieNode<V, C>> pathToPrefix = findPrefixNode(path);
 
-        TrieNode<V, C> parent = pathToParent.get(0);
-        if (color == null && parent.equals(root))
+        TrieNode<V, C> prefix = pathToPrefix.get(0);
+        if (color == null && prefix.equals(root))
         {
             throw new IllegalArgumentException("Root nodes must be colored");
         }
         else if (color == null)
         {
-            color = getColor(parent);
+            color = getColor(prefix);
         }
 
-        if (path.equals(parent.getPath()))
+        if (path.equals(prefix.getPath()))
         {
-            return updateNodeAddValue(pathToParent, value, color);
+            return updateNodeAddValue(pathToPrefix, value, color);
         }
-        return addNewNode(pathToParent, path, value, color);
+        return addNewNode(pathToPrefix, path, value, color);
     }
 
     private PriorityTrieMultimapImpl<V, C> updateNodeAddValue(List<TrieNode<V, C>> pathToNode, V value, C color)
@@ -127,11 +127,12 @@ public final class PriorityTrieMultimapImpl<V extends Comparable<V>, C extends C
     {
         checkNotNull(path);
 
-        List<TrieNode<V, C>> pathToNode = findParents(path);
+        List<TrieNode<V, C>> pathToNode = findPrefixNode(path);
         TrieNode<V, C> node = pathToNode.get(0);
 
         if (!path.equals(node.getPath()))
         {
+            // path is not contained in the trie
             return this;
         }
 
@@ -143,26 +144,31 @@ public final class PriorityTrieMultimapImpl<V extends Comparable<V>, C extends C
         TrieNode<V, C> newNode = node.removeValue(value, color);
         if (newNode == node)
         {
+            // value is not contained in the trie
             return this;
         }
 
-        if (newNode.isEmpty())
-        {
-            return removeEmptyNode(pathToNode);
-        }
-        TrieNode<V, C> newRoot = updateParents(pathToNode, newNode);
-        return new PriorityTrieMultimapImpl<V, C>(newRoot);
+        return new PriorityTrieMultimapImpl<V, C>(updateRoot(pathToNode, newNode));
     }
 
-    private PriorityTrieMultimapImpl<V, C> removeEmptyNode(List<TrieNode<V, C>> pathToNode)
+    private TrieNode<V, C> updateRoot(List<TrieNode<V, C>> pathToNode, TrieNode<V, C> newNode)
     {
-        TrieNode<V, C> node = pathToNode.get(0);
+        if (!newNode.isEmpty())
+        {
+            return updateParents(pathToNode, newNode);
+        }
+
+        TrieNode<V, C> newParent = removeEmptyNode(pathToNode);
+        List<TrieNode<V, C>> pathToParent = pathToNode.subList(1, pathToNode.size());
+        return updateParents(pathToParent, newParent);
+    }
+
+    private TrieNode<V, C> removeEmptyNode(List<TrieNode<V, C>> pathToNode)
+    {
         TrieNode<V, C> parent = pathToNode.get(1);
+        TrieNode<V, C> node = pathToNode.get(0);
 
-        TrieNode<V, C> newParent = removeNode(parent, node);
-        TrieNode<V, C> newRoot = updateParents(pathToNode.subList(1, pathToNode.size()), newParent);
-
-        return new PriorityTrieMultimapImpl<V, C>(newRoot);
+        return removeNode(parent, node);
     }
 
     private TrieNode<V, C> removeNode(TrieNode<V, C> parent, TrieNode<V, C> node)
@@ -193,7 +199,7 @@ public final class PriorityTrieMultimapImpl<V extends Comparable<V>, C extends C
     @Override
     public TrieNode<V, C> getPrefix(SearchPath path)
     {
-        List<TrieNode<V, C>> parents = findParents(path);
+        List<TrieNode<V, C>> parents = findPrefixNode(path);
         return parents.isEmpty() ? null : parents.get(0);
     }
 
@@ -202,8 +208,8 @@ public final class PriorityTrieMultimapImpl<V extends Comparable<V>, C extends C
     {
         checkNotNull(path);
 
-        List<TrieNode<V, C>> pathToParent = findParents(path);
-        for(TrieNode<V, C> node : pathToParent)
+        List<TrieNode<V, C>> pathToPrefix = findPrefixNode(path);
+        for(TrieNode<V, C> node : pathToPrefix)
         {
             if (isActive(node) && node.getPath().matches(path))
             {
@@ -214,29 +220,29 @@ public final class PriorityTrieMultimapImpl<V extends Comparable<V>, C extends C
         return null;
     }
 
-    List<TrieNode<V, C>> findParents(SearchPath path)
+    List<TrieNode<V, C>> findPrefixNode(SearchPath path)
     {
         checkNotNull(path);
 
-        List<TrieNode<V, C>> pathToParent = new ArrayList<TrieNode<V, C>>();
+        List<TrieNode<V, C>> pathToPrefix = new ArrayList<TrieNode<V, C>>();
         TrieNode<V, C> current = root;
 
-        while (isParent(current, path))
+        while (isPrefix(current, path))
         {
-            pathToParent.add(current);
+            pathToPrefix.add(current);
             current = current.getFloorChild(path);
         }
 
-        Collections.reverse(pathToParent);
-        if (!nodeColoring.containsKey(pathToParent.get(0)))
+        Collections.reverse(pathToPrefix);
+        if (!nodeColoring.containsKey(pathToPrefix.get(0)))
         {
-            calculateColors(pathToParent);
+            calculateColors(pathToPrefix);
         }
 
-        return pathToParent;
+        return pathToPrefix;
     }
 
-    private boolean isParent(TrieNode<V, C> current, SearchPath path)
+    private boolean isPrefix(TrieNode<V, C> current, SearchPath path)
     {
         if (current == null)
         {
@@ -262,15 +268,6 @@ public final class PriorityTrieMultimapImpl<V extends Comparable<V>, C extends C
         return new PriorityTrieMultimapImpl<V, C>(subtrieRoot, nodeColoring);
     }
 
-    private void cacheColors(TrieNode<V, C> subtrieRoot)
-    {
-        Iterator<TrieNode<V, C>> iterator = createDepthFirstIterator(subtrieRoot);
-        while (iterator.hasNext())
-        {
-            iterator.next();
-        }
-    }
-
     @Override
     public C getColor(TrieNode<V, C> node)
     {
@@ -287,7 +284,7 @@ public final class PriorityTrieMultimapImpl<V extends Comparable<V>, C extends C
         if (!nodeColoring.containsKey(node))
         {
             //cache node coloring
-            findParents(node.getPath());
+            findPrefixNode(node.getPath());
         }
         return nodeColoring.get(node);
     }
@@ -315,30 +312,16 @@ public final class PriorityTrieMultimapImpl<V extends Comparable<V>, C extends C
 
     private C calculateColor(TrieNode<V, C> node, C cachedColor)
     {
-        C valueColor = node.getValueColor();
-        if (cachedColor == null){
-            return valueColor;
-        }
-
-        if (valueColor == null){
-            return cachedColor;
-        }
-
-        return min(valueColor, cachedColor);
+        return min(node.getValueColor(), cachedColor);
     }
 
-    private C min(C color1, C color2)
+    private void cacheColors(TrieNode<V, C> subtrieRoot)
     {
-        return compareSafely(color1, color2) <= 0 ? color1 : color2;
-    }
-
-    private <T> T checkNotNull(T value)
-    {
-        if (value == null)
+        Iterator<TrieNode<V, C>> iterator = createDepthFirstIterator(subtrieRoot);
+        while (iterator.hasNext())
         {
-            throw new NullPointerException("Argument must not be null");
+            iterator.next();
         }
-        return value;
     }
 
     @Override
@@ -433,6 +416,20 @@ public final class PriorityTrieMultimapImpl<V extends Comparable<V>, C extends C
     private boolean isBareRoot(TrieNode<V, C> current)
     {
         return current.getPath() == null;
+    }
+
+    private C min(C color1, C color2)
+    {
+        return compareSafely(color1, color2) <= 0 ? color1 : color2;
+    }
+
+    private <T> T checkNotNull(T value)
+    {
+        if (value == null)
+        {
+            throw new NullPointerException("Argument must not be null");
+        }
+        return value;
     }
 
     /**

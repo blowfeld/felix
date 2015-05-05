@@ -118,7 +118,6 @@ final class ServletHandlerRegistry
             initHandler(handler);
         }
 
-        // TODO addAll ?
         servletHandlers = servletHandlers.add(searchPath, handler, contextRanking);
 
         destroyHandlers(destroyList);

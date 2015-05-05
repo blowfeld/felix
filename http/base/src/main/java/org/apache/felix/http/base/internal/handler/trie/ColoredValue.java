@@ -17,6 +17,7 @@
 package org.apache.felix.http.base.internal.handler.trie;
 
 import static org.apache.felix.http.base.internal.util.CompareUtil.compareSafely;
+import static org.apache.felix.http.base.internal.util.CompareUtil.equalSafely;
 
 final class ColoredValue<V extends Comparable<V>, C extends Comparable<C>> implements Comparable<ColoredValue<V, C>>
 {
@@ -43,7 +44,7 @@ final class ColoredValue<V extends Comparable<V>, C extends Comparable<C>> imple
     public int compareTo(ColoredValue<V, C> other)
     {
         int colorComparison = compareSafely(color, other.color);
-        return colorComparison == 0 ? value.compareTo(other.value) : colorComparison;
+        return colorComparison == 0 ? compareSafely(value, other.value) : colorComparison;
     }
 
     @Override
@@ -52,6 +53,7 @@ final class ColoredValue<V extends Comparable<V>, C extends Comparable<C>> imple
         return value.hashCode();
     }
 
+    @SuppressWarnings({ "unchecked", "rawtypes" })
     @Override
     public boolean equals(Object obj)
     {
@@ -65,17 +67,11 @@ final class ColoredValue<V extends Comparable<V>, C extends Comparable<C>> imple
             return false;
         }
 
-        if (!(obj instanceof ColoredValue))
-        {
-            return false;
-        }
-
         try
         {
-            @SuppressWarnings("unchecked")
-            ColoredValue<V, C> other = (ColoredValue<V, C>) obj;
+            ColoredValue other = (ColoredValue) obj;
 
-            return value.equals(other.value) && this.compareTo(other) == 0;
+            return equalSafely(value, other.value) && compareSafely(color, (C) other.color) == 0;
         }
         catch (ClassCastException e)
         {

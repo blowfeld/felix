@@ -54,8 +54,10 @@ import java.util.Iterator;
  * The priority of colors and values is determined from their natural ordering
  * and the <em>least</em> element with respect to this ordering has the highest
  * priority.
+ * <p>
+ * Instances of {@code PriorityTrieMultimap} must be thread safe.
  *
- * @param <V> the value type to be stored in the {@code PriorityTrieMultimap}.
+ * @param <V> the value type to be stored in the {@code PriorityTrieMultimap}
  * @param <C> the color type
  */
 public interface PriorityTrieMultimap<V extends Comparable<V>, C extends Comparable<C>> extends Iterable<TrieNode<V, C>>
@@ -64,7 +66,9 @@ public interface PriorityTrieMultimap<V extends Comparable<V>, C extends Compara
      * Returns a copy of this trie with the value added associated with the given path.
      * <p>
      * If the trie does not contain a parent for the given path the color must
-     * not be null.
+     * not be null. If the color is null, the color of the parent, or, if there
+     * is the the alread an association for the given path, the color of the
+     * node at the given path is used.
      *
      * @param path the {@link SearchPath} key to store against
      * @param value  the value to add to the collection at the path
@@ -78,6 +82,7 @@ public interface PriorityTrieMultimap<V extends Comparable<V>, C extends Compara
     /**
      * Returns a copy of this trie with the value association removed from the given path.
      * <p>
+     * If color is null, the color returned by {@link #getColor(TrieNode)} is used.
      *
      * @param path the {@link SearchPath} key to remove from
      * @param value  the value to add to the collection at the path

@@ -16,9 +16,13 @@
  */
 package org.apache.felix.http.base.internal.handler.trie;
 
+import static java.lang.Math.max;
 import static java.util.Collections.unmodifiableSortedSet;
+import static org.apache.felix.http.base.internal.util.CompareUtil.compareSafely;
+import static org.apache.felix.http.base.internal.util.CompareUtil.equalSafely;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.PriorityQueue;
@@ -51,7 +55,7 @@ public final class TrieNode<V extends Comparable<V>, C extends Comparable<C>> im
 
     TrieNode<V, C> addValue(V value, C color)
     {
-        Collection<ColoredValue<V, C>> newValues = createValuesCollection();
+        Collection<ColoredValue<V, C>> newValues = createValuesCollection(values.size() + 1);
         newValues.addAll(values);
         newValues.add(new ColoredValue<V, C>(value, color));
         return new TrieNode<V, C>(children, path, newValues);
@@ -64,7 +68,7 @@ public final class TrieNode<V extends Comparable<V>, C extends Comparable<C>> im
         {
             return this;
         }
-        Collection<ColoredValue<V, C>> newValues = createValuesCollection();
+        Collection<ColoredValue<V, C>> newValues = createValuesCollection(values.size());
         newValues.addAll(values);
         newValues.remove(coloredValue);
         return new TrieNode<V, C>(children, path, newValues);
@@ -77,7 +81,7 @@ public final class TrieNode<V extends Comparable<V>, C extends Comparable<C>> im
 
     public Collection<V> getValues()
     {
-        ArrayList<V> result = new ArrayList<V>();
+        Collection<V> result = new ArrayList<V>();
         for (ColoredValue<V, C> coloredValue : values)
         {
             result.add(coloredValue.getValue());
@@ -87,7 +91,7 @@ public final class TrieNode<V extends Comparable<V>, C extends Comparable<C>> im
 
     Collection<ColoredValue<V, C>> copyOfValues()
     {
-        Collection<ColoredValue<V, C>> result = createValuesCollection();
+        Collection<ColoredValue<V, C>> result = createValuesCollection(values.size());
         result.addAll(values);
         return result;
     }
@@ -99,11 +103,7 @@ public final class TrieNode<V extends Comparable<V>, C extends Comparable<C>> im
 
     public C getValueColor()
     {
-        if (isEmpty())
-        {
-            return null;
-        }
-        return values.iterator().next().getColor();
+        return isEmpty() ? null : values.iterator().next().getColor();
     }
 
     boolean hasDominantColor()
@@ -113,11 +113,7 @@ public final class TrieNode<V extends Comparable<V>, C extends Comparable<C>> im
 
     public V firstValue()
     {
-        if (isEmpty())
-        {
-            return null;
-        }
-        return values.iterator().next().getValue();
+        return isEmpty() ? null : values.iterator().next().getValue();
     }
 
     SortedSet<TrieNode<V, C>> getChildren()
@@ -142,46 +138,21 @@ public final class TrieNode<V extends Comparable<V>, C extends Comparable<C>> im
         return children.isEmpty();
     }
 
-    private Collection<ColoredValue<V, C>> createValuesCollection()
+    private Collection<ColoredValue<V, C>> createValuesCollection(int size)
     {
-        return new PriorityQueue<ColoredValue<V,C>>(1);
-    }
-
-    private static <V extends Comparable<V>, C extends Comparable<C>> Collection<ColoredValue<V, C>> asList(ColoredValue<V, C> coloredValue)
-    {
-        ArrayList<ColoredValue<V, C>> list = new ArrayList<ColoredValue<V,C>>(1);
-        list.add(coloredValue);
-        return list;
+        return new PriorityQueue<ColoredValue<V, C>>(max(size, 1));
     }
 
     @Override
     public int compareTo(TrieNode<V, C> other)
     {
-        int pathCompare;
-        if (path == null)
-        {
-            pathCompare = other.path == null ? 0 : -1;
-        }
-        else
-        {
-            pathCompare = path.compareTo(other.path);
-        }
-
-        if (pathCompare != 0)
-        {
-            return pathCompare;
-        }
-        return 0;
+        return compareSafely(path, other.path);
     }
 
     @Override
     public int hashCode()
     {
-        if (path == null)
-        {
-            return 0;
-        }
-        return path.hashCode();
+        return path == null ? 0 : path.hashCode();
     }
 
     @Override
@@ -191,11 +162,7 @@ public final class TrieNode<V extends Comparable<V>, C extends Comparable<C>> im
         {
             return true;
         }
-        if (obj == null)
-        {
-            return false;
-        }
-        if (!(obj instanceof TrieNode))
+        if (obj == null || !(obj instanceof TrieNode))
         {
             return false;
         }
@@ -203,14 +170,7 @@ public final class TrieNode<V extends Comparable<V>, C extends Comparable<C>> im
         @SuppressWarnings("rawtypes")
         TrieNode other = (TrieNode) obj;
 
-        if (path == null)
-        {
-            return other.path == null;
-        }
-        else
-        {
-            return path.equals(other.path);
-        }
+        return equalSafely(path, other.path);
     }
 
     @Override
@@ -219,4 +179,9 @@ public final class TrieNode<V extends Comparable<V>, C extends Comparable<C>> im
         return String.valueOf(path);
     }
 
+    @SuppressWarnings("unchecked")
+    private static <V extends Comparable<V>, C extends Comparable<C>> Collection<ColoredValue<V, C>> asList(ColoredValue<V, C> coloredValue)
+    {
+        return Arrays.asList(coloredValue);
+    }
 }

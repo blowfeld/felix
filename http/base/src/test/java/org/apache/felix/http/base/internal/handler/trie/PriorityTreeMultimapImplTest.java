@@ -48,7 +48,7 @@ public class PriorityTreeMultimapImplTest
     {
         PriorityTrieMultimapImpl<String, Integer> trie = emptyTrie.add(SearchPath.forPattern("/"), "", 1);
 
-        assertThat(trie.findParents(SearchPath.forPattern("/a")), contains(nodes("/", null)));
+        assertThat(trie.findPrefixNode(SearchPath.forPattern("/a")), contains(nodes("/", null)));
     }
 
     @Test
@@ -56,7 +56,7 @@ public class PriorityTreeMultimapImplTest
     {
         PriorityTrieMultimapImpl<String, Integer> trie = emptyTrie.add(SearchPath.forPattern("/a"), "", 1);
 
-        assertThat(trie.findParents(SearchPath.forPattern("/a")), contains(nodes("/a", null)));
+        assertThat(trie.findPrefixNode(SearchPath.forPattern("/a")), contains(nodes("/a", null)));
     }
 
     @Test
@@ -66,7 +66,7 @@ public class PriorityTreeMultimapImplTest
         trie = trie.add(SearchPath.forPattern("/aa"), "");
         trie = trie.add(SearchPath.forPattern("/ab"), "");
 
-        assertThat(trie.findParents(SearchPath.forPattern("/aa")), contains(nodes("/aa", "/", null)));
+        assertThat(trie.findPrefixNode(SearchPath.forPattern("/aa")), contains(nodes("/aa", "/", null)));
     }
 
     @Test
@@ -76,7 +76,7 @@ public class PriorityTreeMultimapImplTest
         trie = trie.add(SearchPath.forPattern("/a/*"), "");
         trie = trie.add(SearchPath.forPattern("/a/a"), "");
 
-        assertThat(trie.findParents(SearchPath.forPattern("/a/a")), contains(asArray(
+        assertThat(trie.findPrefixNode(SearchPath.forPattern("/a/a")), contains(asArray(
             node("/a/a"),
             node("/a/*"),
             node("/"),
@@ -91,7 +91,7 @@ public class PriorityTreeMultimapImplTest
         trie = trie.add(SearchPath.forPattern("/a/*"), "");
         trie = trie.add(SearchPath.forPattern("/a/a"), "");
 
-        assertThat(trie.findParents(SearchPath.forPattern("/a/a")), contains(asArray(
+        assertThat(trie.findPrefixNode(SearchPath.forPattern("/a/a")), contains(asArray(
             node("/a/a"),
             node("/a"),
             node("/a/*"),
@@ -107,7 +107,7 @@ public class PriorityTreeMultimapImplTest
         trie = trie.add(SearchPath.forPattern("/a"), "");
         trie = trie.add(SearchPath.forPattern("/a/a"), "");
 
-        assertThat(trie.findParents(SearchPath.forPattern("/a/a")), contains(asArray(
+        assertThat(trie.findPrefixNode(SearchPath.forPattern("/a/a")), contains(asArray(
             node("/a/a"),
             node("/a"),
             node("/a/*"),
@@ -123,7 +123,7 @@ public class PriorityTreeMultimapImplTest
         trie = trie.add(SearchPath.forPattern("/a0"), "");
         trie = trie.add(SearchPath.forPattern("/a/a"), "");
 
-        assertThat(trie.findParents(SearchPath.forPattern("/a")), contains(nodes("/a", "/", null)));
+        assertThat(trie.findPrefixNode(SearchPath.forPattern("/a")), contains(nodes("/a", "/", null)));
     }
 
     @Test
@@ -136,14 +136,14 @@ public class PriorityTreeMultimapImplTest
         trie = trie.add(SearchPath.forPattern("/a"), "");
         trie = trie.add(SearchPath.forPattern("/bb"), "");
 
-        assertThat(trie.findParents(SearchPath.forPattern("/a/a/a")), contains(nodes(
+        assertThat(trie.findPrefixNode(SearchPath.forPattern("/a/a/a")), contains(nodes(
             "/a/a/a",
             "/a",
             "/",
             "",
             null)));
 
-        assertThat(trie.findParents(SearchPath.forPattern("/bb/a/a")), contains(nodes(
+        assertThat(trie.findPrefixNode(SearchPath.forPattern("/bb/a/a")), contains(nodes(
             "/bb/a/a",
             "/bb",
             "/",
@@ -161,8 +161,8 @@ public class PriorityTreeMultimapImplTest
 
         trie = trie.remove(SearchPath.forPattern("/a/a"), "", null);
 
-        assertThat(trie.findParents(SearchPath.forPattern("/a/a")), contains(nodes("/a", "/", null)));
-        assertThat(trie.findParents(SearchPath.forPattern("/a/b")), contains(nodes("/a/b", "/a", "/", null)));
+        assertThat(trie.findPrefixNode(SearchPath.forPattern("/a/a")), contains(nodes("/a", "/", null)));
+        assertThat(trie.findPrefixNode(SearchPath.forPattern("/a/b")), contains(nodes("/a/b", "/a", "/", null)));
     }
 
     @Test
@@ -175,8 +175,8 @@ public class PriorityTreeMultimapImplTest
 
         trie = trie.remove(SearchPath.forPattern("/a"), "", null);
 
-        assertThat(trie.findParents(SearchPath.forPattern("/a/a")), contains(nodes("/a/a", "/", null)));
-        assertThat(trie.findParents(SearchPath.forPattern("/a/b")), contains(nodes("/a/b", "/", null)));
+        assertThat(trie.findPrefixNode(SearchPath.forPattern("/a/a")), contains(nodes("/a/a", "/", null)));
+        assertThat(trie.findPrefixNode(SearchPath.forPattern("/a/b")), contains(nodes("/a/b", "/", null)));
     }
 
     @Test
