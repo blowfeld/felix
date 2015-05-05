@@ -133,11 +133,12 @@ public final class WhiteboardManager
     public void start(final ServletContext context)
     {
         // TODO set Endpoint
-        this.serviceRuntime.setAttribute(HttpServiceRuntimeConstants.HTTP_SERVICE_ID_ATTRIBUTE,
-                this.httpServiceFactory.getHttpServiceServiceId());
+        this.serviceRuntime.setAttribute(HttpServiceRuntimeConstants.HTTP_SERVICE_ID,
+                Collections.singletonList(this.httpServiceFactory.getHttpServiceServiceId()));
         this.runtimeServiceReg = this.bundleContext.registerService(HttpServiceRuntime.class,
                 serviceRuntime,
                 this.serviceRuntime.getAttributes());
+        this.serviceRuntime.setServiceReference(this.runtimeServiceReg.getReference());
 
         this.webContext = context;
 
@@ -208,6 +209,8 @@ public final class WhiteboardManager
         }
         this.trackers.clear();
 
+        this.serviceRuntime.setServiceReference(null);
+
         // TODO cleanup
         if (this.defaultContextRegistration != null)
         {
@@ -229,8 +232,8 @@ public final class WhiteboardManager
 
         if (this.runtimeServiceReg != null)
         {
-            this.serviceRuntime.setAttribute(HttpServiceRuntimeConstants.HTTP_SERVICE_ID_ATTRIBUTE,
-                    this.httpServiceFactory.getHttpServiceServiceId());
+            this.serviceRuntime.setAttribute(HttpServiceRuntimeConstants.HTTP_SERVICE_ID,
+                    Collections.singletonList(this.httpServiceFactory.getHttpServiceServiceId()));
             this.runtimeServiceReg.setProperties(this.serviceRuntime.getAttributes());
         }
     }
