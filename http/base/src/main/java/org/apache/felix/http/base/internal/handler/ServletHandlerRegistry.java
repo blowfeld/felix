@@ -98,9 +98,6 @@ final class ServletHandlerRegistry
     private void registerServlet(ServletHandler handler) throws RegistrationFailureException
     {
         List<String> patterns = getFullPathsChecked(handler);
-        // TODO
-        Collections.sort(patterns, Collections.reverseOrder());
-
         for (String path : patterns)
         {
             registerServlet(path, handler);
@@ -127,32 +124,6 @@ final class ServletHandlerRegistry
         destroyHandlers(destroyList);
     }
 
-    private boolean isShadowed(ServletHandler handler, SearchPath path, ContextRanking handlerColor, TrieNode<ServletHandler, ContextRanking> node)
-    {
-        if (node == null)
-        {
-            return false;
-        }
-        return isShadowed(handler, path, handlerColor,
-            node.firstValue(), node.getPath(), servletHandlers.getColor(node));
-    }
-
-    private boolean isShadowed(ServletHandler handler, SearchPath path, ContextRanking handlerColor,
-        ServletHandler otherHandler, SearchPath otherPath, ContextRanking otherColor)
-    {
-        int contextComparison = otherColor.compareTo(handlerColor);
-        if (contextComparison < 0)
-        {
-            return true;
-        }
-
-        if (path.equals(otherPath) && contextComparison == 0 && otherHandler.compareTo(handler) < 0)
-        {
-            return true;
-        }
-        return false;
-    }
-
     private List<ServletHandler> findShadowedNodes(ServletHandler handler, String path, ContextRanking handlerColor, TrieNode<ServletHandler, ContextRanking> parent)
     {
         if (parent != null && servletHandlers.getColor(parent).compareTo(handlerColor) < 0)
@@ -173,6 +144,34 @@ final class ServletHandlerRegistry
             }
         }
         return destroy;
+    }
+
+    private boolean isShadowed(ServletHandler handler, SearchPath path, ContextRanking handlerColor, TrieNode<ServletHandler, ContextRanking> node)
+    {
+        if (node == null)
+        {
+            return false;
+        }
+        return isShadowed(handler, path, handlerColor,
+            node.firstValue(), node.getPath(), servletHandlers.getColor(node));
+    }
+
+    private boolean isShadowed(ServletHandler handler, SearchPath path, ContextRanking handlerColor,
+        ServletHandler otherHandler, SearchPath otherPath, ContextRanking otherColor)
+    {
+        int contextComparison = otherColor.compareTo(handlerColor);
+        // shadowed by other context
+        if (contextComparison < 0)
+        {
+            return true;
+        }
+
+        // shadowed on the same path by handler with higher ranking
+        if (path.equals(otherPath) && contextComparison == 0 && otherHandler.compareTo(handler) < 0)
+        {
+            return true;
+        }
+        return false;
     }
 
     private void initHandler(ServletHandler handler) throws RegistrationFailureException
@@ -431,9 +430,9 @@ final class ServletHandlerRegistry
         }
         else if (pathNode != null && extensionNode != null)
         {
-            ContextRanking pathRanking = extensionNode.getValueColor();
-            ContextRanking extensionRanking = pathNode.getValueColor();
-            result = compareSafely(pathRanking, extensionRanking) < 0 ? extensionNode : pathNode;
+            ContextRanking pathRanking = pathNode.getValueColor();
+            ContextRanking extensionRanking = extensionNode.getValueColor();
+            result = compareSafely(extensionRanking, pathRanking) < 0 ? extensionNode : pathNode;
         }
         else
         {
@@ -473,7 +472,7 @@ final class ServletHandlerRegistry
         {
             ServletHandler handler = countEntry.getKey();
 
-            // TODO remove initFailures from trie and useCounts
+            // TODO remove initFailures from trie (recursively) and useCounts
             if (initFailures.contains(handler))
             {
                 continue;
