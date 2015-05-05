@@ -38,7 +38,7 @@ import javax.annotation.Nonnull;
 import javax.servlet.Servlet;
 import javax.servlet.ServletException;
 
-import org.apache.felix.http.base.internal.handler.trie.PriorityTrieMulitmapImpl;
+import org.apache.felix.http.base.internal.handler.trie.PriorityTrieMultimapImpl;
 import org.apache.felix.http.base.internal.handler.trie.PriorityTrieMultimap;
 import org.apache.felix.http.base.internal.handler.trie.SearchPath;
 import org.apache.felix.http.base.internal.handler.trie.TrieNode;
@@ -66,7 +66,7 @@ final class ServletHandlerRegistry
     synchronized void init()
     {
         contextRankingsById.put(0L, new ContextRanking());
-        servletHandlers = new PriorityTrieMulitmapImpl<ServletHandler, ContextRanking>();
+        servletHandlers = new PriorityTrieMultimapImpl<ServletHandler, ContextRanking>();
     }
 
     synchronized void shutdown()
@@ -223,7 +223,7 @@ final class ServletHandlerRegistry
     synchronized void removeAll()
     {
         Collection<ServletHandler> oldHandlers = new TreeSet<ServletHandler>(servletHandlers.activeValues());
-        this.servletHandlers = new PriorityTrieMulitmapImpl<ServletHandler, ContextRanking>();
+        this.servletHandlers = new PriorityTrieMultimapImpl<ServletHandler, ContextRanking>();
 
         destroyHandlers(oldHandlers, true);
 
